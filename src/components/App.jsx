@@ -48,6 +48,29 @@ export default function App() {
     };
   }, []);
 
+  // CHECK FOR MISSING ENV VARS
+  const isEnvMissing = !import.meta.env.PUBLIC_SUPABASE_URL || !import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  if (isEnvMissing) {
+    return (
+      <div className="min-h-screen bg-quest-bg flex flex-col items-center justify-center font-pixel text-quest-red p-10 text-center gap-6">
+        <div className="text-4xl animate-bounce">⚠️</div>
+        <div className="text-xl border-2 border-quest-red p-6 bg-quest-red/10 shadow-[0_0_20px_rgba(255,0,0,0.3)]">
+          ERROR DE CONFIGURACIÓN
+        </div>
+        <div className="text-[10px] leading-relaxed max-w-md">
+          Las variables de entorno de <span className="text-quest-gold">Supabase</span> no están llegando a la aplicación.
+          <br /><br />
+          <span className="text-white bg-quest-red px-2 py-1">SOLUCIÓN:</span>
+          <br />
+          Detén el servidor pulsando <kbd className="bg-zinc-800 px-1 rounded">Ctrl+C</kbd> y vuelve a ejecutar:
+          <br />
+          <code className="text-quest-cyan block mt-2 p-2 bg-black/50 border border-quest-border">npm run dev</code>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-quest-bg flex flex-col items-center justify-center font-pixel text-quest-gold gap-4">

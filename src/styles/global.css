@@ -38,7 +38,7 @@
   }
 
   .input-pixel {
-    @apply bg-quest-bg border-2 border-quest-border text-quest-green p-2 text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none;
+    @apply bg-quest-bg border-2 border-quest-border text-quest-green p-2 text-[16px] sm:text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none;
   }
 
   .progress-bar {
