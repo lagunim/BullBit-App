@@ -1,4 +1,5 @@
 import useGameStore from '../store/gameStore.js';
+import { supabase } from '../lib/supabase.js';
 
 export default function Header() {
   const level = useGameStore(s => s.level ?? 0);
@@ -43,6 +44,15 @@ export default function Header() {
             <span className="text-[6px] text-quest-textDim">PTS</span>
             <span className="text-[10px] sm:text-xs text-quest-green font-pixel">{points.toLocaleString()}</span>
           </div>
+
+          {/* Logout Button */}
+          <button 
+            onClick={() => supabase.auth.signOut()}
+            className="btn-pixel-red p-1 sm:p-1.5"
+            title="Sali al menú principal"
+          >
+            <span className="text-xs">🚪</span>
+          </button>
         </div>
       </div>
     </header>
