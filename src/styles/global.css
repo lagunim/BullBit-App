@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-quest-bg text-quest-text font-pixel min-h-screen selection:bg-quest-purple selection:text-white;
+    image-rendering: pixelated;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-quest-panel;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-quest-border border border-quest-bg hover:bg-quest-borderLight;
+  }
+}
+
+@layer components {
+  .btn-pixel {
+    @apply inline-flex items-center justify-center px-3 py-2 border-2 shadow-pixel active:translate-y-0.5 active:shadow-pixel-sm transition-all text-[8px] cursor-pointer select-none tracking-wider;
+  }
+
+  .btn-pixel-green { @apply btn-pixel bg-quest-greenDark text-quest-bg border-quest-green hover:bg-quest-green scroll-mt-2; }
+  .btn-pixel-red { @apply btn-pixel bg-quest-redDark text-white border-quest-red hover:bg-quest-red; }
+  .btn-pixel-gold { @apply btn-pixel bg-quest-goldDark text-quest-bg border-quest-gold hover:bg-quest-gold; }
+  .btn-pixel-blue { @apply btn-pixel bg-[#1a3080] text-white border-quest-blue hover:bg-[#1e3a90]; }
+  .btn-pixel-cyan { @apply btn-pixel bg-[#006064] text-white border-quest-cyan hover:bg-[#00838f]; }
+  .btn-pixel-purple { @apply btn-pixel bg-[#4a148c] text-white border-quest-purple hover:bg-[#6a1b9a]; }
+  .btn-pixel-gray { @apply btn-pixel bg-quest-bg text-quest-textDim border-quest-border hover:bg-quest-panel hover:text-quest-text; }
+
+  .card-pixel {
+    @apply border-2 border-quest-border bg-quest-panel shadow-pixel p-3 relative;
+  }
+
+  .input-pixel {
+    @apply bg-quest-bg border-2 border-quest-border text-quest-green p-2 text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none;
+  }
+
+  .progress-bar {
+    @apply h-4 bg-quest-bg border-2 border-quest-border shadow-pixel-sm overflow-hidden relative;
+  }
+  .progress-bar-fill {
+    @apply h-full transition-all duration-500 relative;
+    background-image: repeating-linear-gradient(90deg, currentColor 0px, currentColor 12px, rgba(0,0,0,0.2) 12px, rgba(0,0,0,0.2) 16px);
+  }
+
+  /* Scanlines effect */
+  .crt::after {
+    content: ''; 
+    @apply fixed inset-0 pointer-events-none z-[9999];
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  }
+
+  .tooltip-pixel {
+    @apply hidden absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-quest-panel border-2 border-quest-border shadow-pixel p-2 text-[7px] whitespace-nowrap z-[100] text-quest-text pointer-events-none;
+  }
+  .tooltip-wrap:hover .tooltip-pixel {
+    @apply block;
+  }
+}
+
+@layer utilities {
+  .anim-fade-in {
+    @apply animate-[pixelFadeIn_0.3s_steps(6)_forwards];
+  }
+  .anim-slide-in {
+    @apply animate-[slideIn_0.2s_steps(4)_forwards];
+  }
+}
+
+@keyframes pixelFadeIn { 
+  from { opacity: 0; transform: translateY(4px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+@keyframes slideIn { 
+  from { transform: translateX(-8px); opacity: 0; } 
+  to { transform: translateX(0); opacity: 1; } 
+}
