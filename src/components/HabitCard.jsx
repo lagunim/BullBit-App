@@ -2,9 +2,8 @@ import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey, calcPoints } from '../utils/gameLogic.js';
 import { ITEMS } from '../data/items.js';
-import EditHabitModal from './EditHabitModal.jsx';
 
-export default function HabitCard({ habit }) {
+export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
   const inventory = useGameStore(s => s.inventory ?? []);
   const completeHabit = useGameStore(s => s.completeHabit);
@@ -16,7 +15,6 @@ export default function HabitCard({ habit }) {
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
 
   const today = getTodayKey();
   const todayStatus = history[today]?.[habit.id];
@@ -65,7 +63,7 @@ export default function HabitCard({ habit }) {
           </div>
         )}
         
-        <button onClick={() => setShowEdit(true)} className="btn-pixel-gray !p-1.5 !text-[7px]">
+        <button onClick={onEdit} className="btn-pixel-gray !p-1.5 !text-[7px]">
           ✎
         </button>
 
@@ -74,8 +72,6 @@ export default function HabitCard({ habit }) {
         </button>
         {confirmDelete && <button onClick={() => removeHabit(habit.id)} className="btn-pixel-red !p-1.5 !text-[7px] animate-pulse">SI</button>}
       </div>
-
-      {showEdit && <EditHabitModal habit={habit} onClose={() => setShowEdit(false)} />}
     </div>
   );
 }

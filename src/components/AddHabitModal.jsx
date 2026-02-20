@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { HABIT_EMOJIS, PERIODICITY_LABELS } from '../utils/gameLogic.js';
 
@@ -14,10 +15,10 @@ export default function AddHabitModal({ onClose }) {
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[2000] p-4 backdrop-blur-sm" 
+  return createPortal(
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm" 
          onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto m-auto flex flex-col gap-5 !p-6">
+      <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
           <div className="text-[11px] text-quest-cyan font-pixel uppercase tracking-widest">
@@ -110,6 +111,7 @@ export default function AddHabitModal({ onClose }) {
           <button onClick={handleSubmit} className="btn-pixel-green flex-[2] uppercase font-bold tracking-widest">✚ Crear</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

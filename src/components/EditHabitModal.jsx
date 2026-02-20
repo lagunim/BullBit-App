@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { HABIT_EMOJIS, PERIODICITY_LABELS } from '../utils/gameLogic.js';
 
@@ -19,10 +20,10 @@ export default function EditHabitModal({ habit, onClose }) {
     onClose();
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[2000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]" 
+  return createPortal(
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]" 
          onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto m-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
+      <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
           <div className="text-[11px] text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
@@ -114,6 +115,7 @@ export default function EditHabitModal({ habit, onClose }) {
           <button onClick={handleSubmit} className="btn-pixel-gold flex-[2] uppercase font-bold tracking-widest shadow-[inset_0_0_10px_rgba(255,255,255,0.2)]">💾 Guardar Cambios</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

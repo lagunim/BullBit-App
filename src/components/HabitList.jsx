@@ -2,12 +2,14 @@ import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
+import EditHabitModal from './EditHabitModal.jsx';
 import { getTodayKey } from '../utils/gameLogic.js';
 
 export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
   const history = useGameStore(s => s.history ?? {});
   const [showModal, setShowModal] = useState(false);
+  const [editingHabit, setEditingHabit] = useState(null);
 
   const today = getTodayKey();
   const todayData = history[today] ?? {};
@@ -51,7 +53,13 @@ export default function HabitList() {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {habits.map(habit => <HabitCard key={habit.id} habit={habit} />)}
+          {habits.map(habit => (
+            <HabitCard 
+              key={habit.id} 
+              habit={habit} 
+              onEdit={() => setEditingHabit(habit)}
+            />
+          ))}
         </div>
       )}
 
@@ -62,6 +70,13 @@ export default function HabitList() {
       )}
 
       {showModal && <AddHabitModal onClose={() => setShowModal(false)} />}
+      
+      {editingHabit && (
+        <EditHabitModal 
+          habit={editingHabit} 
+          onClose={() => setEditingHabit(null)} 
+        />
+      )}
     </div>
   );
 }

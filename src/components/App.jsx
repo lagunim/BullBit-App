@@ -16,30 +16,19 @@ export default function App() {
   const [tab, setTab] = useState('home');
 
   useEffect(() => {
-    console.log("App mounted, checking environment...");
-    if (!import.meta.env.PUBLIC_SUPABASE_URL || !import.meta.env.PUBLIC_SUPABASE_ANON_KEY) {
-      console.error("SUPABASE ENV VARIABLES MISSING!");
-    }
-    
-    console.log("Checking session...");
+    // Check initial session
     const checkSession = async () => {
       // Failsafe timeout
       const timeout = setTimeout(() => {
-        console.warn("Session check timed out!");
         setLoading(false);
       }, 5000);
 
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         clearTimeout(timeout);
-        if (error) {
-          console.error("Error getting session:", error);
-        }
-        console.log("Initial session check:", session ? "User found" : "No user");
         setSession(session);
       } catch (err) {
         clearTimeout(timeout);
-        console.error("Unexpected error checking session:", err);
       } finally {
         setLoading(false);
       }
@@ -51,7 +40,6 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Auth state changed:", _event, session ? "User found" : "No user");
       setSession(session);
     });
 
@@ -77,14 +65,10 @@ export default function App() {
     );
   }
 
-  // FORCE AUTH
-  console.log("CHECKING AUTH GATE - session:", !!session, "loading:", loading);
+  // AUTH GATE
   if (!session) {
-    console.log("RENDERING AUTH COMPONENT NOW");
     return <Auth />;
   }
-
-  console.log("AUTH GATE PASSED - RENDERING MAIN APP");
 
   const tabs = [
     { id: 'home',      label: 'INICIO',    icon: '🏠' },
@@ -95,12 +79,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
-      {/* TEMP DEBUG BAR - Remove after testing */}
-      <div className="bg-quest-border/20 text-[6px] p-1 flex justify-between items-center z-[9999]">
-        <span className="text-quest-textDim uppercase">DEBUG: SESIÓN ACTIVA ({session?.user?.email ?? 'N/A'})</span>
-        <button onClick={() => supabase.auth.signOut()} className="text-quest-red underline tracking-tighter cursor-pointer">FORZAR LOGOUT</button>
-      </div>
-      
       <Header />
 
       <div className="flex-1 overflow-y-auto">
