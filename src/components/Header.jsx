@@ -48,8 +48,8 @@ export default function Header() {
           {/* Logout Button */}
           <button 
             onClick={() => supabase.auth.signOut()}
-            className="btn-pixel-red p-1 sm:p-1.5"
-            title="Sali al menú principal"
+            className="btn-pixel-red p-3 sm:p-1.5"
+            title="Sal a menú principal"
           >
             <span className="text-xs">🚪</span>
           </button>

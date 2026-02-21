@@ -60,9 +60,11 @@ export default function Auth() {
         <div className="card-pixel p-6 sm:p-8">
           <form onSubmit={handleAuth} className="space-y-6">
             <div>
-              <label className="block text-quest-textDim text-[8px] uppercase mb-2 tracking-wider">Correo Electrónico</label>
+              <label htmlFor="auth-email" className="block text-quest-textDim text-[10px] sm:text-[8px] uppercase mb-2 tracking-wider">Correo Electrónico</label>
               <input
+                id="auth-email"
                 type="email"
+                autoComplete="email"
                 required
                 className="input-pixel"
                 placeholder="aventurero@ejemplo.com"
@@ -72,9 +74,11 @@ export default function Auth() {
             </div>
 
             <div>
-              <label className="block text-quest-textDim text-[8px] uppercase mb-2 tracking-wider">Contraseña</label>
+              <label htmlFor="auth-password" className="block text-quest-textDim text-[10px] sm:text-[8px] uppercase mb-2 tracking-wider">Contraseña</label>
               <input
+                id="auth-password"
                 type="password"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 required
                 className="input-pixel"
                 placeholder="********"

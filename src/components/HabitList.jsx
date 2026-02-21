@@ -29,7 +29,7 @@ export default function HabitList() {
             {completedToday}/{habits.length} <span className="text-quest-green">COMPLETADOS</span>
           </div>
         </div>
-        <button onClick={() => setShowModal(true)} className="btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-2 text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
+        <button onClick={() => setShowModal(true)} className="btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-3 sm:py-2 text-[10px] sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
           ✚ NUEVO HÁBITO
         </button>
       </div>

@@ -47,3 +47,6 @@ Resurgimiento, Constante Digital, Grindeo Epico, Afortunado
 Escudo del Compromiso, Pergamino de Doble XP, Cristal del Tiempo,
 Voluntad de Hierro, Elixir de la Racha, Runa de Proteccion,
 Amuleto del Poder, Moneda de la Suerte
+
+## Consola del navegador
+Si ves errores como `NotFoundError` (insertBefore) o `GET .../undefined 404` en la consola, suelen venir de **extensiones de autocompletado/gestores de contraseñas** (p. ej. Bitwarden, 1Password). No son del código del proyecto. Puedes ignorarlos o desactivar la extensión en `localhost` para ocultarlos.

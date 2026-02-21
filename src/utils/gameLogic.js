@@ -98,6 +98,7 @@ export const PERIODICITY_LABELS = {
   daily:   'Diaria',
   weekly:  'Semanal',
   monthly: 'Mensual',
+  custom:  'Personalizado',
 };
 
 export const HABIT_EMOJIS = ['📚', '🏃', '💧', '🧘', '🎸', '✍️', '🥗', '😴', '🧹', '💪', '🎯', '🧠', '🎨', '🌿', '🏋️'];

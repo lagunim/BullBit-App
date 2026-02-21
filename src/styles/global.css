@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -22,23 +22,37 @@
 
 @layer components {
   .btn-pixel {
-    @apply inline-flex items-center justify-center px-3 py-2 border-2 shadow-pixel active:translate-y-0.5 active:shadow-pixel-sm transition-all text-[8px] cursor-pointer select-none tracking-wider;
+    @apply inline-flex items-center justify-center px-4 py-4 sm:px-3 sm:py-2 border-2 shadow-pixel active:translate-y-0.5 active:shadow-pixel-sm transition-all text-[12px] sm:text-[8px] cursor-pointer select-none tracking-wider min-h-[48px] sm:min-h-0;
   }
 
-  .btn-pixel-green { @apply btn-pixel bg-quest-greenDark text-quest-bg border-quest-green hover:bg-quest-green scroll-mt-2; }
-  .btn-pixel-red { @apply btn-pixel bg-quest-redDark text-white border-quest-red hover:bg-quest-red; }
-  .btn-pixel-gold { @apply btn-pixel bg-quest-goldDark text-quest-bg border-quest-gold hover:bg-quest-gold; }
-  .btn-pixel-blue { @apply btn-pixel bg-[#1a3080] text-white border-quest-blue hover:bg-[#1e3a90]; }
-  .btn-pixel-cyan { @apply btn-pixel bg-[#006064] text-white border-quest-cyan hover:bg-[#00838f]; }
-  .btn-pixel-purple { @apply btn-pixel bg-[#4a148c] text-white border-quest-purple hover:bg-[#6a1b9a]; }
-  .btn-pixel-gray { @apply btn-pixel bg-quest-bg text-quest-textDim border-quest-border hover:bg-quest-panel hover:text-quest-text; }
+  .btn-pixel-green {
+    @apply btn-pixel bg-quest-greenDark text-quest-bg border-quest-green hover:bg-quest-green scroll-mt-2;
+  }
+  .btn-pixel-red {
+    @apply btn-pixel bg-quest-redDark text-white border-quest-red hover:bg-quest-red;
+  }
+  .btn-pixel-gold {
+    @apply btn-pixel bg-quest-goldDark text-quest-bg border-quest-gold hover:bg-quest-gold;
+  }
+  .btn-pixel-blue {
+    @apply btn-pixel bg-[#1a3080] text-white border-quest-blue hover:bg-[#1e3a90];
+  }
+  .btn-pixel-cyan {
+    @apply btn-pixel bg-[#006064] text-white border-quest-cyan hover:bg-[#00838f];
+  }
+  .btn-pixel-purple {
+    @apply btn-pixel bg-[#4a148c] text-white border-quest-purple hover:bg-[#6a1b9a];
+  }
+  .btn-pixel-gray {
+    @apply btn-pixel bg-quest-bg text-quest-textDim border-quest-border hover:bg-quest-panel hover:text-quest-text;
+  }
 
   .card-pixel {
-    @apply border-2 border-quest-border bg-quest-panel shadow-pixel p-3 relative;
+    @apply border-2 border-quest-border bg-quest-panel shadow-pixel p-4 sm:p-3 relative;
   }
 
   .input-pixel {
-    @apply bg-quest-bg border-2 border-quest-border text-quest-green p-2 text-[16px] sm:text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none;
+    @apply bg-quest-bg border-2 border-quest-border text-quest-green px-4 py-3 sm:p-2 text-[16px] sm:text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none min-h-[48px] sm:min-h-0;
   }
 
   .progress-bar {
@@ -46,14 +60,26 @@
   }
   .progress-bar-fill {
     @apply h-full transition-all duration-500 relative;
-    background-image: repeating-linear-gradient(90deg, currentColor 0px, currentColor 12px, rgba(0,0,0,0.2) 12px, rgba(0,0,0,0.2) 16px);
+    background-image: repeating-linear-gradient(
+      90deg,
+      currentColor 0px,
+      currentColor 12px,
+      rgba(0, 0, 0, 0.2) 12px,
+      rgba(0, 0, 0, 0.2) 16px
+    );
   }
 
   /* Scanlines effect */
   .crt::after {
-    content: ''; 
+    content: "";
     @apply fixed inset-0 pointer-events-none z-[9999];
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
   }
 
   .tooltip-pixel {
@@ -73,11 +99,23 @@
   }
 }
 
-@keyframes pixelFadeIn { 
-  from { opacity: 0; transform: translateY(4px); } 
-  to { opacity: 1; transform: translateY(0); } 
+@keyframes pixelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-@keyframes slideIn { 
-  from { transform: translateX(-8px); opacity: 0; } 
-  to { transform: translateX(0); opacity: 1; } 
+@keyframes slideIn {
+  from {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }

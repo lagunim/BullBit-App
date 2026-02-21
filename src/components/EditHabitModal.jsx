@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { HABIT_EMOJIS, PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
@@ -9,9 +10,12 @@ export default function EditHabitModal({ habit, onClose }) {
     name: habit.name, 
     minutes: habit.minutes, 
     periodicity: habit.periodicity, 
-    emoji: habit.emoji 
+    emoji: habit.emoji,
+    customDays: habit.customDays || '',
+    customInterval: habit.customInterval || ''
   });
   const [error, setError] = useState('');
+  const [showCustomModal, setShowCustomModal] = useState(false);
 
   function handleSubmit() {
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
@@ -29,7 +33,7 @@ export default function EditHabitModal({ habit, onClose }) {
           <div className="text-[11px] text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">✎</span> Editar Misión
           </div>
-          <button onClick={onClose} className="btn-pixel-gray !py-1 !px-2 !text-[9px]">✕</button>
+          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-[12px] sm:!text-[9px]">✕</button>
         </div>
 
         {/* Emoji selector */}
@@ -78,34 +82,35 @@ export default function EditHabitModal({ habit, onClose }) {
               onChange={e => setForm(f => ({ ...f, minutes: Number(e.target.value) }))}
             />
           </div>
-          {/* Quick presets */}
-          <div className="flex flex-wrap gap-2">
-            {[10, 15, 20, 30, 45, 60].map(m => (
-              <button 
-                key={m} 
-                onClick={() => setForm(f => ({ ...f, minutes: m }))}
-                className={`btn-pixel !px-2.5 !py-1.5 !text-[7px] ${
-                  form.minutes === m ? 'bg-quest-panel border-quest-gold text-quest-gold' : 'btn-pixel-gray'
-                }`}
-              >
-                {m}m
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Periodicity */}
         <div>
           <label className="text-[9px] text-quest-textDim block mb-2 font-pixel">FRECUENCIA</label>
-          <select
-            className="input-pixel"
-            value={form.periodicity}
-            onChange={e => setForm(f => ({ ...f, periodicity: e.target.value }))}
-          >
-            {Object.entries(PERIODICITY_LABELS).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <select
+              className="input-pixel flex-1"
+              value={form.periodicity}
+              onChange={e => {
+                setForm(f => ({ ...f, periodicity: e.target.value }));
+                if (e.target.value === 'custom') {
+                  setShowCustomModal(true);
+                }
+              }}
+            >
+              {Object.entries(PERIODICITY_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+            {form.periodicity === 'custom' && (
+              <button 
+                onClick={() => setShowCustomModal(true)}
+                className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-[12px] sm:text-[9px]"
+              >
+                ✎
+              </button>
+            )}
+          </div>
         </div>
 
         {error && <div className="text-quest-red text-[7px] font-pixel animate-pulse bg-quest-red/10 p-2 border border-quest-red">{error}</div>}
@@ -114,6 +119,18 @@ export default function EditHabitModal({ habit, onClose }) {
           <button onClick={onClose} className="btn-pixel-gray flex-1 uppercase">Cancelar</button>
           <button onClick={handleSubmit} className="btn-pixel-gold flex-[2] uppercase font-bold tracking-widest shadow-[inset_0_0_10px_rgba(255,255,255,0.2)]">💾 Guardar Cambios</button>
         </div>
+        
+        {showCustomModal && (
+          <CustomPeriodicityModal
+            initialDays={form.customDays}
+            initialInterval={form.customInterval}
+            onSave={(data) => {
+              setForm(f => ({ ...f, customDays: data.days, customInterval: data.interval }));
+              setShowCustomModal(false);
+            }}
+            onClose={() => setShowCustomModal(false)}
+          />
+        )}
       </div>
     </div>,
     document.body

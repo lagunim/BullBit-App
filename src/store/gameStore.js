@@ -40,6 +40,8 @@ const useGameStore = create(
             minutes: habit.minutes,
             periodicity: habit.periodicity,
             emoji: habit.emoji ?? '🎯',
+            customDays: habit.customDays,
+            customInterval: habit.customInterval,
             multiplier: 1.0,
             baseMultiplier: 1.0,
             streak: 0,

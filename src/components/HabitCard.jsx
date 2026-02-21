@@ -32,7 +32,7 @@ export default function HabitCard({ habit, onEdit }) {
   const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' : isFailed ? 'shadow-[2px_2px_0_#440011]' : 'shadow-pixel-sm';
 
   return (
-    <div className={`anim-slide-in card-pixel flex items-center gap-3 !p-2 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}>
+    <div className={`anim-slide-in card-pixel flex items-center gap-3 !p-4 sm:!p-2 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}>
       {/* Emoji */}
       <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">{habit.emoji}</div>
 
@@ -50,10 +50,10 @@ export default function HabitCard({ habit, onEdit }) {
       <div className="flex gap-2">
         {!isDetermined ? (
           <>
-            <button onClick={() => completeHabit(habit.id)} className="btn-pixel-green !px-2.5 !py-1.5 !text-[8px]">
+            <button onClick={() => completeHabit(habit.id)} className="btn-pixel-green !p-3 sm:!px-2.5 sm:!py-1.5 !text-[12px] sm:!text-[8px]">
               ✔
             </button>
-            <button onClick={() => failHabit(habit.id)} className="btn-pixel-red !px-2.5 !py-1.5 !text-[8px]">
+            <button onClick={() => failHabit(habit.id)} className="btn-pixel-red !p-3 sm:!px-2.5 sm:!py-1.5 !text-[12px] sm:!text-[8px]">
               ✖
             </button>
           </>
@@ -63,14 +63,14 @@ export default function HabitCard({ habit, onEdit }) {
           </div>
         )}
         
-        <button onClick={onEdit} className="btn-pixel-gray !p-1.5 !text-[7px]">
+        <button onClick={onEdit} className="btn-pixel-gray !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px]">
           ✎
         </button>
 
-        <button onClick={() => setConfirmDelete(!confirmDelete)} className={`btn-pixel !p-1.5 !text-[7px] ${confirmDelete ? 'bg-quest-red border-quest-red text-white' : 'btn-pixel-gray'}`}>
+        <button onClick={() => setConfirmDelete(!confirmDelete)} className={`btn-pixel !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px] ${confirmDelete ? 'bg-quest-red border-quest-red text-white' : 'btn-pixel-gray'}`}>
           {confirmDelete ? '?' : '🗑'}
         </button>
-        {confirmDelete && <button onClick={() => removeHabit(habit.id)} className="btn-pixel-red !p-1.5 !text-[7px] animate-pulse">SI</button>}
+        {confirmDelete && <button onClick={() => removeHabit(habit.id)} className="btn-pixel-red !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px] animate-pulse">SI</button>}
       </div>
     </div>
   );
