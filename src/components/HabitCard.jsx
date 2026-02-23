@@ -74,17 +74,17 @@ export default function HabitCard({ habit, onEdit }) {
           {habit.emoji}
         </div>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="text-[9px] text-quest-text truncate uppercase tracking-tight">
+          <div className="text-[10px] text-quest-text truncate uppercase tracking-tight">
             {habit.name}
           </div>
           {habit.streak > 0 && (
-            <span className="text-[8px] text-quest-orange flex items-center gap-0.5 font-pixel shrink-0">
+            <span className="text-[9px] text-quest-orange flex items-center gap-0.5 font-pixel shrink-0">
               🔥{habit.streak}
             </span>
           )}
         </div>
         <span
-          className={`ml-auto text-[9px] font-pixel ${multColorClass} shrink-0`}
+          className={`ml-auto text-[10px] font-pixel ${multColorClass} shrink-0`}
         >
           ×{(habit.multiplier ?? 1).toFixed(1)}
         </span>
@@ -93,13 +93,14 @@ export default function HabitCard({ habit, onEdit }) {
       {/* Botones de acción debajo, ocupando todo el ancho */}
       <div className="mt-1 w-full">
         {!isDetermined ? (
-          <div className="flex gap-2 w-full min-h-[44px]">
+          <div className="flex gap-2 w-full">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 openCompleteModal();
               }}
-              className="btn-pixel-green flex-[2] text-[14px] sm:text-[10px] py-2"
+              className="btn-pixel-green flex-[2] text-[12px] sm:text-[10px]"
+              style={{ height: '22px', minHeight: '22px', paddingTop: '2px', paddingBottom: '2px' }}
             >
               ✔
             </button>
@@ -108,7 +109,8 @@ export default function HabitCard({ habit, onEdit }) {
                 e.stopPropagation();
                 failHabit(habit.id);
               }}
-              className="btn-pixel-red flex-1 text-[14px] sm:text-[10px] py-2"
+              className="btn-pixel-red flex-1 text-[12px] sm:text-[10px]"
+              style={{ height: '22px', minHeight: '22px', paddingTop: '2px', paddingBottom: '2px' }}
             >
               ✖
             </button>
