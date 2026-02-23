@@ -99,7 +99,7 @@ export default function HabitCard({ habit, onEdit }) {
                 e.stopPropagation();
                 openCompleteModal();
               }}
-              className="btn-habit-complete flex-[2] justify-start gap-2 pl-4 pr-3"
+              className="btn-habit-complete flex-[3] justify-start gap-2 pl-4 pr-3"
             >
               <span className="text-[11px]">✔</span>
               <span className="uppercase text-[9px] sm:text-[8px]">Completar</span>

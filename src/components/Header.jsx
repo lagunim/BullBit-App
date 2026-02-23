@@ -1,13 +1,15 @@
-import useGameStore from '../store/gameStore.js';
-import { supabase } from '../lib/supabase.js';
+import useGameStore from "../store/gameStore.js";
+import { supabase } from "../lib/supabase.js";
 
 export default function Header() {
-  const level = useGameStore(s => s.level ?? 0);
-  const points = useGameStore(s => s.points ?? 0);
-  const rawEffects = useGameStore(s => s.activeEffects ?? []);
+  const level = useGameStore((s) => s.level ?? 0);
+  const points = useGameStore((s) => s.points ?? 0);
+  const rawEffects = useGameStore((s) => s.activeEffects ?? []);
 
   const now = new Date();
-  const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
+  const activeEffects = rawEffects.filter(
+    (e) => !e.expiresAt || new Date(e.expiresAt) > now,
+  );
 
   return (
     <header className="sticky top-0 z-[100] bg-quest-bg border-b-2 border-quest-border">
@@ -36,17 +38,21 @@ export default function Header() {
           {/* Level badge */}
           <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-gold px-2 py-0.5 sm:px-3 sm:py-1">
             <span className="text-[6px] text-quest-textDim">LV</span>
-            <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">{level}</span>
+            <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">
+              {level}
+            </span>
           </div>
 
           {/* Points */}
           <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-green px-2 py-0.5 sm:px-3 sm:py-1">
             <span className="text-[6px] text-quest-textDim">PTS</span>
-            <span className="text-[10px] sm:text-xs text-quest-green font-pixel">{points.toLocaleString()}</span>
+            <span className="text-[10px] sm:text-xs text-quest-green font-pixel">
+              {points.toLocaleString()}
+            </span>
           </div>
 
           {/* Logout Button */}
-          <button 
+          <button
             onClick={() => supabase.auth.signOut()}
             className="btn-pixel-red p-3 sm:p-1.5"
             title="Sal a menú principal"

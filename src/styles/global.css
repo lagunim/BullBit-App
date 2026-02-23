@@ -9,11 +9,13 @@
     image-rendering: pixelated;
   }
 
-  /* Sutil brillo tipo neón para el texto pixel */
+  /* Halo global tipo pantalla CRT para toda la tipografía pixel */
   .font-pixel {
     text-shadow:
-      0 0 2px rgba(255, 255, 255, 0.35),
+      0 0 1px rgba(0, 0, 0, 0.9),
+      0 0 2px currentColor,
       0 0 4px currentColor;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
   }
 
   ::-webkit-scrollbar {
@@ -119,6 +121,17 @@
   }
   .anim-slide-in {
     @apply animate-[slideIn_0.2s_steps(4)_forwards];
+  }
+
+  /* Resplandor para títulos tipo logo */
+  .title-glow {
+    text-shadow:
+      0 0 1px rgba(0, 0, 0, 0.9),
+      0 0 4px currentColor,
+      0 0 8px currentColor;
+    filter:
+      drop-shadow(0 0 2px rgba(0, 255, 180, 0.8))
+      drop-shadow(0 0 4px rgba(0, 255, 180, 0.6));
   }
 }
 
