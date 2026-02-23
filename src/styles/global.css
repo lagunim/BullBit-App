@@ -9,13 +9,11 @@
     image-rendering: pixelated;
   }
 
-  /* Halo global tipo pantalla CRT para toda la tipografía pixel */
+  /* Halo global muy sutil tipo CRT para no interferir en la lectura */
   .font-pixel {
     text-shadow:
-      0 0 1px rgba(0, 0, 0, 0.9),
-      0 0 2px currentColor,
-      0 0 4px currentColor;
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.7));
+      0 0 0.5px rgba(0, 0, 0, 0.75),
+      0 0 1.5px rgba(255, 255, 255, 0.18);
   }
 
   ::-webkit-scrollbar {
