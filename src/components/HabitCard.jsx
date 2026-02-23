@@ -2,23 +2,13 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey } from '../utils/gameLogic.js';
-import { ITEMS } from '../data/items.js';
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
-  const inventory = useGameStore(s => s.inventory ?? []);
   const completeHabit = useGameStore(s => s.completeHabit);
   const completeHabitPartial = useGameStore(s => s.completeHabitPartial);
   const completeHabitOvertime = useGameStore(s => s.completeHabitOvertime);
   const failHabit = useGameStore(s => s.failHabit);
-  const removeHabit = useGameStore(s => s.removeHabit);
-  const useItem = useGameStore(s => s.useItem);
-  const rawEffects = useGameStore(s => s.activeEffects ?? []);
-
-  const now = new Date();
-  const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [completionMode, setCompletionMode] = useState(null); // 'partial' | 'over'
   const [customMinutes, setCustomMinutes] = useState(habit.minutes);
@@ -74,7 +64,10 @@ export default function HabitCard({ habit, onEdit }) {
   }
 
   return (
-    <div className={`anim-slide-in card-pixel flex items-center gap-3 !p-4 sm:!p-2 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}>
+    <div
+      className={`anim-slide-in card-pixel flex items-center gap-3 !p-4 sm:!p-2 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}
+      onClick={onEdit}
+    >
       {/* Emoji */}
       <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">{habit.emoji}</div>
 
@@ -89,13 +82,25 @@ export default function HabitCard({ habit, onEdit }) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center min-h-[52px] sm:min-h-[40px]">
         {!isDetermined ? (
           <>
-            <button onClick={openCompleteModal} className="btn-pixel-green !p-3 sm:!px-2.5 sm:!py-1.5 !text-[12px] sm:!text-[8px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openCompleteModal();
+              }}
+              className="btn-pixel-green !px-6 !py-4 sm:!px-3 sm:!py-2 !text-[16px] sm:!text-[10px] min-w-[56px] min-h-[44px]"
+            >
               ✔
             </button>
-            <button onClick={() => failHabit(habit.id)} className="btn-pixel-red !p-3 sm:!px-2.5 sm:!py-1.5 !text-[12px] sm:!text-[8px]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                failHabit(habit.id);
+              }}
+              className="btn-pixel-red !px-6 !py-4 sm:!px-3 sm:!py-2 !text-[16px] sm:!text-[10px] min-w-[56px] min-h-[44px]"
+            >
               ✖
             </button>
           </>
@@ -104,15 +109,6 @@ export default function HabitCard({ habit, onEdit }) {
             {isDone ? '✔' : '✖'}
           </div>
         )}
-        
-        <button onClick={onEdit} className="btn-pixel-gray !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px]">
-          ✎
-        </button>
-
-        <button onClick={() => setConfirmDelete(!confirmDelete)} className={`btn-pixel !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px] ${confirmDelete ? 'bg-quest-red border-quest-red text-white' : 'btn-pixel-gray'}`}>
-          {confirmDelete ? '?' : '🗑'}
-        </button>
-        {confirmDelete && <button onClick={() => removeHabit(habit.id)} className="btn-pixel-red !p-3 sm:!p-1.5 !text-[10px] sm:!text-[7px] animate-pulse">SI</button>}
       </div>
       {showCompleteModal && createPortal(
         <div

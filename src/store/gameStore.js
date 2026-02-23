@@ -256,6 +256,75 @@ const useGameStore = create(
         get()._checkAchievements();
       },
 
+      /**
+       * Corrige el día anterior (ayer) abriendo las mismas opciones de completado
+       * que hoy, pero ajustando el multiplicador como si ayer se hubiera marcado
+       * como fallo (-0.4) y ahora:
+       *  - "menos tiempo" → devuelve ese -0.4 (neto 0.0)
+       *  - "más tiempo" o "completado" → devuelve -0.4 y añade +0.2 (neto +0.2)
+       *
+       * mode: 'partial' | 'over' | 'standard'
+       */
+      retroCompleteYesterday(habitId, mode, minutesDone) {
+        const state = get();
+        const yesterday = getYesterdayKey();
+        const habit = state.habits.find(h => h.id === habitId);
+        if (!habit) return;
+
+        const dayHistory = state.history[yesterday] ?? {};
+        const currentStatus = dayHistory[habitId];
+        // Si ya está marcado como completado (de cualquier tipo), no hacer nada
+        if (currentStatus === 'completed' || currentStatus === 'partial' || currentStatus === 'over') {
+          return;
+        }
+
+        // Duración real usada para el cálculo de puntos
+        const minutes =
+          mode === 'standard'
+            ? habit.minutes
+            : Number(minutesDone);
+        if (!Number.isFinite(minutes) || minutes <= 0) return;
+
+        // Aproximamos el multiplicador "previo al fallo" como mult actual + 0.4
+        const baseMultBeforeFail = parseFloat((habit.multiplier + 0.4).toFixed(1));
+
+        let finalStatus = 'completed';
+        let multDelta = 0.6; // +0.4 por deshacer el fallo, +0.2 por completar
+
+        if (mode === 'partial') {
+          finalStatus = 'partial';
+          multDelta = 0.4; // solo devolvemos el -0.4 del fallo
+        } else if (mode === 'over') {
+          finalStatus = 'over';
+          multDelta = 0.6;
+        } else {
+          finalStatus = 'completed';
+          multDelta = 0.6;
+        }
+
+        // Puntos calculados como si el multiplicador hubiera sido el "correcto" (previo al fallo)
+        const effectiveMultForPoints = baseMultBeforeFail;
+        const earned = Math.round(minutes * effectiveMultForPoints);
+
+        const newMult = parseFloat((habit.multiplier + multDelta).toFixed(1));
+
+        set(state2 => ({
+          points: state2.points + earned,
+          lifetimePoints: state2.lifetimePoints + earned,
+          history: {
+            ...state2.history,
+            [yesterday]: { ...(state2.history[yesterday] ?? {}), [habitId]: finalStatus },
+          },
+          habits: state2.habits.map(h =>
+            h.id === habitId ? { ...h, multiplier: newMult, streak: h.streak + 1 } : h
+          ),
+        }));
+
+        get()._recalcGlobalStreak();
+        get()._checkAchievements();
+        get()._pushNotification('complete', `+${earned} pts — corrección de ayer`);
+      },
+
       failHabit(habitId) {
         const state = get();
         const today = getTodayKey();
