@@ -60,7 +60,12 @@ export default function HabitList() {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {habits.map(habit => (
+          {[
+            // Primero los pendientes de hoy
+            ...habits.filter(h => !todayData[h.id]),
+            // Después los que ya tienen estado hoy (completados / parciales / extra / fallados)
+            ...habits.filter(h => todayData[h.id]),
+          ].map(habit => (
             <HabitCard 
               key={habit.id} 
               habit={habit} 

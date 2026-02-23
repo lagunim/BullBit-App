@@ -9,6 +9,13 @@
     image-rendering: pixelated;
   }
 
+  /* Sutil brillo tipo neón para el texto pixel */
+  .font-pixel {
+    text-shadow:
+      0 0 2px rgba(255, 255, 255, 0.35),
+      0 0 4px currentColor;
+  }
+
   ::-webkit-scrollbar {
     @apply w-2;
   }
@@ -87,6 +94,22 @@
   }
   .tooltip-wrap:hover .tooltip-pixel {
     @apply block;
+  }
+}
+
+@layer components {
+  /* Botones específicos para completar/fallar hábitos (más bajos y anchos) */
+  .btn-habit-base {
+    @apply inline-flex items-center justify-center border-2 shadow-pixel-sm active:translate-y-0.5 active:shadow-pixel text-[10px] sm:text-[8px] cursor-pointer select-none tracking-widest px-3 py-1;
+    min-height: 24px;
+  }
+
+  .btn-habit-complete {
+    @apply btn-habit-base bg-quest-greenDark text-quest-bg border-quest-green;
+  }
+
+  .btn-habit-fail {
+    @apply btn-habit-base bg-quest-redDark text-white border-quest-red;
   }
 }
 

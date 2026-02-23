@@ -99,18 +99,17 @@ export default function HabitCard({ habit, onEdit }) {
                 e.stopPropagation();
                 openCompleteModal();
               }}
-              className="btn-pixel-green flex-[2] text-[12px] sm:text-[10px]"
-              style={{ height: '22px', minHeight: '22px', paddingTop: '2px', paddingBottom: '2px' }}
+              className="btn-habit-complete flex-[2] justify-start gap-2 pl-4 pr-3"
             >
-              ✔
+              <span className="text-[11px]">✔</span>
+              <span className="uppercase text-[9px] sm:text-[8px]">Completar</span>
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 failHabit(habit.id);
               }}
-              className="btn-pixel-red flex-1 text-[12px] sm:text-[10px]"
-              style={{ height: '22px', minHeight: '22px', paddingTop: '2px', paddingBottom: '2px' }}
+              className="btn-habit-fail flex-1"
             >
               ✖
             </button>
