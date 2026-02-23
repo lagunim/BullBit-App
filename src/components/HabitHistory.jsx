@@ -3,7 +3,11 @@ import { getDateKey } from '../utils/gameLogic.js';
 
 const STATUS_STYLE = {
   completed: { bg: 'bg-[#003322]', border: 'border-quest-green', symbol: '✔', text: 'text-quest-green' },
-  failed:    { bg: 'bg-[#330011]', border: 'border-quest-red', symbol: '✖', text: 'text-quest-red' },
+  // Menos tiempo: azul apagado
+  partial:   { bg: 'bg-[#001933]', border: 'border-quest-blue',  symbol: '✔', text: 'text-quest-blue' },
+  // Más tiempo: dorado (tick “especial”)
+  over:      { bg: 'bg-[#332800]', border: 'border-quest-gold',  symbol: '✔', text: 'text-quest-gold' },
+  failed:    { bg: 'bg-[#330011]', border: 'border-quest-red',   symbol: '✖', text: 'text-quest-red' },
   none:      { bg: 'bg-quest-bg', border: 'border-quest-border', symbol: '·', text: 'text-quest-textMuted' },
 };
 
@@ -33,14 +37,24 @@ export default function HabitHistory() {
 
       {/* Legend */}
       <div className="flex gap-4 flex-wrap">
-        {Object.entries(STATUS_STYLE).map(([key, s]) => (
-          <div key={key} className={`flex items-center gap-2 text-[7px] font-pixel ${s.text}`}>
-            <div className={`w-3 h-3 ${s.bg} border ${s.border}`} />
-            <span className="uppercase tracking-tighter">
-              {key === 'completed' ? 'HECHO' : key === 'failed' ? 'FALLO' : 'VACÍO'}
-            </span>
-          </div>
-        ))}
+        {Object.entries(STATUS_STYLE).map(([key, s]) => {
+          const label =
+            key === 'completed'
+              ? 'HECHO'
+              : key === 'partial'
+              ? 'MENOS TIEMPO'
+              : key === 'over'
+              ? 'MÁS TIEMPO'
+              : key === 'failed'
+              ? 'FALLO'
+              : 'VACÍO';
+          return (
+            <div key={key} className={`flex items-center gap-2 text-[7px] font-pixel ${s.text}`}>
+              <div className={`w-3 h-3 ${s.bg} border ${s.border}`} />
+              <span className="uppercase tracking-tighter">{label}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Grid-based History Table */}
@@ -73,7 +87,12 @@ export default function HabitHistory() {
                     const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
                     const isToday = d === getDateKey(0);
                     return (
-                      <div key={d} className={`w-5 h-5 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''}`}>
+                      <div
+                        key={d}
+                        className={`w-5 h-5 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
+                          isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
+                        }`}
+                      >
                         {s.symbol}
                       </div>
                     );
@@ -88,7 +107,10 @@ export default function HabitHistory() {
       {/* Detailed Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         {habits.map(habit => {
-          const completed = dates.filter(d => history[d]?.[habit.id] === 'completed').length;
+          const isCompletedStatus = (status) =>
+            status === 'completed' || status === 'partial' || status === 'over';
+
+          const completed = dates.filter(d => isCompletedStatus(history[d]?.[habit.id])).length;
           const failed = dates.filter(d => history[d]?.[habit.id] === 'failed').length;
           const rate = completed + failed > 0 ? Math.round((completed / (completed + failed)) * 100) : 0;
           return (

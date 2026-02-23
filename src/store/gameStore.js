@@ -20,7 +20,7 @@ const useGameStore = create(
       level: 0,
       points: 0,
       lifetimePoints: 0,
-      history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'skipped' } }
+      history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'partial' | 'over' | 'skipped' } }
       globalStreak: 0,
 
       // Gamification
@@ -115,6 +115,143 @@ const useGameStore = create(
         }));
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
+        get()._recalcGlobalStreak();
+        get()._checkAchievements();
+      },
+
+      /**
+       * Mark habit as done for LESS time than configured.
+       * - Uses the actual minutes provided for points.
+       * - DOES NOT change the habit multiplier.
+       * - Keeps/extends the streak.
+       * - History status: "partial" (shown en amarillo).
+       */
+      completeHabitPartial(habitId, minutesDone) {
+        const state = get();
+        const today = getTodayKey();
+        const habit = state.habits.find(h => h.id === habitId);
+        if (!habit) return;
+        if (state.history[today]?.[habitId]) return; // already resolved today
+
+        const activeEffects = state._getActiveEffects();
+
+        // Points calculation reusing the same bonus effects as calcPoints,
+        // but with the real minutes done.
+        const basePoints = minutesDone * habit.multiplier;
+        let bonusMult = 1;
+        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+        if (activeEffects.some(e => e.key === 'next_triple')) bonusMult *= 3;
+        const earned = Math.round(basePoints * bonusMult);
+
+        const newPoints = state.points + earned;
+        const newLifetime = state.lifetimePoints + earned;
+
+        // Consume "next_triple" if present
+        const nextEffects = state.activeEffects.filter(e => e.key !== 'next_triple');
+
+        // Update history
+        const newHistory = {
+          ...state.history,
+          [today]: { ...(state.history[today] ?? {}), [habitId]: 'partial' },
+        };
+
+        // Level up check
+        const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
+        let finalLevel = state.level;
+        let finalPoints = newPoints;
+        let levelUpMsg = null;
+
+        if (newPoints >= threshold) {
+          finalLevel = state.level + 1;
+          finalPoints = newPoints - threshold;
+          levelUpMsg = `¡NIVEL ${finalLevel} ALCANZADO!`;
+        }
+
+        set(state2 => ({
+          habits: state2.habits.map(h =>
+            h.id === habitId
+              ? { ...h, streak: h.streak + 1 }
+              : h
+          ),
+          points: finalPoints,
+          lifetimePoints: newLifetime,
+          level: finalLevel,
+          history: newHistory,
+          activeEffects: nextEffects,
+          notifications: levelUpMsg
+            ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
+            : state2.notifications,
+        }));
+
+        get()._pushNotification('complete', `+${earned} pts — ×${habit.multiplier.toFixed(1)} (parcial)`);
+        get()._recalcGlobalStreak();
+        get()._checkAchievements();
+      },
+
+      /**
+       * Mark habit as done for MORE time than configured.
+       * - Uses the actual minutes provided for points.
+       * - Multiplier increases as in a normal completion.
+       * - History status: "over" (tick violeta).
+       */
+      completeHabitOvertime(habitId, minutesDone) {
+        const state = get();
+        const today = getTodayKey();
+        const habit = state.habits.find(h => h.id === habitId);
+        if (!habit) return;
+        if (state.history[today]?.[habitId]) return; // already resolved today
+
+        const activeEffects = state._getActiveEffects();
+
+        // Points based on real minutes done, preserving bonus effects.
+        const basePoints = minutesDone * habit.multiplier;
+        let bonusMult = 1;
+        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+        if (activeEffects.some(e => e.key === 'next_triple')) bonusMult *= 3;
+        const earned = Math.round(basePoints * bonusMult);
+
+        const newMult = calcMultiplierOnComplete(habit, activeEffects);
+        const newPoints = state.points + earned;
+        const newLifetime = state.lifetimePoints + earned;
+
+        // Consume "next_triple" if present
+        const nextEffects = state.activeEffects.filter(e => e.key !== 'next_triple');
+
+        // Update history
+        const newHistory = {
+          ...state.history,
+          [today]: { ...(state.history[today] ?? {}), [habitId]: 'over' },
+        };
+
+        // Level up check
+        const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
+        let finalLevel = state.level;
+        let finalPoints = newPoints;
+        let levelUpMsg = null;
+
+        if (newPoints >= threshold) {
+          finalLevel = state.level + 1;
+          finalPoints = newPoints - threshold;
+          levelUpMsg = `¡NIVEL ${finalLevel} ALCANZADO!`;
+        }
+
+        set(state2 => ({
+          habits: state2.habits.map(h =>
+            h.id === habitId
+              ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+              : h
+          ),
+          points: finalPoints,
+          lifetimePoints: newLifetime,
+          level: finalLevel,
+          history: newHistory,
+          activeEffects: nextEffects,
+          notifications: levelUpMsg
+            ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
+            : state2.notifications,
+        }));
+
+        get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
         get()._recalcGlobalStreak();
         get()._checkAchievements();
       },

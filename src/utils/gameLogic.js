@@ -79,6 +79,10 @@ export function getHabitRecentHistory(habitId, history, days = 14) {
 export function calcGlobalStreak(habits, history) {
   if (habits.length === 0) return 0;
   let streak = 0;
+
+  const isCompletedStatus = (status) =>
+    status === 'completed' || status === 'partial' || status === 'over';
+
   for (let i = 1; i <= 365; i++) {
     const key = getDateKey(i);
     const day = history[key];
@@ -87,7 +91,7 @@ export function calcGlobalStreak(habits, history) {
     const dueHabits = habits.filter(h => isHabitDueOnDate(h, key));
     if (dueHabits.length === 0) continue;
 
-    const allCompleted = dueHabits.every(h => day[h.id] === 'completed');
+    const allCompleted = dueHabits.every(h => isCompletedStatus(day[h.id]));
     if (allCompleted) streak++;
     else break;
   }
