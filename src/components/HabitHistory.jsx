@@ -36,10 +36,36 @@ export default function HabitHistory() {
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
-  const deriveStatus = (date, habitId) => {
+  function getCreatedKey(habit) {
+    const direct = (habit.createdAt || '').slice(0, 10);
+    if (direct) return direct;
+
+    // Si no hay createdAt (hábitos antiguos), inferimos la primera fecha
+    // en la que aparece en el historial.
+    let firstKey = null;
+    for (const dateKey of Object.keys(history)) {
+      const day = history[dateKey];
+      if (day && day[habit.id]) {
+        if (!firstKey || dateKey < firstKey) {
+          firstKey = dateKey;
+        }
+      }
+    }
+    return firstKey;
+  }
+
+  const deriveStatus = (date, habit) => {
+    const habitId = habit.id;
     const rawStatus = history[date]?.[habitId] ?? 'none';
     const isToday = date === todayKey;
     const isFuture = date > todayKey;
+    const createdKey = getCreatedKey(habit);
+    const isBeforeCreation = createdKey && date < createdKey;
+
+    if (isBeforeCreation) {
+      // El hábito no existía aún en esta fecha: se muestra vacío/neutro.
+      return 'none';
+    }
 
     if (rawStatus === 'none' && !isToday && !isFuture) {
       // Pasado sin registro explícito = fallo automático
@@ -95,10 +121,10 @@ export default function HabitHistory() {
     : 'text-quest-text';
 
   const detailCompleted = detailHabit
-    ? dates.filter(d => isCompletedStatus(deriveStatus(d, detailHabit.id))).length
+    ? dates.filter(d => isCompletedStatus(deriveStatus(d, detailHabit))).length
     : 0;
   const detailFailed = detailHabit
-    ? dates.filter(d => deriveStatus(d, detailHabit.id) === 'failed').length
+    ? dates.filter(d => deriveStatus(d, detailHabit) === 'failed').length
     : 0;
   const detailRate =
     detailCompleted + detailFailed > 0
@@ -174,42 +200,47 @@ export default function HabitHistory() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            {habits.map(habit => (
-              <div key={habit.id} className="flex items-center">
-                <div className="w-32 shrink-0 text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none">
-                  {habit.emoji} {habit.name}
-                </div>
-                <div className="flex-1 flex justify-around">
-                  {dates.map(d => {
-                    const rawStatus = history[d]?.[habit.id] ?? 'none';
-                    const status = deriveStatus(d, habit.id);
-                    const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
-                    const isToday = d === todayKey;
-                    const isFuture = d > todayKey;
-                    const isEditableYesterday =
-                      d === yesterdayKey &&
-                      !isFuture &&
-                      !(rawStatus === 'completed' || rawStatus === 'partial' || rawStatus === 'over');
+            {habits.map(habit => {
+              const createdKey = getCreatedKey(habit);
+              return (
+                <div key={habit.id} className="flex items-center">
+                  <div className="w-32 shrink-0 text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none">
+                    {habit.emoji} {habit.name}
+                  </div>
+                  <div className="flex-1 flex justify-around">
+                    {dates.map(d => {
+                      const rawStatus = history[d]?.[habit.id] ?? 'none';
+                      const status = deriveStatus(d, habit);
+                      const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
+                      const isToday = d === todayKey;
+                      const isFuture = d > todayKey;
+                      const isBeforeCreation = createdKey && d < createdKey;
+                      const isEditableYesterday =
+                        d === yesterdayKey &&
+                        !isFuture &&
+                        !isBeforeCreation &&
+                        !(rawStatus === 'completed' || rawStatus === 'partial' || rawStatus === 'over');
 
-                    return (
-                      <div
-                        key={d}
-                        onClick={() => {
-                          if (isEditableYesterday) {
-                            openRetroModal(habit);
-                          }
-                        }}
-                        className={`w-5 h-5 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
-                          isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
-                        } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
-                      >
-                        {s.symbol}
-                      </div>
-                    );
-                  })}
+                      return (
+                        <div
+                          key={d}
+                          onClick={() => {
+                            if (isEditableYesterday) {
+                              openRetroModal(habit);
+                            }
+                          }}
+                          className={`w-5 h-5 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
+                            isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
+                          } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
+                        >
+                          {s.symbol}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -217,8 +248,8 @@ export default function HabitHistory() {
       {/* Detailed Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
         {habits.map(habit => {
-          const completed = dates.filter(d => isCompletedStatus(deriveStatus(d, habit.id))).length;
-          const failed = dates.filter(d => deriveStatus(d, habit.id) === 'failed').length;
+          const completed = dates.filter(d => isCompletedStatus(deriveStatus(d, habit))).length;
+          const failed = dates.filter(d => deriveStatus(d, habit) === 'failed').length;
           const rate = completed + failed > 0 ? Math.round((completed / (completed + failed)) * 100) : 0;
           return (
             <div

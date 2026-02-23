@@ -116,7 +116,13 @@ export default function HabitCard({ habit, onEdit }) {
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
-          onClick={(e) => e.target === e.currentTarget && closeCompleteModal()}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeCompleteModal();
+            }
+            // Evita que los clics dentro del modal disparen el onClick de la tarjeta
+            e.stopPropagation();
+          }}
           onKeyDown={(e) => {
             if ((e.key === 'Escape' || e.key === 'Esc') && e.target === e.currentTarget) {
               closeCompleteModal();
