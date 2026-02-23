@@ -65,32 +65,41 @@ export default function HabitCard({ habit, onEdit }) {
 
   return (
     <div
-      className={`anim-slide-in card-pixel flex items-center gap-3 !p-4 sm:!p-2 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}
+      className={`anim-slide-in card-pixel flex flex-col gap-2 !p-4 sm:!p-3 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}
       onClick={onEdit}
     >
-      {/* Emoji */}
-      <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">{habit.emoji}</div>
-
-      <div className="flex-1 min-w-0">
-        <div className="text-[9px] text-quest-text mb-0.5 truncate uppercase tracking-tight">
-          {habit.name}
+      {/* Cabecera: icono, nombre, racha, multiplicador a la derecha */}
+      <div className="flex items-center gap-2 w-full">
+        <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">
+          {habit.emoji}
         </div>
-        <div className="flex gap-3 items-center">
-            <span className={`text-[8px] font-pixel ${multColorClass}`}>×{(habit.multiplier ?? 1).toFixed(1)}</span>
-            {habit.streak > 0 && <span className="text-[7px] text-quest-orange flex items-center gap-0.5 font-pixel">🔥{habit.streak}</span>}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="text-[9px] text-quest-text truncate uppercase tracking-tight">
+            {habit.name}
+          </div>
+          {habit.streak > 0 && (
+            <span className="text-[8px] text-quest-orange flex items-center gap-0.5 font-pixel shrink-0">
+              🔥{habit.streak}
+            </span>
+          )}
         </div>
+        <span
+          className={`ml-auto text-[9px] font-pixel ${multColorClass} shrink-0`}
+        >
+          ×{(habit.multiplier ?? 1).toFixed(1)}
+        </span>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2 items-center min-h-[52px] sm:min-h-[40px]">
+      {/* Botones de acción debajo, ocupando todo el ancho */}
+      <div className="mt-1 w-full">
         {!isDetermined ? (
-          <>
+          <div className="flex gap-2 w-full min-h-[44px]">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 openCompleteModal();
               }}
-              className="btn-pixel-green !px-6 !py-4 sm:!px-3 sm:!py-2 !text-[16px] sm:!text-[10px] min-w-[56px] min-h-[44px]"
+              className="btn-pixel-green flex-[2] text-[14px] sm:text-[10px] py-2"
             >
               ✔
             </button>
@@ -99,14 +108,22 @@ export default function HabitCard({ habit, onEdit }) {
                 e.stopPropagation();
                 failHabit(habit.id);
               }}
-              className="btn-pixel-red !px-6 !py-4 sm:!px-3 sm:!py-2 !text-[16px] sm:!text-[10px] min-w-[56px] min-h-[44px]"
+              className="btn-pixel-red flex-1 text-[14px] sm:text-[10px] py-2"
             >
               ✖
             </button>
-          </>
+          </div>
         ) : (
-          <div className={`px-2 py-1.5 text-[7px] font-pixel border shadow-pixel-sm ${isDone ? 'text-quest-green border-quest-green bg-[#003322]' : 'text-quest-red border-quest-red bg-[#330011]'}`}>
-            {isDone ? '✔' : '✖'}
+          <div className="w-full flex justify-center">
+            <div
+              className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${
+                isDone
+                  ? 'text-quest-green border-quest-green bg-[#003322]'
+                  : 'text-quest-red border-quest-red bg-[#330011]'
+              }`}
+            >
+              {isDone ? '✔ Hábito resuelto' : '✖ Hábito fallado'}
+            </div>
           </div>
         )}
       </div>
