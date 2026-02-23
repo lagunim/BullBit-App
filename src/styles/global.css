@@ -100,8 +100,8 @@
 @layer components {
   /* Botones específicos para completar/fallar hábitos (más bajos y anchos) */
   .btn-habit-base {
-    @apply inline-flex items-center justify-center border-2 shadow-pixel-sm active:translate-y-0.5 active:shadow-pixel text-[10px] sm:text-[8px] cursor-pointer select-none tracking-widest px-3 py-1;
-    min-height: 24px;
+    @apply inline-flex items-center justify-center border-2 shadow-pixel-sm active:translate-y-0.5 active:shadow-pixel text-[10px] sm:text-[8px] cursor-pointer select-none tracking-widest px-4 py-2;
+    min-height: 36px;
   }
 
   .btn-habit-complete {

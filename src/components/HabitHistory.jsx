@@ -182,10 +182,12 @@ export default function HabitHistory() {
       </div>
 
       {/* Grid-based History Table */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="min-w-[480px]">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
+        <div className="min-w-[420px]">
           <div className="flex border-b-2 border-quest-border pb-2 mb-2">
-            <div className="w-32 shrink-0 text-[7px] text-quest-textMuted font-pixel tracking-tighter uppercase self-end">Hábito</div>
+            <div className="w-32 shrink-0 text-[7px] text-quest-textMuted font-pixel tracking-tighter uppercase self-end sticky left-0 z-10 bg-quest-panel">
+              Hábito
+            </div>
             <div className="flex-1 flex justify-around">
               {dates.map(d => {
                 const short = d.slice(8); // DD only
@@ -204,7 +206,7 @@ export default function HabitHistory() {
               const createdKey = getCreatedKey(habit);
               return (
                 <div key={habit.id} className="flex items-center">
-                  <div className="w-32 shrink-0 text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none">
+                  <div className="w-32 shrink-0 text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel">
                     {habit.emoji} {habit.name}
                   </div>
                   <div className="flex-1 flex justify-around">
@@ -229,7 +231,7 @@ export default function HabitHistory() {
                               openRetroModal(habit);
                             }
                           }}
-                          className={`w-5 h-5 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
+                          className={`w-6 h-6 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
                             isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
                           } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
                         >
@@ -246,7 +248,7 @@ export default function HabitHistory() {
       </div>
 
       {/* Detailed Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+      <div className="grid grid-cols-2 gap-3 mt-2">
         {habits.map(habit => {
           const completed = dates.filter(d => isCompletedStatus(deriveStatus(d, habit))).length;
           const failed = dates.filter(d => deriveStatus(d, habit) === 'failed').length;
@@ -260,11 +262,11 @@ export default function HabitHistory() {
                 setDeleteConfirm(false);
               }}
             >
-              <div className="text-[8px] font-pixel mb-3 flex items-center gap-2 uppercase tracking-tighter border-b border-quest-border pb-2">
+              <div className="text-[10px] sm:text-[8px] font-pixel mb-3 flex items-center gap-2 uppercase tracking-tighter border-b border-quest-border pb-2">
                 <span>{habit.emoji}</span>
                 <span className="truncate">{habit.name}</span>
               </div>
-              <div className="grid grid-cols-2 gap-y-2 text-[7px] font-pixel uppercase tracking-tighter">
+              <div className="grid grid-cols-2 gap-y-2 text-[9px] sm:text-[7px] font-pixel uppercase tracking-tighter">
                 <div className="text-quest-textDim">COMPLETADOS:</div>
                 <div className="text-quest-green text-right">{completed}</div>
                 <div className="text-quest-textDim">FALLADOS:</div>
