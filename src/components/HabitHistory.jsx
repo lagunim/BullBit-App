@@ -441,6 +441,7 @@ export default function HabitHistory() {
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     max={480}
                     className="input-pixel !w-24 text-center"

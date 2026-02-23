@@ -70,6 +70,7 @@ export default function AddHabitModal({ onClose }) {
             <input
               className="input-pixel !w-24 text-center"
               type="number"
+              inputMode="numeric"
               min={1} max={480}
               value={form.minutes}
               onChange={e => setForm(f => ({ ...f, minutes: Number(e.target.value) }))}
