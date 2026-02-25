@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { getDateKey } from '../utils/gameLogic.js';
@@ -21,7 +21,8 @@ export default function HabitHistory() {
   const removeHabit = useGameStore(s => s.removeHabit);
 
   const DAYS = 14; // Showing 14 días para mejor encaje en móvil
-  const dates = Array.from({ length: DAYS }, (_, i) => getDateKey(DAYS - 1 - i));
+  // Día actual a la izquierda (i=0), días más antiguos a la derecha
+  const dates = Array.from({ length: DAYS }, (_, i) => getDateKey(i));
   const todayKey = getDateKey(0);
   const yesterdayKey = getDateKey(1);
 
@@ -183,67 +184,68 @@ export default function HabitHistory() {
 
       {/* Grid-based History Table */}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
-        <div className="min-w-[420px]">
-          <div className="flex border-b-2 border-quest-border pb-2 mb-2">
-            <div className="w-32 shrink-0 text-[7px] text-quest-textMuted font-pixel tracking-tighter uppercase self-end sticky left-0 z-10 bg-quest-panel">
-              Hábito
-            </div>
-            <div className="flex-1 flex justify-around">
-              {dates.map(d => {
-                const short = d.slice(8); // DD only
-                const isToday = d === todayKey;
-                return (
-                  <div key={d} className={`text-[6px] font-pixel text-center ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}>
-                    {short}
-                  </div>
-                );
-              })}
-            </div>
+        <div
+          className="min-w-[420px] gap-y-1.5"
+          style={{ display: 'grid', gridTemplateColumns: `128px repeat(${DAYS}, 28px)` }}
+        >
+          <div className="text-[7px] text-quest-textMuted font-pixel tracking-tighter uppercase self-end sticky left-0 z-10 bg-quest-panel py-1 border-b-2 border-quest-border pb-2 mb-1">
+            Hábito
           </div>
+          {dates.map(d => {
+            const short = d.slice(8); // DD only
+            const isToday = d === todayKey;
+            return (
+              <div
+                key={d}
+                className={`text-[6px] font-pixel text-center self-end py-1 border-b-2 border-quest-border pb-2 mb-1 ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}
+              >
+                {short}
+              </div>
+            );
+          })}
 
-          <div className="flex flex-col gap-1.5">
-            {habits.map(habit => {
-              const createdKey = getCreatedKey(habit);
-              return (
-                <div key={habit.id} className="flex items-center">
-                  <div className="w-32 shrink-0 text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel">
-                    {habit.emoji} {habit.name}
-                  </div>
-                  <div className="flex-1 flex justify-around">
-                    {dates.map(d => {
-                      const rawStatus = history[d]?.[habit.id] ?? 'none';
-                      const status = deriveStatus(d, habit);
-                      const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
-                      const isToday = d === todayKey;
-                      const isFuture = d > todayKey;
-                      const isBeforeCreation = createdKey && d < createdKey;
-                      const isEditableYesterday =
-                        d === yesterdayKey &&
-                        !isFuture &&
-                        !isBeforeCreation &&
-                        !(rawStatus === 'completed' || rawStatus === 'partial' || rawStatus === 'over');
-
-                      return (
-                        <div
-                          key={d}
-                          onClick={() => {
-                            if (isEditableYesterday) {
-                              openRetroModal(habit);
-                            }
-                          }}
-                          className={`w-6 h-6 flex items-center justify-center text-[9px] border transition-all ${s.bg} ${s.border} ${s.text} ${
-                            isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
-                          } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
-                        >
-                          {s.symbol}
-                        </div>
-                      );
-                    })}
-                  </div>
+          {habits.map(habit => {
+            const createdKey = getCreatedKey(habit);
+            return (
+              <Fragment key={habit.id}>
+                <div
+                  key={`${habit.id}-label`}
+                  className="text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel flex items-center"
+                >
+                  {habit.emoji} {habit.name}
                 </div>
-              );
-            })}
-          </div>
+                {dates.map(d => {
+                  const rawStatus = history[d]?.[habit.id] ?? 'none';
+                  const status = deriveStatus(d, habit);
+                  const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
+                  const isToday = d === todayKey;
+                  const isFuture = d > todayKey;
+                  const isBeforeCreation = createdKey && d < createdKey;
+                  const isEditableYesterday =
+                    d === yesterdayKey &&
+                    !isFuture &&
+                    !isBeforeCreation &&
+                    !(rawStatus === 'completed' || rawStatus === 'partial' || rawStatus === 'over');
+
+                  return (
+                    <div
+                      key={d}
+                      onClick={() => {
+                        if (isEditableYesterday) {
+                          openRetroModal(habit);
+                        }
+                      }}
+                      className={`w-6 h-6 flex items-center justify-center text-[9px] border transition-all justify-self-center ${s.bg} ${s.border} ${s.text} ${
+                        isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
+                      } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
+                    >
+                      {s.symbol}
+                    </div>
+                  );
+                })}
+              </Fragment>
+            );
+          })}
         </div>
       </div>
 
