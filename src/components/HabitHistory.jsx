@@ -27,7 +27,6 @@ export default function HabitHistory() {
   const yesterdayKey = getDateKey(1);
 
   const [retroHabit, setRetroHabit] = useState(null);
-  const [completionMode, setCompletionMode] = useState(null); // 'partial' | 'over'
   const [customMinutes, setCustomMinutes] = useState('');
   const [customError, setCustomError] = useState('');
   const [detailHabit, setDetailHabit] = useState(null);
@@ -82,31 +81,29 @@ export default function HabitHistory() {
 
   function openRetroModal(habit) {
     setRetroHabit(habit);
-    setCompletionMode(null);
-    setCustomMinutes(habit.minutes);
+    setCustomMinutes('');
     setCustomError('');
   }
 
   function closeRetroModal() {
     setRetroHabit(null);
-    setCompletionMode(null);
     setCustomError('');
   }
 
-  function handleRetroStandard() {
+  function handleRetroComplete() {
     if (!retroHabit) return;
-    retroCompleteYesterday(retroHabit.id, 'standard', retroHabit.minutes);
-    closeRetroModal();
-  }
-
-  function handleRetroCustom() {
-    if (!retroHabit || !completionMode) return;
-    const minutes = Number(customMinutes);
+    const trimmed = String(customMinutes).trim();
+    if (!trimmed) {
+      retroCompleteYesterday(retroHabit.id, 'standard', retroHabit.minutes);
+      closeRetroModal();
+      return;
+    }
+    const minutes = Number(trimmed);
     if (!Number.isFinite(minutes) || minutes <= 0) {
       setCustomError('Introduce un número de minutos válido.');
       return;
     }
-    const mode = completionMode === 'partial' ? 'partial' : 'over';
+    const mode = minutes < retroHabit.minutes ? 'partial' : 'over';
     retroCompleteYesterday(retroHabit.id, mode, minutes);
     closeRetroModal();
   }
@@ -415,74 +412,37 @@ export default function HabitHistory() {
               </div>
             </div>
 
-            {!completionMode && (
-              <div className="space-y-2">
-                <button
-                  onClick={() => setCompletionMode('partial')}
-                  className="btn-pixel-blue w-full text-[9px] py-3"
-                >
-                  Hecho, pero por un tiempo menor
-                </button>
-                <button
-                  onClick={() => setCompletionMode('over')}
-                  className="btn-pixel-gold w-full text-[9px] py-3 text-quest-bg"
-                >
-                  Completado por más tiempo
-                </button>
-                <button
-                  onClick={handleRetroStandard}
-                  className="btn-pixel-green w-full text-[9px] py-3"
-                >
-                  Hábito completado
-                </button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={480}
+                  placeholder={String(retroHabit?.minutes)}
+                  className="input-pixel !w-24 text-center"
+                  value={customMinutes}
+                  onChange={(e) => {
+                    setCustomMinutes(e.target.value);
+                    setCustomError('');
+                  }}
+                />
+                <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
+                  minutos (opcional)
+                </span>
               </div>
-            )}
-
-            {completionMode && (
-              <div className="space-y-3">
-                <div className="text-[8px] text-quest-textDim font-pixel uppercase tracking-widest">
-                  {completionMode === 'partial'
-                    ? 'Indica cuántos minutos hiciste ayer (NO añade extra al multiplicador, solo corrige el fallo).'
-                    : 'Indica cuántos minutos hiciste ayer (se premia el extra y se corrige el fallo).'}
+              {customError && (
+                <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
+                  {customError}
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={480}
-                    className="input-pixel !w-24 text-center"
-                    value={customMinutes}
-                    onChange={(e) => setCustomMinutes(e.target.value)}
-                  />
-                  <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
-                    minutos reales ayer
-                  </span>
-                </div>
-                {customError && (
-                  <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
-                    {customError}
-                  </div>
-                )}
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={() => {
-                      setCompletionMode(null);
-                      setCustomError('');
-                    }}
-                    className="btn-pixel-gray flex-1 text-[9px]"
-                  >
-                    Volver
-                  </button>
-                  <button
-                    onClick={handleRetroCustom}
-                    className="btn-pixel-green flex-[1.5] text-[9px]"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+              <button
+                onClick={handleRetroComplete}
+                className="btn-pixel-green w-full text-[9px] py-3"
+              >
+                Hábito completado
+              </button>
+            </div>
           </div>
         </div>,
         document.body
