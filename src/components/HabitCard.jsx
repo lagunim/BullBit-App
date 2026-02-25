@@ -10,8 +10,7 @@ export default function HabitCard({ habit, onEdit }) {
   const completeHabitOvertime = useGameStore(s => s.completeHabitOvertime);
   const failHabit = useGameStore(s => s.failHabit);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [completionMode, setCompletionMode] = useState(null); // 'partial' | 'over'
-  const [customMinutes, setCustomMinutes] = useState(habit.minutes);
+  const [customMinutes, setCustomMinutes] = useState('');
   const [customError, setCustomError] = useState('');
 
   const today = getTodayKey();
@@ -31,33 +30,32 @@ export default function HabitCard({ habit, onEdit }) {
 
   function openCompleteModal() {
     setShowCompleteModal(true);
-    setCompletionMode(null);
-    setCustomMinutes(habit.minutes);
+    setCustomMinutes('');
     setCustomError('');
   }
 
   function closeCompleteModal() {
     setShowCompleteModal(false);
-    setCompletionMode(null);
+    setCustomMinutes('');
     setCustomError('');
   }
 
-  function handleConfirmStandard() {
-    completeHabit(habit.id);
-    closeCompleteModal();
-  }
-
-  function handleConfirmCustom() {
-    const minutes = Number(customMinutes);
+  function handleHabitCompleted() {
+    const trimmed = String(customMinutes).trim();
+    if (!trimmed) {
+      // Sin valor: usar puntos por defecto del hábito
+      completeHabit(habit.id);
+      closeCompleteModal();
+      return;
+    }
+    const minutes = Number(trimmed);
     if (!Number.isFinite(minutes) || minutes <= 0) {
       setCustomError('Introduce un número de minutos válido.');
       return;
     }
-    if (!completionMode) return;
-
-    if (completionMode === 'partial') {
+    if (minutes < habit.minutes) {
       completeHabitPartial(habit.id, minutes);
-    } else if (completionMode === 'over') {
+    } else {
       completeHabitOvertime(habit.id, minutes);
     }
     closeCompleteModal();
@@ -170,74 +168,37 @@ export default function HabitCard({ habit, onEdit }) {
               </div>
             </div>
 
-            {!completionMode && (
-              <div className="space-y-2">
-                <button
-                  onClick={() => setCompletionMode('partial')}
-                  className="btn-pixel-blue w-full text-[9px] py-3"
-                >
-                  Hecho, pero por un tiempo menor
-                </button>
-                <button
-                  onClick={() => setCompletionMode('over')}
-                  className="btn-pixel-gold w-full text-[9px] py-3 text-quest-bg"
-                >
-                  Completado por más tiempo
-                </button>
-                <button
-                  onClick={handleConfirmStandard}
-                  className="btn-pixel-green w-full text-[9px] py-3"
-                >
-                  Hábito completado
-                </button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={480}
+                  placeholder={String(habit.minutes)}
+                  className="input-pixel !w-24 text-center"
+                  value={customMinutes}
+                  onChange={(e) => {
+                    setCustomMinutes(e.target.value);
+                    setCustomError('');
+                  }}
+                />
+                <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
+                  minutos (opcional)
+                </span>
               </div>
-            )}
-
-            {completionMode && (
-              <div className="space-y-3">
-                <div className="text-[8px] text-quest-textDim font-pixel uppercase tracking-widest">
-                  {completionMode === 'partial'
-                    ? 'Indica cuántos minutos hiciste (NO cambia el multiplicador).'
-                    : 'Indica cuántos minutos hiciste (se premia el extra).'}
+              {customError && (
+                <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
+                  {customError}
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={480}
-                    className="input-pixel !w-24 text-center"
-                    value={customMinutes}
-                    onChange={(e) => setCustomMinutes(e.target.value)}
-                  />
-                  <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
-                    minutos reales hoy
-                  </span>
-                </div>
-                {customError && (
-                  <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
-                    {customError}
-                  </div>
-                )}
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={() => {
-                      setCompletionMode(null);
-                      setCustomError('');
-                    }}
-                    className="btn-pixel-gray flex-1 text-[9px]"
-                  >
-                    Volver
-                  </button>
-                  <button
-                    onClick={handleConfirmCustom}
-                    className="btn-pixel-green flex-[1.5] text-[9px]"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+              <button
+                onClick={handleHabitCompleted}
+                className="btn-pixel-green w-full text-[9px] py-3"
+              >
+                Hábito completado
+              </button>
+            </div>
           </div>
         </div>,
         document.body
