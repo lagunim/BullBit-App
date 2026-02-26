@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation.js';
 import Header from './Header.jsx';
 import LevelProgress from './LevelProgress.jsx';
 import HabitList from './HabitList.jsx';
@@ -100,11 +101,17 @@ export default function App() {
     { id: 'achieve',   label: 'LOGROS',    icon: '🏆' },
   ];
 
+  const swipeHandlers = useSwipeNavigation(tabs, tab, setTab);
+
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
       <Header />
 
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto touch-pan-y"
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchEnd={swipeHandlers.onTouchEnd}
+      >
         <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
           {tab === 'home' && (
             <div className="anim-fade-in">
