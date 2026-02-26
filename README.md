@@ -3,8 +3,13 @@
 ## Setup
 ```bash
 npm install
+cp .env.example .env   # Edita .env con tus credenciales de Supabase
 npm run dev
 ```
+
+Variables de entorno requeridas (ver `.env.example`):
+- `PUBLIC_SUPABASE_URL` - URL de tu proyecto Supabase
+- `PUBLIC_SUPABASE_ANON_KEY` - Clave anónima de Supabase
 
 ## Tech Stack
 - Astro 4 + React 18 + Tailwind CSS 3

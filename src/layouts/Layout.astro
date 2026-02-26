@@ -5,10 +5,6 @@ interface Props {
   title?: string;
 }
 const { title = "HABIT QUEST" } = Astro.props;
-console.log(
-  "SSR Check - Supabase URL exists:",
-  !!import.meta.env.PUBLIC_SUPABASE_URL,
-);
 ---
 
 <!doctype html>
