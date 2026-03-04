@@ -1,5 +1,5 @@
 import useGameStore from '../store/gameStore.js';
-import { getTodayKey } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitExpired } from '../utils/gameLogic.js';
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
@@ -9,18 +9,26 @@ export default function HabitCard({ habit, onEdit }) {
   const isDone = todayStatus === 'completed' || todayStatus === 'partial' || todayStatus === 'over';
   const isFailed = todayStatus === 'failed';
   const isDetermined = isDone || isFailed;
+  const isExpired = isHabitExpired(habit, today, history);
 
   const multColorClass = habit.multiplier >= 3 ? 'text-quest-gold'
     : habit.multiplier >= 2  ? 'text-quest-cyan'
     : habit.multiplier >= 1.5 ? 'text-quest-green'
     : 'text-quest-text';
 
-  const borderColorClass = isDone ? 'border-quest-green' : isFailed ? 'border-quest-red' : 'border-quest-border';
-  const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' : isFailed ? 'shadow-[2px_2px_0_#440011]' : 'shadow-pixel-sm';
+  const borderColorClass = isDone ? 'border-quest-green' 
+    : isFailed ? 'border-quest-red' 
+    : isExpired ? 'border-orange-500' 
+    : 'border-quest-border';
+  
+  const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' 
+    : isFailed ? 'shadow-[2px_2px_0_#440011]' 
+    : isExpired ? 'shadow-[2px_2px_0_#ff8800]' 
+    : 'shadow-pixel-sm';
 
   return (
     <div
-      className={`anim-slide-in card-pixel flex flex-col gap-2 !p-4 sm:!p-3 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}
+      className={`anim-slide-in card-pixel flex flex-col gap-2 !p-4 sm:!p-3 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''} ${isExpired ? 'animate-pulse' : ''}`}
       onClick={onEdit}
     >
       <div className="flex items-center gap-2 w-full">
@@ -37,11 +45,16 @@ export default function HabitCard({ habit, onEdit }) {
             </span>
           )}
         </div>
-        <span
-          className={`ml-auto text-[10px] font-pixel ${multColorClass} shrink-0`}
-        >
-          ×{(habit.multiplier ?? 1).toFixed(1)}
-        </span>
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          {isExpired && !isDetermined && (
+            <span className="text-[9px] text-orange-500" title="Hábito expirado">
+              ⚠️
+            </span>
+          )}
+          <span className={`text-[10px] font-pixel ${multColorClass}`}>
+            ×{(habit.multiplier ?? 1).toFixed(1)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-1 w-full">
@@ -59,8 +72,12 @@ export default function HabitCard({ habit, onEdit }) {
           </div>
         ) : (
           <div className="w-full flex justify-center">
-            <div className="px-3 py-2 text-[8px] font-pixel text-quest-textMuted border border-quest-border/50">
-              Toca para abrir opciones
+            <div className={`px-3 py-2 text-[8px] font-pixel border ${
+              isExpired 
+                ? 'text-orange-500 border-orange-500/50 bg-orange-500/10'
+                : 'text-quest-textMuted border-quest-border/50'
+            }`}>
+              {isExpired ? '⚠️ Hábito expirado' : 'Toca para abrir opciones'}
             </div>
           </div>
         )}

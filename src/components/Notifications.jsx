@@ -3,6 +3,7 @@ import useGameStore from '../store/gameStore.js';
 const TYPE_STYLES = {
   complete:    { border: 'border-quest-green', text: 'text-quest-green', icon: '✔' },
   fail:        { border: 'border-quest-red', text: 'text-quest-red', icon: '✖' },
+  auto_fail:   { border: 'border-orange-500', text: 'text-orange-500', icon: '⚠️' },
   achievement: { border: 'border-quest-gold', text: 'text-quest-gold', icon: '★' },
   level:       { border: 'border-quest-purple', text: 'text-quest-purple', icon: '▲' },
   item:        { border: 'border-quest-cyan', text: 'text-quest-cyan', icon: '◆' },

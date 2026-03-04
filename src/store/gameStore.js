@@ -11,6 +11,7 @@ import {
   calcMultiplierOnComplete,
   calcMultiplierOnFail,
   calcGlobalStreak,
+  isHabitDueOnDate,
 } from '../utils/gameLogic.js';
 
 const useGameStore = create(
@@ -71,6 +72,7 @@ const useGameStore = create(
 
       // ── INITIALIZATION ────────────────────────────────────────────
       init() {
+        get()._processExpiredHabits(); // ← NUEVO: Procesar hábitos vencidos
         get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
       },
@@ -490,6 +492,64 @@ const useGameStore = create(
             !e.expiresAt || new Date(e.expiresAt) > now
           ),
         }));
+      },
+
+      _processExpiredHabits() {
+        const state = get();
+        const today = getTodayKey();
+        const yesterday = getYesterdayKey();
+        
+        // Buscar hábitos que estaban programados ayer pero no se completaron
+        const expiredHabits = state.habits.filter(habit => {
+          const wasDueYesterday = isHabitDueOnDate(habit, yesterday);
+          const yesterdayStatus = state.history[yesterday]?.[habit.id];
+          const wasNotResolved = !yesterdayStatus; // No completed, failed, partial, etc.
+          
+          return wasDueYesterday && wasNotResolved;
+        });
+
+        if (expiredHabits.length === 0) return;
+
+        // Marcar como failed automáticamente y aplicar penalizaciones
+        const newHistory = { ...state.history };
+        if (!newHistory[yesterday]) newHistory[yesterday] = {};
+
+        const updatedHabits = [...state.habits];
+        const activeEffects = state._getActiveEffects();
+
+        expiredHabits.forEach(habit => {
+          // Marcar como failed en el historial
+          newHistory[yesterday][habit.id] = 'failed';
+          
+          // Aplicar penalización de multiplicador
+          const newMult = calcMultiplierOnFail(habit, activeEffects);
+          
+          // Actualizar hábito con multiplicador penalizado y streak a 0
+          const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+          if (habitIndex !== -1) {
+            updatedHabits[habitIndex] = {
+              ...updatedHabits[habitIndex],
+              multiplier: newMult,
+              streak: 0
+            };
+          }
+        });
+
+        // Aplicar todos los cambios
+        set({
+          habits: updatedHabits,
+          history: newHistory
+        });
+
+        // Notificar al usuario
+        const message = expiredHabits.length === 1 
+          ? `Hábito "${expiredHabits[0].name}" marcado como fallido automáticamente`
+          : `${expiredHabits.length} hábitos marcados como fallidos automáticamente`;
+        
+        get()._pushNotification('auto_fail', message);
+
+        // Recalcular racha global después de los cambios
+        get()._recalcGlobalStreak();
       },
 
       _recalcGlobalStreak() {

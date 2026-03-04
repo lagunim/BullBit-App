@@ -27,10 +27,114 @@ export function getDateKey(daysAgo = 0) {
 
 export function isHabitDueOnDate(habit, dateStr) {
   const date = new Date(dateStr + 'T12:00:00');
-  if (habit.periodicity === 'daily') return true;
-  if (habit.periodicity === 'weekly') return date.getDay() === 1; // Monday
-  if (habit.periodicity === 'monthly') return date.getDate() === 1;
-  return true;
+  
+  switch (habit.periodicity) {
+    case 'daily':
+      return true;
+      
+    case 'weekly':
+      return date.getDay() === 1; // Monday
+      
+    case 'monthly':
+      return date.getDate() === 1;
+      
+    case 'custom':
+      return _checkCustomPeriodicity(habit, date);
+      
+    default:
+      return true; // Fallback para retrocompatibilidad
+  }
+}
+
+/** Helper function to check custom periodicity */
+function _checkCustomPeriodicity(habit, date) {
+  // Manejo de customDays (ej: "1,3,5" = Lun,Mié,Vie)
+  if (habit.customDays && habit.customDays.trim()) {
+    return _isCustomDaysDue(habit.customDays, date);
+  }
+  
+  // Manejo de customInterval (ej: "3" = cada 3 días desde creación)
+  if (habit.customInterval && habit.customInterval.trim()) {
+    return _isCustomIntervalDue(habit.customInterval, habit.createdAt, date);
+  }
+  
+  return false; // Sin configuración válida
+}
+
+/** Check if today matches any of the custom days (1-7 = Lun-Dom) */
+function _isCustomDaysDue(customDays, date) {
+  try {
+    const validDays = _parseCustomDays(customDays);
+    const todayDay = date.getDay(); // 0=Dom, 1=Lun, 2=Mar, ... 6=Sáb
+    // Convertir de getDay() (0=Dom) a nuestro sistema (1=Lun, 7=Dom)
+    const adjustedDay = todayDay === 0 ? 7 : todayDay;
+    return validDays.includes(adjustedDay);
+  } catch (error) {
+    console.error('Error parsing custom days:', customDays, error);
+    return false;
+  }
+}
+
+/** Check if today matches the custom interval (every N days since creation) */
+function _isCustomIntervalDue(customInterval, createdAt, date) {
+  try {
+    const interval = parseInt(customInterval, 10);
+    if (!Number.isInteger(interval) || interval <= 0) {
+      throw new Error('Invalid interval');
+    }
+    
+    const creationDate = new Date(createdAt);
+    const creationDateKey = creationDate.toISOString().split('T')[0];
+    const creationDateNormalized = new Date(creationDateKey + 'T12:00:00');
+    
+    // Calcular días desde la creación
+    const daysSinceCreation = Math.floor(
+      (date.getTime() - creationDateNormalized.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    
+    // El hábito es debido si han pasado múltiplos exactos del intervalo
+    return daysSinceCreation >= 0 && daysSinceCreation % interval === 0;
+  } catch (error) {
+    console.error('Error parsing custom interval:', customInterval, error);
+    return false;
+  }
+}
+
+/** Parse and validate custom days string (ej: "1,3,5" -> [1,3,5]) */
+function _parseCustomDays(customDays) {
+  const parts = customDays.split(',').map(s => s.trim());
+  const validDays = [];
+  
+  for (const part of parts) {
+    const day = parseInt(part, 10);
+    if (Number.isInteger(day) && day >= 1 && day <= 7) {
+      validDays.push(day);
+    } else {
+      throw new Error(`Invalid day: ${part}`);
+    }
+  }
+  
+  if (validDays.length === 0) {
+    throw new Error('No valid days found');
+  }
+  
+  return [...new Set(validDays)]; // Remove duplicates
+}
+
+/** Check if a habit is currently expired (past its due time today) */
+export function isHabitExpired(habit, today, history) {
+  // Si ya tiene un estado para hoy, no está vencido
+  const todayStatus = history[today]?.[habit.id];
+  if (todayStatus) return false;
+  
+  // Solo puede estar vencido si era debido hoy
+  if (!isHabitDueOnDate(habit, today)) return false;
+  
+  // Verificar si ya pasó la medianoche (00:00)
+  const now = new Date();
+  const todayEnd = new Date(today + 'T23:59:59');
+  
+  return now > todayEnd;
 }
 
 /** Calculate points earned for completing a habit */
