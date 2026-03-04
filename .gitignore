@@ -1,6 +1,8 @@
 node_modules
 docs
 .env
+dist
+.dist
 skills-lock.json
 .agent/skills/vercel-react-best-practices
 .agents/skills/vercel-react-best-practices/AGENTS.md
