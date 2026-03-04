@@ -10,10 +10,16 @@ export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
   const history = useGameStore(s => s.history ?? {});
   const removeHabit = useGameStore(s => s.removeHabit);
+  const completeHabit = useGameStore(s => s.completeHabit);
+  const completeHabitPartial = useGameStore(s => s.completeHabitPartial);
+  const completeHabitOvertime = useGameStore(s => s.completeHabitOvertime);
+  
   const [showModal, setShowModal] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [selectedHabit, setSelectedHabit] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [customError, setCustomError] = useState('');
 
   const today = getTodayKey();
   const todayData = history[today] ?? {};
@@ -25,6 +31,41 @@ export default function HabitList() {
 
   const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const todayName = dayNames[new Date().getDay()];
+
+  function closeSelected() {
+    setSelectedHabit(null);
+    setDeleteConfirm(false);
+    setCustomMinutes('');
+    setCustomError('');
+  }
+
+  function handleComplete() {
+    if (!selectedHabit) return;
+    const trimmed = String(customMinutes).trim();
+    if (!trimmed) {
+      completeHabit(selectedHabit.id);
+      closeSelected();
+      return;
+    }
+    const minutes = Number(trimmed);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      setCustomError('Introduce un número válido.');
+      return;
+    }
+    if (minutes < selectedHabit.minutes) {
+      completeHabitPartial(selectedHabit.id, minutes);
+    } else {
+      completeHabitOvertime(selectedHabit.id, minutes);
+    }
+    closeSelected();
+  }
+
+  function getMultColor(mult) {
+    return mult >= 3 ? 'text-quest-gold'
+      : mult >= 2  ? 'text-quest-cyan'
+      : mult >= 1.5 ? 'text-quest-green'
+      : 'text-quest-text';
+  }
 
   return (
     <div>
@@ -94,8 +135,7 @@ export default function HabitList() {
           tabIndex={-1}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedHabit(null);
-              setDeleteConfirm(false);
+              closeSelected();
             }
           }}
         >
@@ -106,10 +146,7 @@ export default function HabitList() {
                 <span className="truncate">{selectedHabit.name}</span>
               </div>
               <button
-                onClick={() => {
-                  setSelectedHabit(null);
-                  setDeleteConfirm(false);
-                }}
+                onClick={closeSelected}
                 className="btn-pixel-gray !py-2 !px-3 !text-[10px]"
               >
                 ✕
@@ -120,7 +157,7 @@ export default function HabitList() {
               <div className="text-quest-textDim">Duración:</div>
               <div className="text-quest-green text-right">{selectedHabit.minutes} min</div>
               <div className="text-quest-textDim">Multiplicador actual:</div>
-              <div className="text-quest-gold text-right">×{(selectedHabit.multiplier ?? 1).toFixed(1)}</div>
+              <div className={`text-right ${getMultColor(selectedHabit.multiplier)}`}>×{(selectedHabit.multiplier ?? 1).toFixed(1)}</div>
               {selectedHabit.streak > 0 && (
                 <>
                   <div className="text-quest-textDim">Racha:</div>
@@ -129,12 +166,48 @@ export default function HabitList() {
               )}
             </div>
 
+            {/* Sección completar hábito - si no está completado hoy */}
+            {!todayData[selectedHabit.id] ? (
+              <div className="space-y-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={480}
+                    placeholder={String(selectedHabit.minutes)}
+                    className="input-pixel !w-20 text-center text-[9px]"
+                    value={customMinutes}
+                    onChange={(e) => {
+                      setCustomMinutes(e.target.value);
+                      setCustomError('');
+                    }}
+                  />
+                  <span className="text-[7px] text-quest-textMuted font-pixel">min (opcional)</span>
+                </div>
+                {customError && (
+                  <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
+                    {customError}
+                  </div>
+                )}
+                <button
+                  onClick={handleComplete}
+                  className="btn-pixel-green w-full text-[9px] py-3 font-bold"
+                >
+                  ✔ Completar
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
+                ✔ Hábito completado hoy
+              </div>
+            )}
+
             <div className="flex flex-col gap-2 mt-2">
               <button
                 onClick={() => {
                   setEditingHabit(selectedHabit);
-                  setSelectedHabit(null);
-                  setDeleteConfirm(false);
+                  closeSelected();
                 }}
                 className="btn-pixel-gold w-full text-[9px] py-3"
               >
@@ -163,8 +236,7 @@ export default function HabitList() {
                   <button
                     onClick={() => {
                       removeHabit(selectedHabit.id);
-                      setSelectedHabit(null);
-                      setDeleteConfirm(false);
+                      closeSelected();
                     }}
                     className="btn-pixel-red flex-1 text-[9px]"
                   >

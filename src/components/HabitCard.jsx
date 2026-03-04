@@ -1,17 +1,8 @@
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey } from '../utils/gameLogic.js';
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
-  const completeHabit = useGameStore(s => s.completeHabit);
-  const completeHabitPartial = useGameStore(s => s.completeHabitPartial);
-  const completeHabitOvertime = useGameStore(s => s.completeHabitOvertime);
-  const failHabit = useGameStore(s => s.failHabit);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState('');
-  const [customError, setCustomError] = useState('');
 
   const today = getTodayKey();
   const todayStatus = history[today]?.[habit.id];
@@ -19,7 +10,6 @@ export default function HabitCard({ habit, onEdit }) {
   const isFailed = todayStatus === 'failed';
   const isDetermined = isDone || isFailed;
 
-  // Multiplier color
   const multColorClass = habit.multiplier >= 3 ? 'text-quest-gold'
     : habit.multiplier >= 2  ? 'text-quest-cyan'
     : habit.multiplier >= 1.5 ? 'text-quest-green'
@@ -28,45 +18,11 @@ export default function HabitCard({ habit, onEdit }) {
   const borderColorClass = isDone ? 'border-quest-green' : isFailed ? 'border-quest-red' : 'border-quest-border';
   const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' : isFailed ? 'shadow-[2px_2px_0_#440011]' : 'shadow-pixel-sm';
 
-  function openCompleteModal() {
-    setShowCompleteModal(true);
-    setCustomMinutes('');
-    setCustomError('');
-  }
-
-  function closeCompleteModal() {
-    setShowCompleteModal(false);
-    setCustomMinutes('');
-    setCustomError('');
-  }
-
-  function handleHabitCompleted() {
-    const trimmed = String(customMinutes).trim();
-    if (!trimmed) {
-      // Sin valor: usar puntos por defecto del hábito
-      completeHabit(habit.id);
-      closeCompleteModal();
-      return;
-    }
-    const minutes = Number(trimmed);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      setCustomError('Introduce un número de minutos válido.');
-      return;
-    }
-    if (minutes < habit.minutes) {
-      completeHabitPartial(habit.id, minutes);
-    } else {
-      completeHabitOvertime(habit.id, minutes);
-    }
-    closeCompleteModal();
-  }
-
   return (
     <div
       className={`anim-slide-in card-pixel flex flex-col gap-2 !p-4 sm:!p-3 transition-all ${borderColorClass} ${shadowColorClass} ${isDetermined ? 'bg-quest-bg/60 opacity-80' : ''}`}
       onClick={onEdit}
     >
-      {/* Cabecera: icono, nombre, racha, multiplicador a la derecha */}
       <div className="flex items-center gap-2 w-full">
         <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">
           {habit.emoji}
@@ -88,31 +44,8 @@ export default function HabitCard({ habit, onEdit }) {
         </span>
       </div>
 
-      {/* Botones de acción debajo, ocupando todo el ancho */}
       <div className="mt-1 w-full">
-        {!isDetermined ? (
-          <div className="flex gap-2 w-full">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openCompleteModal();
-              }}
-              className="btn-habit-complete flex-[3] justify-start gap-2 pl-4 pr-3"
-            >
-              <span className="text-[11px]">✔</span>
-              <span className="uppercase text-[9px] sm:text-[8px]">Completar</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                failHabit(habit.id);
-              }}
-              className="btn-habit-fail flex-1"
-            >
-              ✖
-            </button>
-          </div>
-        ) : (
+        {isDetermined ? (
           <div className="w-full flex justify-center">
             <div
               className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${
@@ -124,85 +57,14 @@ export default function HabitCard({ habit, onEdit }) {
               {isDone ? '✔ Hábito resuelto' : '✖ Hábito fallado'}
             </div>
           </div>
-        )}
-      </div>
-      {showCompleteModal && createPortal(
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[11000] p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          tabIndex={-1}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              closeCompleteModal();
-            }
-            // Evita que los clics dentro del modal disparen el onClick de la tarjeta
-            e.stopPropagation();
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Escape' || e.key === 'Esc') && e.target === e.currentTarget) {
-              closeCompleteModal();
-            }
-          }}
-        >
-          <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-[10px] text-quest-cyan font-pixel uppercase tracking-widest">
-                ¿Cómo fue la misión de hoy?
-              </div>
-              <button
-                onClick={closeCompleteModal}
-                className="btn-pixel-gray !py-2 !px-3 !text-[10px]"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="text-[9px] text-quest-textDim font-pixel leading-relaxed">
-              <div className="mb-1">
-                <span className="text-quest-text">{habit.emoji} {habit.name}</span>
-              </div>
-              <div className="text-quest-textMuted">
-                Objetivo: <span className="text-quest-green">{habit.minutes} min</span> — Multiplicador actual:{' '}
-                <span className={multColorClass}>×{(habit.multiplier ?? 1).toFixed(1)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={480}
-                  placeholder={String(habit.minutes)}
-                  className="input-pixel !w-24 text-center"
-                  value={customMinutes}
-                  onChange={(e) => {
-                    setCustomMinutes(e.target.value);
-                    setCustomError('');
-                  }}
-                />
-                <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
-                  minutos (opcional)
-                </span>
-              </div>
-              {customError && (
-                <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
-                  {customError}
-                </div>
-              )}
-              <button
-                onClick={handleHabitCompleted}
-                className="btn-pixel-green w-full text-[9px] py-3"
-              >
-                Hábito completado
-              </button>
+        ) : (
+          <div className="w-full flex justify-center">
+            <div className="px-3 py-2 text-[8px] font-pixel text-quest-textMuted border border-quest-border/50">
+              Toca para abrir opciones
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </div>
     </div>
   );
 }

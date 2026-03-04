@@ -1,4 +1,5 @@
 node_modules
+docs
 .env
 skills-lock.json
 .agent/skills/vercel-react-best-practices

@@ -6,6 +6,7 @@ import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
+  
   const [form, setForm] = useState({ 
     name: habit.name, 
     minutes: habit.minutes, 
