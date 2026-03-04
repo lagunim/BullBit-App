@@ -31,7 +31,7 @@ export default function CustomPeriodicityModal({ initialDays = '', initialInterv
 
         <div>
           <label className="text-[9px] text-quest-text block mb-2 font-pixel" title="Ej: 2 (Cada 2 días)">
-            Periocidad
+            Periocidad (cada cuántos días)
           </label>
           <input
             className="input-pixel"

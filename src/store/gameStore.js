@@ -479,6 +479,33 @@ const useGameStore = create(
         set({ globalStreak: calcGlobalStreak(habits, history) });
       },
 
+      // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===
+      _getItemsByRarity(rarity) {
+        return Object.values(ITEMS).filter(item => item.rarity === rarity).map(item => item.id);
+      },
+
+      _selectRandomReward(rarity) {
+        const POOL_CONFIG = {
+          random_common:    { primary: 'common',    secondary: 'uncommon',  primaryChance: 0.7 },
+          random_uncommon: { primary: 'uncommon',   secondary: 'rare',      primaryChance: 0.7 },
+          random_rare:      { primary: 'rare',       secondary: 'epic',      primaryChance: 0.7 },
+          random_epic:      { primary: 'epic',       secondary: 'legendary', primaryChance: 0.7 },
+          random_legendary: { primary: 'legendary', secondary: null,        primaryChance: 1.0 },
+        };
+
+        const config = POOL_CONFIG[rarity];
+        if (!config) return null;
+
+        const pool = config.secondary 
+          ? (Math.random() < config.primaryChance 
+              ? this._getItemsByRarity(config.primary) 
+              : this._getItemsByRarity(config.secondary))
+          : this._getItemsByRarity(config.primary);
+
+        if (pool.length === 0) return null;
+        return pool[Math.floor(Math.random() * pool.length)];
+      },
+
       _checkAchievements() {
         const state = get();
         const newlyUnlocked = [];
@@ -501,7 +528,12 @@ const useGameStore = create(
           }));
           newlyUnlocked.forEach(ach => {
             get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
-            if (ach.reward) get().grantItem(ach.reward);
+            if (ach.reward) {
+              const rewardId = ach.reward.startsWith('random_') 
+                ? get()._selectRandomReward(ach.reward)
+                : ach.reward;
+              if (rewardId) get().grantItem(rewardId);
+            }
           });
         }
       },
