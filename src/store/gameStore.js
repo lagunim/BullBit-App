@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
+import { getRandomDaily, checkDailyProgress } from '../data/dailies.js';
 import {
   LEVEL_THRESHOLDS,
   getTodayKey,
@@ -22,6 +23,10 @@ const useGameStore = create(
       lifetimePoints: 0,
       history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'partial' | 'over' | 'skipped' } }
       globalStreak: 0,
+
+      // Dailies
+      currentDaily: null,   // { id, name, description, icon, difficulty, condition, rewards, progress, completed }
+      lastDailyDate: null,  // 'YYYY-MM-DD'
 
       // Gamification
       unlockedAchievements: [],
@@ -49,6 +54,7 @@ const useGameStore = create(
           }]
         }));
         get()._checkAchievements();
+        get()._checkAndGenerateDaily();
       },
 
       removeHabit(id) {
@@ -61,6 +67,12 @@ const useGameStore = create(
             h.id === id ? { ...h, ...updates } : h
           )
         }));
+      },
+
+      // ── INITIALIZATION ────────────────────────────────────────────
+      init() {
+        get()._checkAndGenerateDaily();
+        get()._purgeExpiredEffects();
       },
 
       // ── COMPLETING / FAILING ──────────────────────────────────────
@@ -117,12 +129,13 @@ const useGameStore = create(
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
         get()._recalcGlobalStreak();
         get()._checkAchievements();
+        get()._updateDailyProgress();
       },
 
       /**
        * Mark habit as done for LESS time than configured.
        * - Uses the actual minutes provided for points.
-       * - DOES NOT change the habit multiplier.
+       * - Multiplier increases as in a normal completion.
        * - Keeps/extends the streak.
        * - History status: "partial" (shown en amarillo).
        */
@@ -143,6 +156,7 @@ const useGameStore = create(
         if (activeEffects.some(e => e.key === 'next_triple')) bonusMult *= 3;
         const earned = Math.round(basePoints * bonusMult);
 
+        const newMult = calcMultiplierOnComplete(habit, activeEffects);
         const newPoints = state.points + earned;
         const newLifetime = state.lifetimePoints + earned;
 
@@ -170,7 +184,7 @@ const useGameStore = create(
         set(state2 => ({
           habits: state2.habits.map(h =>
             h.id === habitId
-              ? { ...h, streak: h.streak + 1 }
+              ? { ...h, multiplier: newMult, streak: h.streak + 1 }
               : h
           ),
           points: finalPoints,
@@ -183,9 +197,10 @@ const useGameStore = create(
             : state2.notifications,
         }));
 
-        get()._pushNotification('complete', `+${earned} pts — ×${habit.multiplier.toFixed(1)} (parcial)`);
+        get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
         get()._recalcGlobalStreak();
         get()._checkAchievements();
+        get()._updateDailyProgress();
       },
 
       /**
@@ -254,6 +269,7 @@ const useGameStore = create(
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
         get()._recalcGlobalStreak();
         get()._checkAchievements();
+        get()._updateDailyProgress();
       },
 
       /**
@@ -286,7 +302,7 @@ const useGameStore = create(
         if (!Number.isFinite(minutes) || minutes <= 0) return;
 
         // Aproximamos el multiplicador "previo al fallo" como mult actual + 0.4
-        const baseMultBeforeFail = parseFloat((habit.multiplier + 0.4).toFixed(1));
+        const baseMultBeforeFail = Math.min(3.0, parseFloat((habit.multiplier + 0.4).toFixed(1)));
 
         let finalStatus = 'completed';
         let multDelta = 0.6; // +0.4 por deshacer el fallo, +0.2 por completar
@@ -306,7 +322,7 @@ const useGameStore = create(
         const effectiveMultForPoints = baseMultBeforeFail;
         const earned = Math.round(minutes * effectiveMultForPoints);
 
-        const newMult = parseFloat((habit.multiplier + multDelta).toFixed(1));
+        const newMult = Math.min(3.0, parseFloat((habit.multiplier + multDelta).toFixed(1)));
 
         set(state2 => ({
           points: state2.points + earned,
@@ -322,6 +338,7 @@ const useGameStore = create(
 
         get()._recalcGlobalStreak();
         get()._checkAchievements();
+        get()._updateDailyProgress();
         get()._pushNotification('complete', `+${earned} pts — corrección de ayer`);
       },
 
@@ -355,6 +372,7 @@ const useGameStore = create(
 
         get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
         get()._recalcGlobalStreak();
+        get()._updateDailyProgress();
       },
 
       // ── ITEMS ──────────────────────────────────────────────────────
@@ -401,7 +419,7 @@ const useGameStore = create(
               inventory: newInventory,
               habits: state2.habits.map(h =>
                 h.id === targetHabitId
-                  ? { ...h, multiplier: parseFloat((h.multiplier + item.effectValue).toFixed(1)) }
+                  ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
                   : h
               ),
             }));
@@ -410,8 +428,8 @@ const useGameStore = create(
               inventory: newInventory,
               habits: state2.habits.map(h =>
                 h.id === targetHabitId
-                  ? { ...h, baseMultiplier: parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1)),
-                          multiplier: parseFloat((h.multiplier + item.effectValue).toFixed(1)) }
+                  ? { ...h, baseMultiplier: Math.min(3.0, parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1))),
+                          multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
                   : h
               ),
             }));
@@ -555,6 +573,81 @@ const useGameStore = create(
           notifications: state.notifications.filter(n => n.id !== id),
         }));
       },
+
+      // ── DAILIES ───────────────────────────────────────────────────
+      _checkAndGenerateDaily() {
+        const state = get();
+        const today = getTodayKey();
+        
+        // Generate new daily if it's a new day or no daily exists
+        if (!state.currentDaily || state.lastDailyDate !== today) {
+          const excludeIds = state.lastDailyDate === today ? [state.currentDaily?.id] : [];
+          const newDaily = getRandomDaily(excludeIds);
+          
+          set({
+            currentDaily: {
+              ...newDaily,
+              progress: { current: 0, target: 1, completed: false },
+              completed: false,
+            },
+            lastDailyDate: today,
+          });
+        }
+        
+        // Update progress of current daily
+        get()._updateDailyProgress();
+      },
+
+      _updateDailyProgress() {
+        const state = get();
+        if (!state.currentDaily) return;
+        
+        const progress = checkDailyProgress(state.currentDaily, state);
+        const wasCompleted = state.currentDaily.completed;
+        
+        set(state2 => ({
+          currentDaily: {
+            ...state2.currentDaily,
+            progress,
+            completed: progress.completed,
+          }
+        }));
+        
+        // If just completed, give rewards
+        if (progress.completed && !wasCompleted) {
+          get()._completeDailyChallenge();
+        }
+      },
+
+      _completeDailyChallenge() {
+        const state = get();
+        if (!state.currentDaily || !state.currentDaily.rewards) return;
+        
+        const { points, items } = state.currentDaily.rewards;
+        
+        // Award points
+        if (points) {
+          set(state2 => ({
+            points: state2.points + points,
+            lifetimePoints: state2.lifetimePoints + points,
+          }));
+        }
+        
+        // Award items
+        if (items && items.length > 0) {
+          items.forEach(itemId => {
+            get().grantItem(itemId);
+          });
+        }
+        
+        // Notify user
+        const itemNames = items ? items.map(id => ITEMS[id]?.name || id).join(', ') : '';
+        const message = itemNames 
+          ? `🏆 Daily completado! +${points} pts, ${itemNames}`
+          : `🏆 Daily completado! +${points} pts`;
+        
+        get()._pushNotification('daily', message);
+      },
     }),
     {
       name: 'habit-quest-v1',
@@ -568,6 +661,8 @@ const useGameStore = create(
         unlockedAchievements: state.unlockedAchievements,
         inventory: state.inventory,
         activeEffects: state.activeEffects,
+        currentDaily: state.currentDaily,
+        lastDailyDate: state.lastDailyDate,
       }),
     }
   )

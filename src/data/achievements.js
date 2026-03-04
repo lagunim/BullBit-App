@@ -219,7 +219,7 @@ export const ACHIEVEMENTS = [
     reward: 'multiplier_gem',
   },
   {
-    id: 'streak_100',
+    id: 'streak_100_inv',
     name: 'Invencible',
     desc: 'Completa un hábito 100 días seguidos',
     icon: '🏛️',

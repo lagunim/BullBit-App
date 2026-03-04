@@ -5,6 +5,7 @@ import HabitList from './HabitList.jsx';
 import HabitHistory from './HabitHistory.jsx';
 import AchievementsPanel from './AchievementsPanel.jsx';
 import InventoryPanel from './InventoryPanel.jsx';
+import DailyChallenge from './DailyChallenge.jsx';
 import Notifications from './Notifications.jsx';
 import Auth from './Auth.jsx';
 import { supabase } from '../lib/supabase.js';
@@ -14,6 +15,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('home');
+  const { init } = useGameStore();
 
   useEffect(() => {
     // Check initial session
@@ -47,6 +49,13 @@ export default function App() {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
+
+  // Initialize dailies when user is authenticated
+  useEffect(() => {
+    if (session) {
+      init();
+    }
+  }, [session, init]);
 
   // CHECK FOR MISSING ENV VARS
   const isEnvMissing = !import.meta.env.PUBLIC_SUPABASE_URL || !import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -109,6 +118,7 @@ export default function App() {
           {tab === 'home' && (
             <div className="anim-fade-in">
               <LevelProgress />
+              <DailyChallenge />
               <HabitList />
             </div>
           )}

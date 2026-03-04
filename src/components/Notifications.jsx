@@ -6,6 +6,7 @@ const TYPE_STYLES = {
   achievement: { border: 'border-quest-gold', text: 'text-quest-gold', icon: '★' },
   level:       { border: 'border-quest-purple', text: 'text-quest-purple', icon: '▲' },
   item:        { border: 'border-quest-cyan', text: 'text-quest-cyan', icon: '◆' },
+  daily:       { border: 'border-quest-gold', text: 'text-quest-gold', icon: '🏆' },
 };
 
 export default function Notifications() {

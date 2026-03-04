@@ -48,7 +48,7 @@ export function calcPoints(habit, activeEffects = []) {
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
   const boostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const boost = boostEffect ? boostEffect.value : 0;
-  return parseFloat((habit.multiplier + 0.2 + boost).toFixed(1));
+  return Math.min(3.0, parseFloat((habit.multiplier + 0.2 + boost).toFixed(1)));
 }
 
 /** Calculate new multiplier after failing a habit */
