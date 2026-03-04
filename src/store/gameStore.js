@@ -625,7 +625,7 @@ const useGameStore = create(
           set(state => ({
             notifications: state.notifications.filter(n => n.id !== id),
           }));
-        }, 3500);
+        }, 6000);
       },
 
       dismissNotification(id) {
