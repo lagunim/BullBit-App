@@ -30,32 +30,35 @@ export default function DailyChallenge() {
     <div className={`mb-6 p-4 rounded-lg border bg-gradient-to-r ${getDifficultyBg(difficulty)} backdrop-blur-sm`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className="text-2xl">{icon}</span>
-          <div>
-            <h3 className="font-bold text-white text-lg">{name}</h3>
-            <p className={`text-sm font-medium ${getDifficultyColor(difficulty)}`}>
-              {difficulty.toUpperCase()}
-            </p>
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-base sm:text-lg truncate">{name}</h3>
+            <div className="mt-1">
+              <span className={`text-[10px] sm:text-sm font-semibold px-2 py-0.5 rounded-full border ${getDifficultyColor(difficulty)} ${getDifficultyBg(difficulty)}`}>
+                {difficulty.toUpperCase()}
+              </span>
+            </div>
           </div>
         </div>
         {completed && (
           <div className="flex items-center gap-1 text-green-400">
-            <span className="text-xl">✓</span>
-            <span className="text-sm font-medium">COMPLETADO</span>
+            <span className="text-lg">✓</span>
+            <span className="text-[10px] sm:text-sm font-medium">COMPLETADO</span>
           </div>
         )}
       </div>
 
       {/* Description */}
-      <p className="text-gray-300 text-sm mb-3">{description}</p>
+      <p className="text-gray-300 text-sm mb-3 hidden sm:block">{description}</p>
 
       {/* Progress Bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-gray-400">Progreso</span>
-          <span className="text-sm text-white font-bold">
-            {progress.current} / {progress.target}
+          <span className="text-xs sm:text-sm text-white font-bold">
+            <span className="sm:hidden">{progressPercentage}%</span>
+            <span className="hidden sm:inline">{progress.current} / {progress.target}</span>
           </span>
         </div>
         <div className="w-full bg-gray-700 rounded-full h-3 relative overflow-hidden">
@@ -73,7 +76,7 @@ export default function DailyChallenge() {
           )}
         </div>
         {/* Progress text overlay */}
-        <div className="text-center mt-1">
+        <div className="text-center mt-1 hidden sm:block">
           <span className={`text-xs font-medium ${
             progressPercentage === 100 ? 'text-green-400' : 'text-blue-400'
           }`}>
@@ -84,20 +87,17 @@ export default function DailyChallenge() {
 
       {/* Rewards */}
       <div className="flex items-center justify-between text-sm">
-        <div className="text-gray-400">
-          Recompensa: 
-          <span className="text-yellow-400 font-medium ml-1">
-            +{rewards.points} pts
-          </span>
+        <div className="text-gray-400 text-xs sm:text-sm">
+          Recompensa:
+          <span className="text-yellow-400 font-medium ml-1">+{rewards.points} pts</span>
           {rewards.items && rewards.items.length > 0 && (
-            <span className="text-purple-400 ml-2">
+            <span className="text-purple-400 ml-2 hidden sm:inline">
               + {rewards.items.length} item{rewards.items.length > 1 ? 's' : ''}
             </span>
           )}
         </div>
-        
         {completed && (
-          <div className="text-green-400 text-xs font-medium">
+          <div className="text-green-400 text-[10px] sm:text-xs font-medium hidden sm:block">
             ¡Recompensa obtenida! 🎉
           </div>
         )}
