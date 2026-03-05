@@ -41,15 +41,15 @@ export default function AddHabitModal({ onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-[18px] sm:text-[11px] text-quest-cyan font-pixel uppercase tracking-widest">
+          <div className="text-sm sm:text-xs text-quest-cyan font-pixel uppercase tracking-widest">
             ✚ Nuevo Hábito
           </div>
-          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-[18px] sm:!text-[12px]">✕</button>
+          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
         {/* Emoji selector */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-3 font-pixel">ICONO</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">ICONO</label>
           <div className="grid grid-cols-6 gap-2">
             {HABIT_EMOJIS.map(em => (
               <button 
@@ -69,7 +69,7 @@ export default function AddHabitModal({ onClose }) {
 
         {/* Name */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE</label>
           <input
             className="input-pixel"
             value={form.name}
@@ -81,7 +81,7 @@ export default function AddHabitModal({ onClose }) {
 
         {/* Minutes */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
             DURACIÓN (MIN) — <span className="text-quest-green">{(form.minutes === '' ? 20 : form.minutes)} pts</span>
           </label>
           <div className="flex items-center gap-3 mb-3">
@@ -94,13 +94,13 @@ export default function AddHabitModal({ onClose }) {
               onChange={e => setForm(f => ({ ...f, minutes: e.target.value }))}
               placeholder="20"
             />
-            <div className="text-[16px] sm:text-[7px] text-quest-textMuted uppercase">Puntos base por completion</div>
+            <div className="text-xs sm:text-[8px] text-quest-textMuted uppercase">Puntos base por completion</div>
           </div>
         </div>
 
         {/* Periodicity */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">PERIODICIDAD</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">PERIODICIDAD</label>
           <div className="flex gap-2">
             <select
               className="input-pixel flex-1"
@@ -119,8 +119,8 @@ export default function AddHabitModal({ onClose }) {
             {form.periodicity === 'custom' && (
               <button 
                 onClick={() => setShowCustomModal(true)}
-                className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-[18px] sm:text-[12px]"
-              >
+               className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-sm sm:text-xs"
+            >
                 ✎
               </button>
             )}

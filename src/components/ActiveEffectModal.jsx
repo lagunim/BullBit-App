@@ -54,19 +54,19 @@ export default function ActiveEffectModal({ effect, onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[380px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-4 !p-5 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-[14px] text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+          <div className="text-sm text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">◆</span> Efecto Activo
           </div>
-          <button onClick={onClose} className="btn-pixel-gray !py-2 !px-3 !text-[14px]">✕</button>
+          <button onClick={onClose} className="btn-pixel-gray !py-2 !px-3 !text-sm">✕</button>
         </div>
 
         {/* Icon & Name */}
         <div className="flex items-start gap-4">
-          <div className="text-4xl p-3 rounded-lg border bg-quest-panel border-quest-cyan/30 shrink-0">
+          <div className="text-3xl p-3 rounded-lg border bg-quest-panel border-quest-cyan/30 shrink-0">
             {item?.icon || '✨'}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-white font-pixel break-words leading-tight">
+            <h2 className="text-sm md:text-base font-bold text-white font-pixel break-words leading-tight">
               {effect.itemName || item?.name || effect.key}
             </h2>
             <div className="flex items-center gap-2 mt-1">

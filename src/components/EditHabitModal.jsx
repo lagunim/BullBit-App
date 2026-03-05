@@ -45,15 +45,15 @@ export default function EditHabitModal({ habit, onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-[18px] sm:text-[11px] text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+          <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">✎</span> Editar Misión
           </div>
-          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-[18px] sm:!text-[12px]">✕</button>
+          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
         {/* Emoji selector */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-3 font-pixel">CAMBIAR ICONO</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">CAMBIAR ICONO</label>
           <div className="grid grid-cols-6 gap-2">
             {HABIT_EMOJIS.map(em => (
               <button 
@@ -73,7 +73,7 @@ export default function EditHabitModal({ habit, onClose }) {
 
         {/* Name */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE DE LA MISIÓN</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE DE LA MISIÓN</label>
           <input
             className="input-pixel"
             value={form.name}
@@ -85,7 +85,7 @@ export default function EditHabitModal({ habit, onClose }) {
 
         {/* Minutes */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
             DURACIÓN (MINUTOS) — <span className="text-quest-green">{form.minutes} pts</span>
           </label>
           <div className="flex items-center gap-3 mb-3">
@@ -102,7 +102,7 @@ export default function EditHabitModal({ habit, onClose }) {
 
         {/* Periodicity */}
         <div>
-          <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">FRECUENCIA</label>
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">FRECUENCIA</label>
           <div className="flex gap-2">
             <select
               className="input-pixel flex-1"
@@ -121,7 +121,7 @@ export default function EditHabitModal({ habit, onClose }) {
             {form.periodicity === 'custom' && (
               <button 
                 onClick={() => setShowCustomModal(true)}
-                className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-[18px] sm:text-[12px]"
+                className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-sm sm:text-xs"
               >
                 ✎
               </button>
