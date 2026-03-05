@@ -46,7 +46,7 @@ export default function CustomPeriodicityModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[20000] p-4 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[20000] p-4 backdrop-blur-sm" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="anim-fade-in card-pixel w-full max-w-[420px] flex flex-col gap-4 !p-6 border-quest-cyan shadow-[4px_4px_0_theme(colors.quest.cyan)]">
         <div className="flex justify-between items-center border-b border-quest-border pb-2">
           <div className="text-[11px] text-quest-cyan font-pixel uppercase tracking-widest">PERSONALIZADO</div>

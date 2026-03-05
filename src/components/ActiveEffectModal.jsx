@@ -12,7 +12,7 @@ function getItemFromEffect(effect) {
 function getEffectDescription(effect) {
   const item = getItemFromEffect(effect);
   if (item) return item.desc;
-  
+
   switch (effect.key) {
     case 'double_points': return 'Duplica todos los puntos ganados.';
     case 'next_triple': return 'Triplica los puntos del próximo hábito completado.';
@@ -42,13 +42,13 @@ export default function ActiveEffectModal({ effect, onClose }) {
 
   const expiresAt = effect.expiresAt ? new Date(effect.expiresAt) : null;
   const now = new Date();
-  const timeLeft = expiresAt 
+  const timeLeft = expiresAt
     ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)))
     : null;
 
   return createPortal(
-    <div 
-      className="fixed inset-0 bg-black/85 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="anim-fade-in card-pixel w-full max-w-[380px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-4 !p-5 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
@@ -71,7 +71,7 @@ export default function ActiveEffectModal({ effect, onClose }) {
             </h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[8px] font-pixel px-1.5 py-0.5 border uppercase tracking-wider font-bold"
-                    style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
+                style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
                 {rarity.label}
               </span>
               <span className="text-[8px] font-pixel text-quest-cyan">

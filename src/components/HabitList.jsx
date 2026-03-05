@@ -151,7 +151,7 @@ export default function HabitList() {
 
       {selectedHabit && createPortal(
         <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[11000] p-4 backdrop-blur-[18px] shadow-[inset_0_0_80px_rgba(0,0,0,0.8)]"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[11000] p-4 backdrop-blur-[18px] shadow-[inset_0_0_80px_rgba(0,0,0,0.8)]"
           role="dialog"
           aria-modal="true"
           tabIndex={-1}

@@ -8,10 +8,10 @@ import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/ha
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
   const defaultTheme = HABIT_THEME_BY_ID[habit.themeId] ?? HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME];
-  const [form, setForm] = useState({ 
-    name: habit.name, 
-    minutes: habit.minutes, 
-    periodicity: habit.periodicity, 
+  const [form, setForm] = useState({
+    name: habit.name,
+    minutes: habit.minutes,
+    periodicity: habit.periodicity,
     emoji: habit.emoji ?? defaultTheme?.icon,
     themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
     customDays: habit.customDays || '',
@@ -43,8 +43,8 @@ export default function EditHabitModal({ habit, onClose }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]" 
-         onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
@@ -65,11 +65,10 @@ export default function EditHabitModal({ habit, onClose }) {
                   key={theme.id}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, themeId: theme.id, emoji: theme.icon }))}
-                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded border-2 transition-all ${
-                    isSelected
-                      ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)] scale-105'
-                      : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
-                  }`}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded border-2 transition-all ${isSelected
+                    ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)] scale-105'
+                    : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
+                    }`}
                 >
                   <span className="text-3xl leading-[1]">{theme.icon}</span>
                   {isSelected && (
@@ -132,7 +131,7 @@ export default function EditHabitModal({ habit, onClose }) {
               ))}
             </select>
             {form.periodicity === 'custom' && (
-              <button 
+              <button
                 onClick={() => setShowCustomModal(true)}
                 className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-sm sm:text-xs"
               >
@@ -166,7 +165,7 @@ export default function EditHabitModal({ habit, onClose }) {
           <button onClick={onClose} className="btn-pixel-gray flex-1 uppercase">Cancelar</button>
           <button onClick={handleSubmit} className="btn-pixel-gold flex-[2] uppercase font-bold tracking-widest shadow-[inset_0_0_10px_rgba(255,255,255,0.2)]">💾 Guardar Cambios</button>
         </div>
-        
+
         {showCustomModal && (
           <CustomPeriodicityModal
             initialDays={form.customDays}
