@@ -19,7 +19,7 @@ export default function HabitHistory() {
   const history = useGameStore(s => s.history ?? {});
   const removeHabit = useGameStore(s => s.removeHabit);
 
-  const DAYS = 14; // Showing 14 días para mejor encaje en móvil
+  const DAYS = 7; // Showing 7 días para una tabla más legible
   // Día actual a la izquierda (sin scroll lateral), más antiguos a la derecha
   const dates = Array.from({ length: DAYS }, (_, i) => getDateKey(i));
   const todayKey = getDateKey(0);
@@ -110,7 +110,7 @@ export default function HabitHistory() {
 
   if (habits.length === 0) {
     return (
-      <div className="text-center py-10 text-quest-textMuted font-pixel text-[8px] uppercase tracking-widest border-2 border-dashed border-quest-border">
+      <div className="text-center py-10 text-quest-textMuted font-pixel text-xs uppercase tracking-widest border-2 border-dashed border-quest-border">
         SIN HÁBITOS — CREA UNO PRIMERO ⚔️
       </div>
     );
@@ -120,13 +120,13 @@ export default function HabitHistory() {
     <div className="flex flex-col gap-6">
       <div className="border-b border-quest-border pb-3">
         <div className="text-xs text-quest-cyan font-pixel mb-2 tracking-widest uppercase">📅 Historial</div>
-        <div className="text-[7px] text-quest-textDim leading-relaxed uppercase">
+        <div className="text-[8px] text-quest-textDim leading-relaxed uppercase">
           Registro de los últimos {DAYS} días. Mantén el ritmo para evitar penalizaciones en el multiplicador.
         </div>
       </div>
 
       {/* Legend (sin “VACÍO”, solo estados reales) */}
-        <div className="flex gap-4 flex-wrap text-xs">
+      <div className="flex gap-4 flex-wrap text-xs">
         {Object.entries(STATUS_STYLE)
           .filter(([key]) => key !== 'none')
           .map(([key, s]) => {
@@ -139,7 +139,7 @@ export default function HabitHistory() {
                     ? 'MÁS TIEMPO'
                     : 'FALLO';
             return (
-              <div key={key} className={`flex items-center gap-2 text-[7px] font-pixel ${s.text}`}>
+              <div key={key} className={`flex items-center gap-2 text-[8px] font-pixel ${s.text}`}>
                 <div className={`w-3 h-3 ${s.bg} border ${s.border}`} />
                 <span className="uppercase tracking-tighter">{label}</span>
               </div>
@@ -149,21 +149,21 @@ export default function HabitHistory() {
 
       {/* Grid-based History Table - Grid para alineación correcta día/cuadro */}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
-        <div className="min-w-[420px]">
+        <div className="w-full">
           <div
             className="grid border-b-2 border-quest-border pb-2 mb-2 items-end"
-            style={{ gridTemplateColumns: '8rem repeat(14, 1.5rem)' }}
+            style={{ gridTemplateColumns: '8rem repeat(7, minmax(1fr, 2.5rem))' }}
           >
-              <div className="text-[8px] text-quest-textMuted font-pixel tracking-tighter uppercase sticky left-0 z-10 bg-quest-panel">
-                Hábito
-              </div>
+            <div className="text-xs text-quest-textMuted font-pixel tracking-tighter uppercase sticky left-0 z-10 bg-quest-panel">
+              Hábito
+            </div>
             {dates.map(d => {
               const short = d.slice(8); // DD only
               const isToday = d === todayKey;
               return (
                 <div
                   key={d}
-                  className={`text-[7px] font-pixel text-center ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}
+                  className={`text-xs font-pixel text-center ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}
                 >
                   {short}
                 </div>
@@ -178,9 +178,9 @@ export default function HabitHistory() {
                 <div
                   key={habit.id}
                   className="grid items-center"
-                  style={{ gridTemplateColumns: '8rem repeat(14, 1.5rem)' }}
+                  style={{ gridTemplateColumns: '8rem repeat(7, minmax(1fr, 2.5rem))' }}
                 >
-                  <div className="text-[8px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel">
+                  <div className="text-[10px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel">
                     {habit.emoji} {habit.name}
                   </div>
                   {dates.map(d => {
@@ -193,7 +193,7 @@ export default function HabitHistory() {
                     return (
                       <div
                         key={d}
-                        className={`w-6 h-6 flex items-center justify-center text-xs border transition-all justify-self-center ${s.bg} ${s.border} ${s.text} ${isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
+                        className={`w-8 h-8 flex items-center justify-center text-xs border transition-all justify-self-center ${s.bg} ${s.border} ${s.text} ${isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
                           }`}
                       >
                         {s.symbol}
@@ -222,11 +222,11 @@ export default function HabitHistory() {
                 setDeleteConfirm(false);
               }}
             >
-              <div className="text-xs sm:text-[8px] font-pixel mb-3 flex items-center gap-2 uppercase tracking-tighter border-b border-quest-border pb-2">
+              <div className="text-xs sm:text-xs font-pixel mb-3 flex items-center gap-2 uppercase tracking-tighter border-b border-quest-border pb-2">
                 <span>{habit.emoji}</span>
                 <span className="truncate">{habit.name}</span>
               </div>
-              <div className="grid grid-cols-2 gap-y-2 text-xs sm:text-[7px] font-pixel uppercase tracking-tighter">
+              <div className="grid grid-cols-2 gap-y-2 text-xs sm:text-[8px] font-pixel uppercase tracking-tighter">
                 <div className="text-quest-textDim">COMPLETADOS:</div>
                 <div className="text-quest-green text-right">{completed}</div>
                 <div className="text-quest-textDim">FALLADOS:</div>
@@ -298,7 +298,7 @@ export default function HabitHistory() {
             </div>
 
             {deleteConfirm && (
-              <div className="mt-2 p-2 border border-quest-red bg-quest-red/10 text-[8px] font-pixel">
+              <div className="mt-2 p-2 border border-quest-red bg-quest-red/10 text-xs font-pixel">
                 <div className="mb-2">
                   <p>
                     <span className="text-quest-red text-xs">¿Seguro que quieres borrar este hábito?</span>

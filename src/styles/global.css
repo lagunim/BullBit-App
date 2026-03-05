@@ -58,6 +58,36 @@
     @apply border-2 border-quest-border bg-quest-panel shadow-pixel p-4 sm:p-3 relative;
   }
 
+  .level-progress-card {
+    @apply border-2 shadow-pixel p-4 sm:p-3 relative;
+    border-color: #5a3b00;
+    background:
+      linear-gradient(180deg, rgba(255, 196, 80, 0.28), rgba(34, 22, 6, 0.92));
+    box-shadow: 0 0 0 2px rgba(26, 17, 5, 0.85), 2px 2px 0 rgba(40, 24, 4, 0.9);
+  }
+
+  .level-progress-bar {
+    border-color: #6a4600;
+    background-color: #1d1406;
+  }
+
+  .level-progress-bar {
+    @apply h-4 border-2 shadow-pixel-sm overflow-hidden relative;
+    background: linear-gradient(180deg, rgba(28, 18, 6, 0.9), rgba(12, 8, 2, 0.95));
+    border-color: #6b4a0b;
+  }
+
+  .level-progress-bar-fill {
+    @apply h-full transition-all duration-500 relative;
+    background-image: repeating-linear-gradient(
+      90deg,
+      #f6d06b 0px,
+      #f6d06b 12px,
+      rgba(0, 0, 0, 0.22) 12px,
+      rgba(0, 0, 0, 0.22) 16px
+    );
+  }
+
   .input-pixel {
     @apply bg-quest-bg border-2 border-quest-border text-quest-green px-4 py-3 sm:p-2 text-[16px] sm:text-[10px] outline-none w-full focus:border-quest-cyan focus:bg-quest-panel transition-colors placeholder:text-quest-textMuted appearance-none min-h-[48px] sm:min-h-0;
   }
