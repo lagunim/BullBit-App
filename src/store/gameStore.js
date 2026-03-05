@@ -15,11 +15,26 @@ import {
   getWeekStart,
   getWeekCompletions,
 } from '../utils/gameLogic.js';
+import {
+  loadUserData,
+  migrateLocalStateToDb,
+  saveProfile,
+  saveHabit,
+  saveHabits,
+  deleteHabit as dbDeleteHabit,
+  saveHabitEntry,
+  saveHabitEntries,
+  saveInventory,
+  saveActiveEffects,
+  saveAchievements,
+  saveDaily,
+} from '../lib/db.js';
 
 const useGameStore = create(
   persist(
     (set, get) => ({
       // Core
+      _userId: null,        // Supabase user ID (set on init)
       habits: [],
       level: 0,
       points: 0,
@@ -42,28 +57,35 @@ const useGameStore = create(
 
       // ── HABITS ────────────────────────────────────────────────────
       addHabit(habit) {
-        set(state => ({
-          habits: [...state.habits, {
-            id: Date.now().toString(),
-            name: habit.name,
-            minutes: habit.minutes,
-            periodicity: habit.periodicity,
-            emoji: habit.emoji ?? '🎯',
-            customDays: habit.customDays,
-            customInterval: habit.customInterval,
-            weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
-            multiplier: 1.0,
-            baseMultiplier: 1.0,
-            streak: 0,
-            createdAt: new Date().toISOString(),
-          }]
-        }));
+        const newHabit = {
+          id: Date.now().toString(),
+          name: habit.name,
+          minutes: habit.minutes,
+          periodicity: habit.periodicity,
+          emoji: habit.emoji ?? '🎯',
+          customDays: habit.customDays,
+          customInterval: habit.customInterval,
+          weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
+          multiplier: 1.0,
+          baseMultiplier: 1.0,
+          streak: 0,
+          createdAt: new Date().toISOString(),
+        };
+        set(state => ({ habits: [...state.habits, newHabit] }));
+
+        // Persistir en BD
+        const userId = get()._userId;
+        if (userId) saveHabit(userId, newHabit).catch(() => {});
+
         get()._checkAchievements();
         get()._checkAndGenerateDaily();
       },
 
       removeHabit(id) {
         set(state => ({ habits: state.habits.filter(h => h.id !== id) }));
+
+        // Persistir en BD
+        if (get()._userId) dbDeleteHabit(id).catch(() => {});
       },
 
       updateHabit(id, updates) {
@@ -72,10 +94,69 @@ const useGameStore = create(
             h.id === id ? { ...h, ...updates } : h
           )
         }));
+
+        // Persistir en BD
+        const userId = get()._userId;
+        if (userId) {
+          const updated = get().habits.find(h => h.id === id);
+          if (updated) saveHabit(userId, updated).catch(() => {});
+        }
       },
 
       // ── INITIALIZATION ────────────────────────────────────────────
-      init() {
+      async init(userId) {
+        // Guardar el userId en el store para que las acciones puedan acceder a él
+        set({ _userId: userId });
+
+        try {
+          const remoteData = await loadUserData(userId);
+
+          if (remoteData) {
+            // ── Hay datos en Supabase → usarlos como fuente de verdad ──
+            set({
+              habits: remoteData.habits,
+              level: remoteData.level,
+              points: remoteData.points,
+              lifetimePoints: remoteData.lifetimePoints,
+              history: remoteData.history,
+              globalStreak: remoteData.globalStreak,
+              unlockedAchievements: remoteData.unlockedAchievements,
+              inventory: remoteData.inventory,
+              activeEffects: remoteData.activeEffects,
+              currentDaily: remoteData.currentDaily,
+              lastDailyDate: remoteData.lastDailyDate,
+              lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
+            });
+          } else {
+            // ── BD vacía → usuario nuevo o migrar datos locales ──
+            const localState = get();
+            const hasLocalData =
+              localState.habits.length > 0 ||
+              localState.lifetimePoints > 0 ||
+              localState.unlockedAchievements.length > 0;
+
+            if (hasLocalData) {
+              // Migrar localStorage → Supabase (one-time)
+              migrateLocalStateToDb(userId, localState).catch(err =>
+                console.error('[store] Migración fallida:', err)
+              );
+            } else {
+              // Usuario completamente nuevo: crear perfil en BD
+              saveProfile(userId, {
+                level: 0,
+                points: 0,
+                lifetimePoints: 0,
+                globalStreak: 0,
+                lastWeeklyProcessDate: null,
+              }).catch(() => {});
+            }
+          }
+        } catch (err) {
+          // Si Supabase falla, seguir con el estado local sin interrumpir
+          console.error('[store] Error cargando datos de BD, usando estado local:', err);
+        }
+
+        // Procesos de inicio (siempre, independientemente del origen de datos)
         get()._processExpiredHabits();
         get()._processWeeklyHabits();
         get()._checkAndGenerateDaily();
@@ -132,6 +213,16 @@ const useGameStore = create(
             ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
             : state2.notifications,
         }));
+
+        // Persistir en BD (fire & forget)
+        const userId = get()._userId;
+        if (userId) {
+          const updatedHabit = get().habits.find(h => h.id === habitId);
+          if (updatedHabit) saveHabit(userId, updatedHabit).catch(() => {});
+          saveHabitEntry(userId, habitId, today, 'completed').catch(() => {});
+          saveProfile(userId, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId, nextEffects).catch(() => {});
+        }
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
         get()._recalcGlobalStreak();
@@ -204,6 +295,16 @@ const useGameStore = create(
             : state2.notifications,
         }));
 
+        // Persistir en BD (fire & forget)
+        const userId2 = get()._userId;
+        if (userId2) {
+          const updatedHabit = get().habits.find(h => h.id === habitId);
+          if (updatedHabit) saveHabit(userId2, updatedHabit).catch(() => {});
+          saveHabitEntry(userId2, habitId, today, 'partial').catch(() => {});
+          saveProfile(userId2, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId2, nextEffects).catch(() => {});
+        }
+
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
         get()._recalcGlobalStreak();
         get()._checkAchievements();
@@ -272,6 +373,16 @@ const useGameStore = create(
             ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
             : state2.notifications,
         }));
+
+        // Persistir en BD (fire & forget)
+        const userId3 = get()._userId;
+        if (userId3) {
+          const updatedHabit = get().habits.find(h => h.id === habitId);
+          if (updatedHabit) saveHabit(userId3, updatedHabit).catch(() => {});
+          saveHabitEntry(userId3, habitId, today, 'over').catch(() => {});
+          saveProfile(userId3, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId3, nextEffects).catch(() => {});
+        }
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
         get()._recalcGlobalStreak();
@@ -343,6 +454,15 @@ const useGameStore = create(
           ),
         }));
 
+        // Persistir en BD (fire & forget)
+        const userId4 = get()._userId;
+        if (userId4) {
+          const updatedHabit = get().habits.find(h => h.id === habitId);
+          if (updatedHabit) saveHabit(userId4, updatedHabit).catch(() => {});
+          saveHabitEntry(userId4, habitId, yesterday, finalStatus).catch(() => {});
+          saveProfile(userId4, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+        }
+
         get()._recalcGlobalStreak();
         get()._checkAchievements();
         get()._updateDailyProgress();
@@ -377,6 +497,15 @@ const useGameStore = create(
           activeEffects: newActiveEffects,
         }));
 
+        // Persistir en BD (fire & forget)
+        const userId5 = get()._userId;
+        if (userId5) {
+          const updatedHabit = get().habits.find(h => h.id === habitId);
+          if (updatedHabit) saveHabit(userId5, updatedHabit).catch(() => {});
+          saveHabitEntry(userId5, habitId, today, 'failed').catch(() => {});
+          if (newActiveEffects.length !== state.activeEffects.length) saveActiveEffects(userId5, newActiveEffects).catch(() => {});
+        }
+
         get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
         get()._recalcGlobalStreak();
         get()._updateDailyProgress();
@@ -407,6 +536,12 @@ const useGameStore = create(
               itemName: item.name,
             }],
           }));
+          // Persistir en BD
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => {});
+            saveActiveEffects(uid, get().activeEffects).catch(() => {});
+          }
           get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
         }
         else if (item.effectType === 'passive') {
@@ -418,6 +553,12 @@ const useGameStore = create(
               itemName: item.name,
             }],
           }));
+          // Persistir en BD
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => {});
+            saveActiveEffects(uid, get().activeEffects).catch(() => {});
+          }
           get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
         }
         else if (item.effectType === 'instant') {
@@ -430,6 +571,12 @@ const useGameStore = create(
                   : h
               ),
             }));
+            const uid = get()._userId;
+            if (uid) {
+              saveInventory(uid, get().inventory).catch(() => {});
+              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
+            }
           } else if (item.effectKey === 'perm_base_mult' && targetHabitId) {
             set(state2 => ({
               inventory: newInventory,
@@ -440,6 +587,12 @@ const useGameStore = create(
                   : h
               ),
             }));
+            const uid = get()._userId;
+            if (uid) {
+              saveInventory(uid, get().inventory).catch(() => {});
+              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
+            }
           } else if (item.effectKey === 'retroactive_complete' && targetHabitId) {
             const yesterday = getYesterdayKey();
             const habit = get().habits.find(h => h.id === targetHabitId);
@@ -457,11 +610,23 @@ const useGameStore = create(
                   h.id === targetHabitId ? { ...h, streak: h.streak + 1 } : h
                 ),
               }));
+              const uid = get()._userId;
+              if (uid) {
+                saveInventory(uid, get().inventory).catch(() => {});
+                saveHabitEntry(uid, targetHabitId, yesterday, 'completed').catch(() => {});
+                saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+                const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+                if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
+              }
             } else {
               set({ inventory: newInventory });
+              const uid = get()._userId;
+              if (uid) saveInventory(uid, get().inventory).catch(() => {});
             }
           } else {
             set({ inventory: newInventory });
+            const uid = get()._userId;
+            if (uid) saveInventory(uid, get().inventory).catch(() => {});
           }
           get()._pushNotification('item', `${item.icon} ${item.name} usado!`);
         }
@@ -480,6 +645,9 @@ const useGameStore = create(
               : [...state.inventory, { itemId, qty: 1 }],
           };
         });
+        // Persistir en BD
+        const uid = get()._userId;
+        if (uid) saveInventory(uid, get().inventory).catch(() => {});
       },
 
       // ── INTERNAL ──────────────────────────────────────────────────
@@ -545,6 +713,14 @@ const useGameStore = create(
           habits: updatedHabits,
           history: newHistory
         });
+
+        // Persistir en BD (fire & forget)
+        const uid = get()._userId;
+        if (uid) {
+          saveHabits(uid, updatedHabits).catch(() => {});
+          const entries = expiredHabits.map(h => ({ habitId: h.id, date: yesterday, status: 'failed' }));
+          saveHabitEntries(uid, entries).catch(() => {});
+        }
 
         // Notificar al usuario
         const message = expiredHabits.length === 1 
@@ -634,10 +810,26 @@ const useGameStore = create(
             history: newHistory,
             lastWeeklyProcessDate: today
           });
+          // Persistir en BD (fire & forget)
+          const uid = get()._userId;
+          if (uid) {
+            saveHabits(uid, updatedHabits).catch(() => {});
+            // Persistir todas las entradas 'failed' añadidas
+            const entries = [];
+            for (const [date, dayMap] of Object.entries(newHistory)) {
+              for (const [habitId, status] of Object.entries(dayMap)) {
+                if (status === 'failed') entries.push({ habitId, date, status });
+              }
+            }
+            if (entries.length) saveHabitEntries(uid, entries).catch(() => {});
+            saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => {});
+          }
           get()._recalcGlobalStreak();
           get()._pushNotification('weekly_review', 'Resumen semanal de hábitos procesado');
         } else {
           set({ lastWeeklyProcessDate: today });
+          const uid = get()._userId;
+          if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => {});
         }
       },
 
@@ -693,6 +885,10 @@ const useGameStore = create(
               ...newlyUnlocked.map(a => a.id),
             ],
           }));
+          // Persistir logros nuevos en BD
+          const uid = get()._userId;
+          if (uid) saveAchievements(uid, newlyUnlocked.map(a => a.id)).catch(() => {});
+
           newlyUnlocked.forEach(ach => {
             get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
             if (ach.reward) {
@@ -741,6 +937,10 @@ const useGameStore = create(
             },
             lastDailyDate: today,
           });
+
+          // Persistir nuevo daily en BD
+          const uid = get()._userId;
+          if (uid) saveDaily(uid, get().currentDaily, today).catch(() => {});
         }
         
         // Update progress of current daily
@@ -761,6 +961,10 @@ const useGameStore = create(
             completed: progress.completed,
           }
         }));
+
+        // Persistir progreso del daily en BD
+        const uid = get()._userId;
+        if (uid) saveDaily(uid, get().currentDaily, get().lastDailyDate).catch(() => {});
         
         // If just completed, give rewards
         if (progress.completed && !wasCompleted) {
@@ -780,6 +984,9 @@ const useGameStore = create(
             points: state2.points + points,
             lifetimePoints: state2.lifetimePoints + points,
           }));
+          // Persistir perfil con puntos del daily
+          const uid = get()._userId;
+          if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
         }
         
         // Award items

@@ -58,13 +58,15 @@ export default function CustomPeriodicityModal({
           <span className="text-[9px] text-quest-text font-pixel">Días específicos (1-7, separados por coma)</span>
         </label>
         {mode === 'days' && (
-          <input
-            className="input-pixel ml-6"
-            value={days}
-            onChange={e => setDays(e.target.value)}
-            placeholder="Ej: 1,3,5"
-            title="Ej: 1,3,5 (Lun, Mie, Vie)"
-          />
+          <div className="ml-6 w-full">
+            <input
+              className="input-pixel w-full"
+              value={days}
+              onChange={e => setDays(e.target.value)}
+              placeholder="Ej: 1,3,5"
+              title="Ej: 1,3,5 (Lun, Mie, Vie)"
+            />
+          </div>
         )}
 
         <label className="flex items-center gap-2 cursor-pointer">
@@ -72,15 +74,17 @@ export default function CustomPeriodicityModal({
           <span className="text-[9px] text-quest-text font-pixel">Periodicidad (cada cuántos días)</span>
         </label>
         {mode === 'interval' && (
-          <input
-            className="input-pixel ml-6 !w-24 text-center"
-            type="number"
-            min={1}
-            value={interval}
-            onChange={e => setIntervalVal(e.target.value)}
-            placeholder="Ej: 2"
-            title="Ej: 2 (Cada 2 días)"
-          />
+          <div className="ml-6 w-full">
+            <input
+              className="input-pixel w-full text-center"
+              type="number"
+              min={1}
+              value={interval}
+              onChange={e => setIntervalVal(e.target.value)}
+              placeholder="Ej: 2"
+              title="Ej: 2 (Cada 2 días)"
+            />
+          </div>
         )}
 
         <label className="flex items-center gap-2 cursor-pointer">

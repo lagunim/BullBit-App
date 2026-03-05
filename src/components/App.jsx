@@ -64,7 +64,7 @@ export default function App() {
 
   useEffect(() => {
     if (session) {
-      init();
+      init(session.user.id);
     }
   }, [session, init]);
 
