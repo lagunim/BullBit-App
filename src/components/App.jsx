@@ -24,17 +24,31 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const { init } = useGameStore();
   const [bounceOffset, setBounceOffset] = useState(0);
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    return coarsePointer || navigator.maxTouchPoints > 0;
+  });
   const touchStartRef = useRef({ x: 0, y: 0 });
   const bounceTimer = useRef(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const matcher = window.matchMedia('(max-width: 768px)');
-    const handler = (ev) => setIsMobileView(ev.matches);
-    setIsMobileView(matcher.matches);
-    matcher.addEventListener('change', handler);
-    return () => matcher.removeEventListener('change', handler);
+    const coarsePointerMatcher = window.matchMedia('(pointer: coarse)');
+
+    const updateTouchDevice = () => {
+      setIsTouchDevice(coarsePointerMatcher.matches || navigator.maxTouchPoints > 0);
+    };
+
+    updateTouchDevice();
+
+    if (coarsePointerMatcher.addEventListener) {
+      coarsePointerMatcher.addEventListener('change', updateTouchDevice);
+      return () => coarsePointerMatcher.removeEventListener('change', updateTouchDevice);
+    }
+
+    coarsePointerMatcher.addListener(updateTouchDevice);
+    return () => coarsePointerMatcher.removeListener(updateTouchDevice);
   }, []);
 
   useEffect(() => {
@@ -172,7 +186,7 @@ export default function App() {
     return <Auth />;
   }
 
-  const touchHandlers = isMobileView
+  const touchHandlers = isTouchDevice
     ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd }
     : {};
 
@@ -185,7 +199,7 @@ export default function App() {
           className="flex h-full transition-transform duration-300 ease-out"
           style={{
             transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))`,
-            touchAction: 'pan-y',
+            touchAction: isTouchDevice ? 'manipulation' : 'auto',
           }}
           {...touchHandlers}
         >
