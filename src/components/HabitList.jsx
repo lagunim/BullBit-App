@@ -151,7 +151,7 @@ export default function HabitList() {
 
       {selectedHabit && createPortal(
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[11000] p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[11000] p-4 backdrop-blur-[18px] shadow-[inset_0_0_80px_rgba(0,0,0,0.8)]"
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
@@ -161,9 +161,9 @@ export default function HabitList() {
             }
           }}
         >
-          <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-4">
+          <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-5">
             <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-[10px] text-quest-cyan font-pixel uppercase tracking-widest flex items-center gap-2">
+              <div className="text-[16px] text-quest-cyan font-pixel uppercase tracking-[0.3em] flex items-center gap-2">
                 <span>{selectedHabit.emoji}</span>
                 <span className="truncate">{selectedHabit.name}</span>
               </div>
@@ -175,27 +175,33 @@ export default function HabitList() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-y-2 text-[7px] font-pixel uppercase tracking-tighter">
-              <div className="text-quest-textDim">Duración:</div>
-              <div className="text-quest-green text-right">{selectedHabit.minutes} min</div>
-              <div className="text-quest-textDim">Multiplicador actual:</div>
-              <div className="text-right flex items-center justify-end gap-1">
-                <MultiplierIcons />
-                <span className={getMultColor(selectedHabit.multiplier)}>×{(selectedHabit.multiplier ?? 1).toFixed(1)}</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Duración</span>
+                <span className="text-2xl font-bold text-quest-green">{selectedHabit.minutes} min</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Multiplicador actual</span>
+                <div className="flex items-center gap-2">
+                  <MultiplierIcons />
+                  <span className={`text-2xl font-bold ${getMultColor(selectedHabit.multiplier)}`}>
+                    ×{(selectedHabit.multiplier ?? 1).toFixed(1)}
+                  </span>
+                </div>
               </div>
               {selectedHabit.streak > 0 && (
-                <>
-                  <div className="text-quest-textDim">Racha:</div>
-                  <div className="text-quest-orange text-right">🔥 {selectedHabit.streak}</div>
-                </>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Racha</span>
+                  <span className="text-2xl font-bold text-quest-orange">🔥 {selectedHabit.streak}</span>
+                </div>
               )}
               {selectedHabit.periodicity === 'weekly_times' && selectedHabit.weeklyTimesTarget && (
-                <>
-                  <div className="text-quest-textDim">Esta semana:</div>
-                  <div className="text-right text-quest-cyan">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Esta semana</span>
+                  <span className="text-2xl font-bold text-quest-cyan">
                     {getWeekCompletions(selectedHabit.id, history, today)}/{selectedHabit.weeklyTimesTarget}
-                  </div>
-                </>
+                  </span>
+                </div>
               )}
             </div>
 
@@ -204,7 +210,7 @@ export default function HabitList() {
               const weeklyTargetMet = isWeeklyTargetMet(selectedHabit);
               if (weeklyTargetMet) {
                 return (
-                  <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
+                  <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[11px] font-pixel uppercase tracking-[0.3em]">
                     ✔ Objetivo semanal cumplido
                   </div>
                 );
@@ -235,7 +241,7 @@ export default function HabitList() {
                     )}
                     <button
                       onClick={handleComplete}
-                      className="btn-pixel-green w-full text-[9px] py-3 font-bold"
+                      className="btn-pixel-green w-full text-[12px] py-3 font-bold uppercase tracking-[0.3em]"
                     >
                       ✔ Completar
                     </button>
@@ -243,7 +249,7 @@ export default function HabitList() {
                 );
               }
               return (
-                <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
+                <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[11px] font-pixel uppercase tracking-[0.3em]">
                   ✔ Hábito completado hoy
                 </div>
               );
@@ -255,27 +261,27 @@ export default function HabitList() {
                   setEditingHabit(selectedHabit);
                   closeSelected();
                 }}
-                className="btn-pixel-gold w-full text-[9px] py-3"
+                className="btn-pixel-gold w-full text-[12px] py-3 font-bold uppercase tracking-[0.3em]"
               >
                 ✎ Editar hábito
               </button>
               <button
                 onClick={() => setDeleteConfirm(true)}
-                className="btn-pixel-red w-full text-[9px] py-3"
+                className="btn-pixel-red w-full text-[12px] py-3 font-bold uppercase tracking-[0.3em]"
               >
                 🗑 Borrar hábito
               </button>
             </div>
 
             {deleteConfirm && (
-              <div className="mt-2 p-2 border border-quest-red bg-quest-red/10 text-[8px] font-pixel">
+              <div className="mt-2 p-3 border border-quest-red bg-quest-red/10 text-[9px] font-pixel">
                 <div className="mb-2">
                   ¿Seguro que quieres borrar este hábito? Esta acción no se puede deshacer.
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setDeleteConfirm(false)}
-                    className="btn-pixel-gray flex-1 text-[9px]"
+                    className="btn-pixel-gray flex-1 text-[10px] uppercase tracking-[0.3em]"
                   >
                     Cancelar
                   </button>
@@ -284,7 +290,7 @@ export default function HabitList() {
                       removeHabit(selectedHabit.id);
                       closeSelected();
                     }}
-                    className="btn-pixel-red flex-1 text-[9px]"
+                    className="btn-pixel-red flex-1 text-[10px] uppercase tracking-[0.3em]"
                   >
                     Sí, borrar
                   </button>

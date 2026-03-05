@@ -241,7 +241,7 @@ export default function HabitHistory() {
       </div>
       {detailHabit && createPortal(
         <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[11000] p-4 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[11000] p-4 backdrop-blur-[18px]"
           role="dialog"
           aria-modal="true"
           tabIndex={-1}
@@ -249,7 +249,7 @@ export default function HabitHistory() {
         >
           <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-4">
             <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-[10px] text-quest-cyan font-pixel uppercase tracking-widest flex items-center gap-2">
+              <div className="text-[16px] text-quest-cyan font-pixel uppercase tracking-[0.3em] flex items-center gap-2">
                 <span>{detailHabit.emoji}</span>
                 <span className="truncate">{detailHabit.name}</span>
               </div>
@@ -261,15 +261,23 @@ export default function HabitHistory() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-y-2 text-[7px] font-pixel uppercase tracking-tighter">
-              <div className="text-quest-textDim">COMPLETADOS (últimos {DAYS} días):</div>
-              <div className="text-quest-green text-right">{detailCompleted}</div>
-              <div className="text-quest-textDim">FALLADOS:</div>
-              <div className="text-quest-red text-right">{detailFailed}</div>
-              <div className="text-quest-textDim pt-2 border-t border-quest-border">TASA ÉXITO:</div>
-              <div className="text-quest-gold text-right pt-2 border-t border-quest-border">{detailRate}%</div>
-              <div className="text-quest-textDim pt-2 border-t border-quest-border">MAYOR RACHA:</div>
-              <div className="text-quest-orange text-right pt-2 border-t border-quest-border">🔥 {detailMaxStreak}</div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Completados ({DAYS} días)</span>
+                <span className="text-2xl font-bold text-quest-green">{detailCompleted}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Fallados</span>
+                <span className="text-2xl font-bold text-quest-red">{detailFailed}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-quest-border">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Tasa de éxito</span>
+                <span className="text-2xl font-bold text-quest-gold">{detailRate}%</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-quest-border">
+                <span className="text-[10px] text-quest-textDim uppercase tracking-[0.3em]">Mayor racha</span>
+                <span className="text-2xl font-bold text-quest-orange">🔥 {detailMaxStreak}</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 mt-2">
@@ -278,13 +286,13 @@ export default function HabitHistory() {
                   setEditingHabit(detailHabit);
                   closeDetailModal();
                 }}
-                className="btn-pixel-gold w-full text-[9px] py-3"
+                className="btn-pixel-gold w-full text-[12px] py-3"
               >
                 ✎ Editar hábito
               </button>
               <button
                 onClick={() => setDeleteConfirm(true)}
-                className="btn-pixel-red w-full text-[9px] py-3"
+                className="btn-pixel-red w-full text-[12px] py-3"
               >
                 🗑 Borrar hábito
               </button>
