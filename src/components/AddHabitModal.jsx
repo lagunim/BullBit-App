@@ -6,14 +6,15 @@ import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function AddHabitModal({ onClose }) {
   const addHabit = useGameStore(s => s.addHabit);
-  const [form, setForm] = useState({ name: '', minutes: 20, periodicity: 'daily', emoji: '🎯', customDays: '', customInterval: '' });
+  const [form, setForm] = useState({ name: '', minutes: '', periodicity: 'daily', emoji: '🎯', customDays: '', customInterval: '' });
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
   function handleSubmit() {
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
-    if (form.minutes < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
-    addHabit(form);
+    const mins = form.minutes === '' ? 20 : Number(form.minutes);
+    if (mins < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
+    addHabit({ ...form, minutes: mins });
     onClose();
   }
 
@@ -64,7 +65,7 @@ export default function AddHabitModal({ onClose }) {
         {/* Minutes */}
         <div>
           <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
-            DURACIÓN (MIN) — <span className="text-quest-green">{form.minutes} pts</span>
+            DURACIÓN (MIN) — <span className="text-quest-green">{(form.minutes === '' ? 20 : form.minutes)} pts</span>
           </label>
           <div className="flex items-center gap-3 mb-3">
             <input
@@ -73,7 +74,8 @@ export default function AddHabitModal({ onClose }) {
               inputMode="numeric"
               min={1} max={480}
               value={form.minutes}
-              onChange={e => setForm(f => ({ ...f, minutes: Number(e.target.value) }))}
+              onChange={e => setForm(f => ({ ...f, minutes: e.target.value }))}
+              placeholder="20"
             />
             <div className="text-[16px] sm:text-[7px] text-quest-textMuted uppercase">Puntos base por completion</div>
           </div>

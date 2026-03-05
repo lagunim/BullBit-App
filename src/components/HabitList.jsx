@@ -4,6 +4,7 @@ import useGameStore from '../store/gameStore.js';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
+import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
 import { getTodayKey, isHabitDueOnDate } from '../utils/gameLogic.js';
 
 export default function HabitList() {
@@ -63,8 +64,12 @@ export default function HabitList() {
     closeSelected();
   }
 
+  const hasActiveEffect = useHasActiveMultiplierEffect();
+
   function getMultColor(mult) {
-    return mult >= 3 ? 'text-quest-gold'
+    return hasActiveEffect
+      ? 'text-yellow-400'
+      : mult >= 3 ? 'text-quest-gold'
       : mult >= 2  ? 'text-quest-cyan'
       : mult >= 1.5 ? 'text-quest-green'
       : 'text-quest-text';
@@ -166,7 +171,10 @@ export default function HabitList() {
               <div className="text-quest-textDim">Duración:</div>
               <div className="text-quest-green text-right">{selectedHabit.minutes} min</div>
               <div className="text-quest-textDim">Multiplicador actual:</div>
-              <div className={`text-right ${getMultColor(selectedHabit.multiplier)}`}>×{(selectedHabit.multiplier ?? 1).toFixed(1)}</div>
+              <div className="text-right flex items-center justify-end gap-1">
+                <MultiplierIcons />
+                <span className={getMultColor(selectedHabit.multiplier)}>×{(selectedHabit.multiplier ?? 1).toFixed(1)}</span>
+              </div>
               {selectedHabit.streak > 0 && (
                 <>
                   <div className="text-quest-textDim">Racha:</div>

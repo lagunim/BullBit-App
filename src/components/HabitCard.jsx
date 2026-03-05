@@ -1,8 +1,10 @@
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey, isHabitExpired } from '../utils/gameLogic.js';
+import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
+  const hasActiveEffect = useHasActiveMultiplierEffect();
 
   const today = getTodayKey();
   const todayStatus = history[today]?.[habit.id];
@@ -11,7 +13,9 @@ export default function HabitCard({ habit, onEdit }) {
   const isDetermined = isDone || isFailed;
   const isExpired = isHabitExpired(habit, today, history);
 
-  const multColorClass = habit.multiplier >= 3 ? 'text-quest-gold'
+  const multColorClass = hasActiveEffect
+    ? 'text-yellow-400'
+    : habit.multiplier >= 3 ? 'text-quest-gold'
     : habit.multiplier >= 2  ? 'text-quest-cyan'
     : habit.multiplier >= 1.5 ? 'text-quest-green'
     : 'text-quest-text';
@@ -51,6 +55,7 @@ export default function HabitCard({ habit, onEdit }) {
               ⚠️
             </span>
           )}
+          <MultiplierIcons />
           <span className={`text-[10px] font-pixel ${multColorClass}`}>
             ×{(habit.multiplier ?? 1).toFixed(1)}
           </span>
