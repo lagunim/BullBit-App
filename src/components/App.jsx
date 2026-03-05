@@ -183,7 +183,10 @@ export default function App() {
       <div className="flex-1 overflow-hidden relative">
         <div
           className="flex h-full transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))` }}
+          style={{
+            transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))`,
+            touchAction: 'pan-y',
+          }}
           {...touchHandlers}
         >
           <section className="w-full flex-shrink-0">
