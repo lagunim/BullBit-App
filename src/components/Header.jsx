@@ -1,10 +1,13 @@
+import { useState } from "react";
 import useGameStore from "../store/gameStore.js";
 import { supabase } from "../lib/supabase.js";
+import ActiveEffectModal from "./ActiveEffectModal.jsx";
 
 export default function Header() {
   const level = useGameStore((s) => s.level ?? 0);
   const points = useGameStore((s) => s.points ?? 0);
   const rawEffects = useGameStore((s) => s.activeEffects ?? []);
+  const [selectedEffect, setSelectedEffect] = useState(null);
 
   const now = new Date();
   const activeEffects = rawEffects.filter(
@@ -27,7 +30,10 @@ export default function Header() {
           <div className="hidden sm:flex gap-2">
             {activeEffects.map((eff, i) => (
               <div key={i} className="tooltip-wrap relative">
-                <div className="flex items-center gap-1 bg-quest-panel border border-quest-cyan px-1.5 py-0.5 text-[6px] text-quest-cyan">
+                <div 
+                  onClick={() => setSelectedEffect(eff)}
+                  className="flex items-center gap-1 bg-quest-panel border border-quest-cyan px-1.5 py-0.5 text-[6px] text-quest-cyan cursor-pointer hover:bg-quest-cyan/20 transition-colors"
+                >
                   <span className="animate-blink">◆</span>
                   <span>{eff.itemName}</span>
                 </div>
@@ -61,6 +67,10 @@ export default function Header() {
           </button>
         </div>
       </div>
+
+      {selectedEffect && (
+        <ActiveEffectModal effect={selectedEffect} onClose={() => setSelectedEffect(null)} />
+      )}
     </header>
   );
 }

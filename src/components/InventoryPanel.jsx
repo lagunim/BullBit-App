@@ -1,16 +1,27 @@
+import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS, RARITY_COLORS } from '../data/items.js';
+import ActiveEffectModal from './ActiveEffectModal.jsx';
 
 export default function InventoryPanel() {
   const inventory = useGameStore(s => s.inventory ?? []);
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   const useItem = useGameStore(s => s.useItem);
   const habits = useGameStore(s => s.habits ?? []);
+  const [selectedEffect, setSelectedEffect] = useState(null);
 
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
 
-  const allItems = Object.values(ITEMS);
+  const allItems = Object.values(ITEMS).sort((a, b) => {
+    const invA = inventory.find(i => i.itemId === a.id);
+    const invB = inventory.find(i => i.itemId === b.id);
+    const qtyA = invA?.qty ?? 0;
+    const qtyB = invB?.qty ?? 0;
+    if (qtyA > 0 && qtyB === 0) return -1;
+    if (qtyA === 0 && qtyB > 0) return 1;
+    return 0;
+  });
 
   // Items that need a target habit (instant effects on habits)
   const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'retroactive_complete'];
@@ -43,7 +54,11 @@ export default function InventoryPanel() {
           </div>
           <div className="flex flex-wrap gap-3">
             {activeEffects.map((eff, i) => (
-              <div key={i} className="bg-quest-panel/50 border-2 border-quest-gold px-3 py-2 shadow-[2px_2px_0_theme(colors.quest.goldDark)] text-quest-gold text-[7px] font-pixel flex items-center gap-3">
+              <div 
+                key={i} 
+                onClick={() => setSelectedEffect(eff)}
+                className="bg-quest-panel/50 border-2 border-quest-gold px-3 py-2 shadow-[2px_2px_0_theme(colors.quest.goldDark)] text-quest-gold text-[7px] font-pixel flex items-center gap-3 cursor-pointer hover:bg-quest-gold/10 transition-colors"
+              >
                 <span className="animate-blink">◆</span>
                 <div>
                   <div className="mb-1 uppercase tracking-tighter">{eff.itemName ?? eff.key}</div>
@@ -111,6 +126,10 @@ export default function InventoryPanel() {
           );
         })}
       </div>
+
+      {selectedEffect && (
+        <ActiveEffectModal effect={selectedEffect} onClose={() => setSelectedEffect(null)} />
+      )}
     </div>
   );
 }

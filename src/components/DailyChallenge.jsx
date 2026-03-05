@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
+import DailyChallengeModal from './DailyChallengeModal.jsx';
 
 export default function DailyChallenge() {
   const { currentDaily } = useGameStore();
+  const [showModal, setShowModal] = useState(false);
 
   if (!currentDaily) return null;
 
@@ -27,7 +30,11 @@ export default function DailyChallenge() {
   };
 
   return (
-    <div className={`mb-6 p-3 sm:p-4 rounded-lg border bg-gradient-to-r ${getDifficultyBg(difficulty)} backdrop-blur-sm card-pixel`}>
+    <>
+      <div 
+        className={`mb-6 p-3 sm:p-4 rounded-lg border bg-gradient-to-r ${getDifficultyBg(difficulty)} backdrop-blur-sm card-pixel cursor-pointer hover:scale-[1.02] transition-transform`}
+        onClick={() => setShowModal(true)}
+      >
       {/* Header */}
       <div className="flex items-center justify-between mb-2 sm:mb-3">
         <div className="flex items-center gap-2">
@@ -100,6 +107,14 @@ export default function DailyChallenge() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      {showModal && (
+        <DailyChallengeModal 
+          daily={currentDaily} 
+          onClose={() => setShowModal(false)} 
+        />
+      )}
+    </>
   );
 }
