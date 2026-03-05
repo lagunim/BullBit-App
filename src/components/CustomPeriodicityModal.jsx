@@ -74,10 +74,13 @@ export default function CustomPeriodicityModal({
           <span className="text-[9px] text-quest-text font-pixel">Periodicidad (cada cuántos días)</span>
         </label>
         {mode === 'interval' && (
-          <div className="ml-6 w-full">
+          <div className="w-full flex flex-col items-center">
             <input
               className="input-pixel w-full text-center"
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              step="1"
               min={1}
               value={interval}
               onChange={e => setIntervalVal(e.target.value)}
@@ -92,10 +95,13 @@ export default function CustomPeriodicityModal({
           <span className="text-[9px] text-quest-text font-pixel">Veces por semana</span>
         </label>
         {mode === 'weekly_times' && (
-          <div className="ml-6 flex items-center gap-2">
+          <div className="w-full flex flex-col items-center gap-2">
             <input
-              className="input-pixel !w-16 text-center"
+              className="input-pixel w-full text-center"
               type="number"
+              inputMode="numeric"
+              pattern="[0-7]*"
+              step="1"
               min={1}
               max={7}
               value={weeklyTimes}
