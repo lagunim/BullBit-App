@@ -24,7 +24,7 @@ export default function InventoryPanel() {
   });
 
   // Items that need a target habit (instant effects on habits)
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'retroactive_complete'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult'];
 
   function handleUse(itemId) {
     const item = ITEMS[itemId];

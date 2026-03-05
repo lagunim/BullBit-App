@@ -6,7 +6,7 @@ export const ACHIEVEMENTS = [
   { id:'streak_10',       name:'RACHA DE FUEGO',        description:'Racha de 10 días en cualquier hábito',                    icon:'🔥', rarity:'rare',      reward:'elixir' },
   { id:'streak_30',       name:'MAESTRO CONSTANTE',     description:'Racha de 30 días en cualquier hábito',                    icon:'🏆', rarity:'epic',      reward:'double_xp' },
   { id:'multiplier_2',    name:'MOMENTUM',              description:'Alcanza ×2.0 en cualquier hábito',                        icon:'⚡', rarity:'uncommon',  reward:null },
-  { id:'multiplier_3',    name:'IMPARABLE',             description:'Alcanza ×3.0 en cualquier hábito',                        icon:'💎', rarity:'epic',      reward:'time_warp' },
+  { id:'multiplier_3',    name:'IMPARABLE',             description:'Alcanza ×3.0 en cualquier hábito',                        icon:'💎', rarity:'epic',      reward:null },
   { id:'multiplier_5',    name:'TRASCENDENCIA',         description:'Alcanza ×5.0 en cualquier hábito',                        icon:'🌌', rarity:'legendary', reward:'rune' },
   { id:'level_1',         name:'PRIMER NIVEL',          description:'Sube al Nivel 1 (Aventurero)',                             icon:'🎮', rarity:'uncommon',  reward:null },
   { id:'level_3',         name:'VETERANO',              description:'Alcanza el Nivel 3 (Héroe)',                               icon:'🛡️', rarity:'rare',      reward:'iron_will' },

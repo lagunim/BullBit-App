@@ -46,16 +46,6 @@ export const ITEMS = {
     durationDays: 7,
     maxStack: 2,
   },
-  time_crystal: {
-    id: 'time_crystal',
-    name: 'Cristal del Tiempo',
-    icon: '🔮',
-    rarity: 'rare',
-    desc: 'Marca retroactivamente un hábito como completado ayer (evita la penalización de ese día).',
-    effectType: 'instant',
-    effectKey: 'retroactive_complete',
-    maxStack: 3,
-  },
   recovery_totem: {
     id: 'recovery_totem',
     name: 'Tótem de Recuperación',

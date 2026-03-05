@@ -17,7 +17,6 @@ const STATUS_STYLE = {
 export default function HabitHistory() {
   const habits = useGameStore(s => s.habits ?? []);
   const history = useGameStore(s => s.history ?? {});
-  const retroCompleteYesterday = useGameStore(s => s.retroCompleteYesterday);
   const removeHabit = useGameStore(s => s.removeHabit);
 
   const DAYS = 14; // Showing 14 días para mejor encaje en móvil
@@ -25,10 +24,6 @@ export default function HabitHistory() {
   const dates = Array.from({ length: DAYS }, (_, i) => getDateKey(i));
   const todayKey = getDateKey(0);
   const yesterdayKey = getDateKey(1);
-
-  const [retroHabit, setRetroHabit] = useState(null);
-  const [customMinutes, setCustomMinutes] = useState('');
-  const [customError, setCustomError] = useState('');
   const [detailHabit, setDetailHabit] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
@@ -99,44 +94,6 @@ export default function HabitHistory() {
     setDeleteConfirm(false);
   }
 
-  function openRetroModal(habit) {
-    setRetroHabit(habit);
-    setCustomMinutes('');
-    setCustomError('');
-  }
-
-  function closeRetroModal() {
-    setRetroHabit(null);
-    setCustomError('');
-  }
-
-  function handleRetroComplete() {
-    if (!retroHabit) return;
-    const trimmed = String(customMinutes).trim();
-    if (!trimmed) {
-      retroCompleteYesterday(retroHabit.id, 'standard', retroHabit.minutes);
-      closeRetroModal();
-      return;
-    }
-    const minutes = Number(trimmed);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      setCustomError('Introduce un número de minutos válido.');
-      return;
-    }
-    const mode = minutes < retroHabit.minutes ? 'partial' : 'over';
-    retroCompleteYesterday(retroHabit.id, mode, minutes);
-    closeRetroModal();
-  }
-
-  const retroMultColorClass = retroHabit
-    ? retroHabit.multiplier >= 3
-      ? 'text-quest-gold'
-      : retroHabit.multiplier >= 2
-      ? 'text-quest-cyan'
-      : retroHabit.multiplier >= 1.5
-      ? 'text-quest-green'
-      : 'text-quest-text'
-    : 'text-quest-text';
 
   const detailCompleted = detailHabit
     ? dates.filter(d => isCompletedStatus(deriveStatus(d, detailHabit))).length
@@ -150,16 +107,6 @@ export default function HabitHistory() {
       : 0;
   const detailMaxStreak = detailHabit ? getMaxStreak(detailHabit.id) : 0;
 
-  const canRetroYesterdayForDetail = detailHabit
-    ? (() => {
-        const rawStatus = history[yesterdayKey]?.[detailHabit.id] ?? 'none';
-        return !(
-          rawStatus === 'completed' ||
-          rawStatus === 'partial' ||
-          rawStatus === 'over'
-        );
-      })()
-    : false;
 
   if (habits.length === 0) {
     return (
@@ -243,23 +190,12 @@ export default function HabitHistory() {
                     const isToday = d === todayKey;
                     const isFuture = d > todayKey;
                     const isBeforeCreation = createdKey && d < createdKey;
-                    const isEditableYesterday =
-                      d === yesterdayKey &&
-                      !isFuture &&
-                      !isBeforeCreation &&
-                      !(rawStatus === 'completed' || rawStatus === 'partial' || rawStatus === 'over');
-
                     return (
                       <div
                         key={d}
-                        onClick={() => {
-                          if (isEditableYesterday) {
-                            openRetroModal(habit);
-                          }
-                        }}
                         className={`w-6 h-6 flex items-center justify-center text-[9px] border transition-all justify-self-center ${s.bg} ${s.border} ${s.text} ${
                           isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
-                        } ${isEditableYesterday ? 'cursor-pointer hover:scale-110 hover:border-quest-gold' : ''}`}
+                        }`}
                       >
                         {s.symbol}
                       </div>
@@ -337,17 +273,6 @@ export default function HabitHistory() {
             </div>
 
             <div className="flex flex-col gap-2 mt-2">
-              {canRetroYesterdayForDetail && (
-                <button
-                  onClick={() => {
-                    openRetroModal(detailHabit);
-                    closeDetailModal();
-                  }}
-                  className="btn-pixel-blue w-full text-[9px] py-3"
-                >
-                  ⏪ Corregir día de ayer
-                </button>
-              )}
               <button
                 onClick={() => {
                   setEditingHabit(detailHabit);
@@ -398,77 +323,6 @@ export default function HabitHistory() {
           habit={editingHabit}
           onClose={() => setEditingHabit(null)}
         />
-      )}
-      {retroHabit && createPortal(
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[11000] p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          tabIndex={-1}
-          onClick={(e) => e.target === e.currentTarget && closeRetroModal()}
-          onKeyDown={(e) => {
-            if ((e.key === 'Escape' || e.key === 'Esc') && e.target === e.currentTarget) {
-              closeRetroModal();
-            }
-          }}
-        >
-          <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-4">
-            <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-[10px] text-quest-cyan font-pixel uppercase tracking-widest">
-                ¿Cómo fue la misión de ayer?
-              </div>
-              <button
-                onClick={closeRetroModal}
-                className="btn-pixel-gray !py-2 !px-3 !text-[10px]"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="text-[9px] text-quest-textDim font-pixel leading-relaxed">
-              <div className="mb-1">
-                <span className="text-quest-text">{retroHabit?.emoji} {retroHabit?.name}</span>
-              </div>
-              <div className="text-quest-textMuted">
-                Objetivo: <span className="text-quest-green">{retroHabit?.minutes} min</span> — Multiplicador actual:{' '}
-                <span className={retroMultColorClass}>×{(retroHabit?.multiplier ?? 1).toFixed(1)}</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={480}
-                  placeholder={String(retroHabit?.minutes)}
-                  className="input-pixel !w-24 text-center"
-                  value={customMinutes}
-                  onChange={(e) => {
-                    setCustomMinutes(e.target.value);
-                    setCustomError('');
-                  }}
-                />
-                <span className="text-[8px] text-quest-textMuted font-pixel uppercase">
-                  minutos (opcional)
-                </span>
-              </div>
-              {customError && (
-                <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
-                  {customError}
-                </div>
-              )}
-              <button
-                onClick={handleRetroComplete}
-                className="btn-pixel-green w-full text-[9px] py-3"
-              >
-                Hábito completado
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
     </div>
   );

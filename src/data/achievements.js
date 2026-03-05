@@ -157,7 +157,7 @@ export const ACHIEVEMENTS = [
     icon: '🥈',
     rarity: 'rare',
     check: (state) => state.level >= 2,
-    reward: 'time_crystal',
+    reward: 'random_rare',
   },
   {
     id: 'level_3',

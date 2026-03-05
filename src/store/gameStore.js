@@ -494,84 +494,6 @@ const useGameStore = create(
         get()._updateDailyProgress();
       },
 
-      /**
-       * Corrige el día anterior (ayer) abriendo las mismas opciones de completado
-       * que hoy, pero ajustando el multiplicador como si ayer se hubiera marcado
-       * como fallo (-0.4) y ahora:
-       *  - "menos tiempo" → devuelve ese -0.4 (neto 0.0)
-       *  - "más tiempo" o "completado" → devuelve -0.4 y añade +0.2 (neto +0.2)
-       *
-       * mode: 'partial' | 'over' | 'standard'
-       */
-      retroCompleteYesterday(habitId, mode, minutesDone) {
-        const state = get();
-        const yesterday = getYesterdayKey();
-        const habit = state.habits.find(h => h.id === habitId);
-        if (!habit) return;
-
-        const dayHistory = state.history[yesterday] ?? {};
-        const currentStatus = dayHistory[habitId];
-        // Si ya está marcado como completado (de cualquier tipo), no hacer nada
-        if (currentStatus === 'completed' || currentStatus === 'partial' || currentStatus === 'over') {
-          return;
-        }
-
-        // Duración real usada para el cálculo de puntos
-        const minutes =
-          mode === 'standard'
-            ? habit.minutes
-            : Number(minutesDone);
-        if (!Number.isFinite(minutes) || minutes <= 0) return;
-
-        // Aproximamos el multiplicador "previo al fallo" como mult actual + 0.4
-        const baseMultBeforeFail = Math.min(3.0, parseFloat((habit.multiplier + 0.4).toFixed(1)));
-
-        let finalStatus = 'completed';
-        let multDelta = 0.6; // +0.4 por deshacer el fallo, +0.2 por completar
-
-        if (mode === 'partial') {
-          finalStatus = 'partial';
-          multDelta = 0.4; // solo devolvemos el -0.4 del fallo
-        } else if (mode === 'over') {
-          finalStatus = 'over';
-          multDelta = 0.6;
-        } else {
-          finalStatus = 'completed';
-          multDelta = 0.6;
-        }
-
-        // Puntos calculados como si el multiplicador hubiera sido el "correcto" (previo al fallo)
-        const effectiveMultForPoints = baseMultBeforeFail;
-        const earned = Math.round(minutes * effectiveMultForPoints);
-
-        const newMult = Math.min(3.0, parseFloat((habit.multiplier + multDelta).toFixed(1)));
-
-        set(state2 => ({
-          points: state2.points + earned,
-          lifetimePoints: state2.lifetimePoints + earned,
-          history: {
-            ...state2.history,
-            [yesterday]: { ...(state2.history[yesterday] ?? {}), [habitId]: finalStatus },
-          },
-          habits: state2.habits.map(h =>
-            h.id === habitId ? { ...h, multiplier: newMult, streak: h.streak + 1 } : h
-          ),
-        }));
-
-        // Persistir en BD (fire & forget)
-        const userId4 = get()._userId;
-        if (userId4) {
-          const updatedHabit = get().habits.find(h => h.id === habitId);
-          if (updatedHabit) saveHabit(userId4, updatedHabit).catch(() => {});
-          saveHabitEntry(userId4, habitId, yesterday, finalStatus).catch(() => {});
-          saveProfile(userId4, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-        }
-
-        get()._recalcGlobalStreak();
-        get()._checkAchievements();
-        get()._updateDailyProgress();
-        get()._pushNotification('complete', `+${earned} pts — corrección de ayer`);
-      },
 
       failHabit(habitId) {
         const state = get();
@@ -697,36 +619,6 @@ const useGameStore = create(
               saveInventory(uid, get().inventory).catch(() => {});
               const updatedHabit = get().habits.find(h => h.id === targetHabitId);
               if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
-            }
-          } else if (item.effectKey === 'retroactive_complete' && targetHabitId) {
-            const yesterday = getYesterdayKey();
-            const habit = get().habits.find(h => h.id === targetHabitId);
-            if (habit) {
-              const earned = Math.round(habit.minutes * habit.multiplier);
-              set(state2 => ({
-                inventory: newInventory,
-                points: state2.points + earned,
-                lifetimePoints: state2.lifetimePoints + earned,
-                history: {
-                  ...state2.history,
-                  [yesterday]: { ...(state2.history[yesterday] ?? {}), [targetHabitId]: 'completed' },
-                },
-                habits: state2.habits.map(h =>
-                  h.id === targetHabitId ? { ...h, streak: h.streak + 1 } : h
-                ),
-              }));
-              const uid = get()._userId;
-              if (uid) {
-                saveInventory(uid, get().inventory).catch(() => {});
-                saveHabitEntry(uid, targetHabitId, yesterday, 'completed').catch(() => {});
-                saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-                const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-                if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
-              }
-            } else {
-              set({ inventory: newInventory });
-              const uid = get()._userId;
-              if (uid) saveInventory(uid, get().inventory).catch(() => {});
             }
           } else {
             set({ inventory: newInventory });
