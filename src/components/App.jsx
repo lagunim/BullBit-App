@@ -12,10 +12,10 @@ import { supabase } from '../lib/supabase.js';
 import useGameStore from '../store/gameStore.js';
 
 const TABS = [
-  { id: 'home',    label: 'INICIO',    icon: '🏠' },
+  { id: 'home', label: 'INICIO', icon: '🏠' },
   { id: 'history', label: 'HISTORIAL', icon: '📅' },
-  { id: 'items',   label: 'ITEMS',     icon: '🎒' },
-  { id: 'achieve', label: 'LOGROS',    icon: '🏆' },
+  { id: 'items', label: 'ITEMS', icon: '🎒' },
+  { id: 'achieve', label: 'LOGROS', icon: '🏆' },
 ];
 
 export default function App() {
@@ -235,14 +235,12 @@ export default function App() {
           <button
             key={t.id}
             onClick={() => handleTabChange(t.id)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-opacity duration-200 cursor-pointer border-none bg-transparent ${
-              tab === t.id ? 'opacity-100' : 'opacity-40 hover:opacity-70'
-            }`}
+            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-opacity duration-200 cursor-pointer border-none bg-transparent ${tab === t.id ? 'opacity-100' : 'opacity-40 hover:opacity-70'
+              }`}
           >
-            <span className="text-base sm:text-lg">{t.icon}</span>
-            <span className={`text-[6px] font-pixel sm:text-[7px] ${
-              tab === t.id ? 'text-quest-green' : 'text-quest-text'
-            }`}>
+            <span className="text-xl sm:text-lg">{t.icon}</span>
+            <span className={`text-xs font-pixel sm:text-[7px] ${tab === t.id ? 'text-quest-green' : 'text-quest-text'
+              }`}>
               {t.label}
             </span>
             {tab === t.id && (
