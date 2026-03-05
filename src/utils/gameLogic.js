@@ -244,4 +244,3 @@ export const PERIODICITY_LABELS = {
   custom:       'Personalizado',
 };
 
-export const HABIT_EMOJIS = ['📚', '🏃', '💧', '🧘', '🎸', '✍️', '🥗', '😴', '🧹', '💪', '🎯', '🧠', '🎨', '🌿', '🏋️'];

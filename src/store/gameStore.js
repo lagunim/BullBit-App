@@ -14,6 +14,7 @@ import {
   getWeekStart,
   getWeekCompletions,
 } from '../utils/gameLogic.js';
+import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
 import {
   loadUserData,
   saveProfile,
@@ -102,7 +103,8 @@ const useGameStore = create(
           name: habit.name,
           minutes: habit.minutes,
           periodicity: habit.periodicity,
-          emoji: habit.emoji ?? '🎯',
+          emoji: habit.emoji ?? HABIT_THEME_BY_ID[habit.themeId ?? DEFAULT_HABIT_THEME]?.icon ?? '🎯',
+          themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
           customDays: habit.customDays,
           customInterval: habit.customInterval,
           weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
@@ -185,7 +187,7 @@ const useGameStore = create(
               const migratedHistory = migrateHistory(localState.history ?? {}, idMap);
 
               set({
-                habits: migratedHabits,
+                habits: migratedHabits.map(attachThemeToHabit),
                 level: localState.level ?? 0,
                 points: localState.points ?? 0,
                 lifetimePoints: localState.lifetimePoints ?? 0,

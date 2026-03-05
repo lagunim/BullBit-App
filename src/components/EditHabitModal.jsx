@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
-import { HABIT_EMOJIS, PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import { PERIODICITY_LABELS } from '../utils/gameLogic.js';
 import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
+import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/habitThemes.js';
 
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
+  const defaultTheme = HABIT_THEME_BY_ID[habit.themeId] ?? HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME];
   const [form, setForm] = useState({ 
     name: habit.name, 
     minutes: habit.minutes, 
     periodicity: habit.periodicity, 
-    emoji: habit.emoji,
+    emoji: habit.emoji ?? defaultTheme?.icon,
+    themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
     customDays: habit.customDays || '',
     customInterval: habit.customInterval || '',
     customWeeklyTimes: habit.weeklyTimesTarget ? String(habit.weeklyTimesTarget) : '',
@@ -53,21 +56,31 @@ export default function EditHabitModal({ habit, onClose }) {
 
         {/* Emoji selector */}
         <div>
-          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">CAMBIAR ICONO</label>
-          <div className="grid grid-cols-6 gap-2">
-            {HABIT_EMOJIS.map(em => (
-              <button 
-                key={em} 
-                onClick={() => setForm(f => ({ ...f, emoji: em }))}
-                className={`flex items-center justify-center p-2 text-xl border-2 transition-all ${
-                  form.emoji === em 
-                    ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)] scale-110 z-10' 
-                    : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
-                }`}
-              >
-                {em}
-              </button>
-            ))}
+          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">TEMÁTICA</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {HABIT_THEMES.map(theme => {
+              const isSelected = form.themeId === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, themeId: theme.id, emoji: theme.icon }))}
+                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded border-2 transition-all ${
+                    isSelected
+                      ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)] scale-105'
+                      : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
+                  }`}
+                >
+                  <span className="text-3xl leading-[1]">{theme.icon}</span>
+                  {isSelected && (
+                    <span className="text-[10px] uppercase tracking-[0.3em] text-quest-textDim">{theme.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-quest-textDim mt-2">
+            {HABIT_THEME_BY_ID[form.themeId]?.description}
           </div>
         </div>
 

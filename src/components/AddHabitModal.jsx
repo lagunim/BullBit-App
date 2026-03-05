@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
-import { HABIT_EMOJIS, PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import { PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import { HABIT_THEMES, DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID } from '../data/habitThemes.js';
 import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function AddHabitModal({ onClose }) {
   const addHabit = useGameStore(s => s.addHabit);
-  const [form, setForm] = useState({ name: '', minutes: '', periodicity: 'daily', emoji: '🎯', customDays: '', customInterval: '', customWeeklyTimes: '' });
+  const defaultTheme = HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME] ?? HABIT_THEMES[0];
+  const [form, setForm] = useState({
+    name: '',
+    minutes: '',
+    periodicity: 'daily',
+    emoji: defaultTheme?.icon ?? '🎯',
+    themeId: defaultTheme?.id ?? DEFAULT_HABIT_THEME,
+    customDays: '',
+    customInterval: '',
+    customWeeklyTimes: '',
+  });
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
@@ -36,8 +47,8 @@ export default function AddHabitModal({ onClose }) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm" 
-         onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
@@ -50,20 +61,27 @@ export default function AddHabitModal({ onClose }) {
         {/* Emoji selector */}
         <div>
           <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">ICONO</label>
-          <div className="grid grid-cols-6 gap-2">
-            {HABIT_EMOJIS.map(em => (
-              <button 
-                key={em} 
-                onClick={() => setForm(f => ({ ...f, emoji: em }))}
-                className={`flex items-center justify-center p-2 text-xl border-2 transition-all ${
-                  form.emoji === em 
-                    ? 'bg-quest-panel border-quest-cyan shadow-[0_0_8px_theme(colors.quest.cyan)]' 
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {HABIT_THEMES.map(theme => {
+              const isSelected = form.themeId === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, themeId: theme.id, emoji: theme.icon }))}
+                  className={`flex flex-col items-center justify-center gap-y-3 py-3 rounded border-2 transition-all ${isSelected
+                    ? 'bg-quest-panel border-quest-cyan shadow-[0_0_8px_theme(colors.quest.cyan)]'
                     : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
-                }`}
-              >
-                {em}
-              </button>
-            ))}
+                    }`}
+                >
+                  <span className="text-3xl leading-[1]">{theme.icon}</span>
+                  <span className="text-[8px] uppercase  text-quest-textDim">{theme.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="text-[11px] text-quest-textDim uppercase  mt-2">
+            {HABIT_THEME_BY_ID[form.themeId]?.description}
           </div>
         </div>
 
@@ -74,7 +92,7 @@ export default function AddHabitModal({ onClose }) {
             className="input-pixel"
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            placeholder="Ej: Leer, Correr, Meditar..."
+            placeholder="Ej: Leer, Correr..."
             maxLength={40}
           />
         </div>
@@ -117,10 +135,10 @@ export default function AddHabitModal({ onClose }) {
               ))}
             </select>
             {form.periodicity === 'custom' && (
-              <button 
+              <button
                 onClick={() => setShowCustomModal(true)}
-               className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-sm sm:text-xs"
-            >
+                className="btn-pixel-gray !py-3 !px-4 sm:!px-3 sm:!py-2 font-pixel text-sm sm:text-xs"
+              >
                 ✎
               </button>
             )}
@@ -133,7 +151,7 @@ export default function AddHabitModal({ onClose }) {
           <button onClick={onClose} className="btn-pixel-gray flex-1 uppercase">Cancelar</button>
           <button onClick={handleSubmit} className="btn-pixel-green flex-[2] uppercase font-bold tracking-widest">✚ Crear</button>
         </div>
-        
+
         {showCustomModal && (
           <CustomPeriodicityModal
             initialDays={form.customDays}

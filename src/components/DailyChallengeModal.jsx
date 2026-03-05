@@ -45,7 +45,7 @@ export default function DailyChallengeModal({ daily, onClose }) {
             {icon}
           </div>
           <div className="flex-1">
-             <h2 className="text-base font-bold text-white">{name}</h2>
+            <h2 className="text-base font-bold text-white">{name}</h2>
             <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${getDifficultyColor(difficulty)} ${getDifficultyBg(difficulty)}`}>
               {difficulty.toUpperCase()}
             </span>
@@ -53,9 +53,9 @@ export default function DailyChallengeModal({ daily, onClose }) {
         </div>
 
         {/* Description */}
-           <div className="bg-quest-bg/50 p-4 rounded-lg border border-quest-border">
-             <p className="text-gray-300 text-xs">{description}</p>
-          </div>
+        <div className="bg-quest-bg/50 p-4 rounded-lg border border-quest-border">
+          <p className="text-gray-300 text-xs">{description}</p>
+        </div>
 
         {/* Progress */}
         <div>
@@ -123,7 +123,7 @@ export default function DailyChallengeModal({ daily, onClose }) {
         </div>
 
         {/* Close button */}
-         <button onClick={onClose} className="btn-pixel-gold w-full uppercase font-bold tracking-widest mt-2 text-xs">
+        <button onClick={onClose} className="btn-pixel-gold w-full uppercase font-bold tracking-widest mt-2 text-xs">
           Cerrar
         </button>
       </div>

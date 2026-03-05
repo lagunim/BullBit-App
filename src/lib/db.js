@@ -8,6 +8,7 @@
  */
 
 import { supabase } from './supabase.js';
+import { attachThemeToHabit } from '../data/habitThemes.js';
 
 const SERVER_ID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
 
@@ -27,6 +28,7 @@ function habitToRow(userId, habit, includeId = true) {
     custom_days: habit.customDays ?? null,
     custom_interval: habit.customInterval ?? null,
     weekly_times_target: habit.weeklyTimesTarget ?? null,
+    theme_id: habit.themeId ?? undefined,
     created_at: habit.createdAt ?? new Date().toISOString(),
   };
 
@@ -39,7 +41,7 @@ function habitToRow(userId, habit, includeId = true) {
 
 /** Convierte una fila de la tabla habits al formato del store. */
 function rowToHabit(row) {
-  return {
+  return attachThemeToHabit({
     id: row.id,
     name: row.name,
     minutes: row.minutes,
@@ -51,8 +53,9 @@ function rowToHabit(row) {
     customDays: row.custom_days ?? undefined,
     customInterval: row.custom_interval ?? undefined,
     weeklyTimesTarget: row.weekly_times_target ?? null,
+    themeId: row.theme_id ?? undefined,
     createdAt: row.created_at,
-  };
+  });
 }
 
 /** Convierte una fila de active_effects al formato del store. */
