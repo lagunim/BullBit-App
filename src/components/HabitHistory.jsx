@@ -148,62 +148,65 @@ export default function HabitHistory() {
       </div>
 
       {/* Grid-based History Table - Grid para alineación correcta día/cuadro */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory">
-        <div className="w-full">
-          <div
-            className="grid border-b-2 border-quest-border pb-2 mb-2 items-end"
-            style={{ gridTemplateColumns: '8rem repeat(7, minmax(1fr, 2.5rem))' }}
-          >
-            <div className="text-xs text-quest-textMuted font-pixel tracking-tighter uppercase sticky left-0 z-10 bg-quest-panel">
-              Hábito
-            </div>
-            {dates.map(d => {
-              const short = d.slice(8); // DD only
-              const isToday = d === todayKey;
-              return (
-                <div
-                  key={d}
-                  className={`text-xs font-pixel text-center ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}
-                >
-                  {short}
-                </div>
-              );
-            })}
+      <div className="w-full">
+        <div
+          className="grid border-b-2 border-quest-border pb-2 mb-2 items-end"
+          style={{ gridTemplateColumns: 'minmax(0, 12rem) repeat(7, minmax(0, 1fr))' }}
+        >
+          <div className="text-xs text-quest-textMuted font-pixel tracking-tighter uppercase sticky left-0 z-10 bg-quest-panel px-2 text-left">
+            Hábito
           </div>
+          {dates.map(d => {
+            const short = d.slice(8);
+            const isToday = d === todayKey;
+            return (
+              <div
+                key={d}
+                className={`text-xs font-pixel text-center ${isToday ? 'text-quest-cyan underline decoration-2' : 'text-quest-textMuted'}`}
+              >
+                {short}
+              </div>
+            );
+          })}
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            {habits.map(habit => {
-              const createdKey = getCreatedKey(habit);
-              return (
+        <div className="flex flex-col gap-1.5">
+          {habits.map(habit => {
+            const createdKey = getCreatedKey(habit);
+            return (
+              <div
+                key={habit.id}
+                className="grid items-center"
+                style={{ gridTemplateColumns: 'minmax(0, 12rem) repeat(7, minmax(0, 1fr))' }}
+              >
                 <div
-                  key={habit.id}
-                  className="grid items-center"
-                  style={{ gridTemplateColumns: '8rem repeat(7, minmax(1fr, 2.5rem))' }}
+                  className="text-[10px] uppercase font-pixel tracking-tighter leading-tight sticky left-0 z-10 bg-quest-panel px-2"
+                  style={{
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    display: '-webkit-box',
+                    overflow: 'hidden',
+                  }}
                 >
-                  <div className="text-[10px] truncate pr-2 uppercase font-pixel tracking-tighter leading-none sticky left-0 z-10 bg-quest-panel">
-                    {habit.emoji} {habit.name}
-                  </div>
-                  {dates.map(d => {
-                    const rawStatus = history[d]?.[habit.id] ?? 'none';
-                    const status = deriveStatus(d, habit);
-                    const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
-                    const isToday = d === todayKey;
-                    const isFuture = d > todayKey;
-                    const isBeforeCreation = createdKey && d < createdKey;
-                    return (
+                  {habit.emoji} {habit.name}
+                </div>
+                {dates.map(d => {
+                  const status = deriveStatus(d, habit);
+                  const s = STATUS_STYLE[status] ?? STATUS_STYLE.none;
+                  const isToday = d === todayKey;
+                  return (
+                    <div key={d} className="flex items-center justify-center px-1 py-1">
                       <div
-                        key={d}
-                        className={`w-8 h-8 flex items-center justify-center text-xs border transition-all justify-self-center ${s.bg} ${s.border} ${s.text} ${isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''
-                          }`}
+                        className={`aspect-square w-full flex items-center justify-center text-xs border transition-all ${s.bg} ${s.border} ${s.text} ${isToday && status === 'none' ? 'animate-pulse scale-110 border-quest-cyan' : ''}`}
                       >
                         {s.symbol}
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
 
