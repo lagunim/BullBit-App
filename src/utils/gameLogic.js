@@ -26,6 +26,7 @@ export function getDateKey(daysAgo = 0) {
 }
 
 export function isHabitDueOnDate(habit, dateStr) {
+  if (habit.weeklyTimesTarget) return true;
   const date = new Date(dateStr + 'T12:00:00');
   
   switch (habit.periodicity) {
@@ -123,6 +124,8 @@ function _parseCustomDays(customDays) {
 
 /** Check if a habit is currently expired (past its due time today) */
 export function isHabitExpired(habit, today, history) {
+  if (habit.weeklyTimesTarget) return false;
+  
   // Si ya tiene un estado para hoy, no está vencido
   const todayStatus = history[today]?.[habit.id];
   if (todayStatus) return false;
@@ -202,11 +205,43 @@ export function calcGlobalStreak(habits, history) {
   return streak;
 }
 
+/** Get the Monday of the week for a given date */
+export function getWeekStart(dateStr) {
+  const date = new Date(dateStr + 'T12:00:00');
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Adjust when day is Sunday
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + diff);
+  return monday.toISOString().split('T')[0];
+}
+
+/** Get completions count for a weekly_times habit in a given week (Mon-Sun) */
+export function getWeekCompletions(habitId, history, dateStr) {
+  const weekStart = getWeekStart(dateStr);
+  const weekStartDate = new Date(weekStart + 'T12:00:00');
+  
+  const isCompletedStatus = (status) =>
+    status === 'completed' || status === 'partial' || status === 'over';
+  
+  let completions = 0;
+  for (let i = 0; i < 7; i++) {
+    const currentDate = new Date(weekStartDate);
+    currentDate.setDate(weekStartDate.getDate() + i);
+    const dateKey = currentDate.toISOString().split('T')[0];
+    const dayData = history[dateKey] ?? {};
+    const status = dayData[habitId];
+    if (isCompletedStatus(status)) {
+      completions++;
+    }
+  }
+  return completions;
+}
+
 export const PERIODICITY_LABELS = {
-  daily:   'Diaria',
-  weekly:  'Semanal',
-  monthly: 'Mensual',
-  custom:  'Personalizado',
+  daily:        'Diaria',
+  weekly:       'Semanal',
+  monthly:      'Mensual',
+  custom:       'Personalizado',
 };
 
 export const HABIT_EMOJIS = ['📚', '🏃', '💧', '🧘', '🎸', '✍️', '🥗', '😴', '🧹', '💪', '🎯', '🧠', '🎨', '🌿', '🏋️'];

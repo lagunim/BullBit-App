@@ -5,7 +5,7 @@ import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
-import { getTodayKey, isHabitDueOnDate } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitDueOnDate, getWeekCompletions } from '../utils/gameLogic.js';
 
 export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
@@ -29,9 +29,17 @@ export default function HabitList() {
 
   // Filtrar solo hábitos que corresponden al día actual
   const todayHabits = habits.filter(habit => isHabitDueOnDate(habit, today));
+
+  const isWeeklyTargetMet = (habit) => {
+    if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+      const completions = getWeekCompletions(habit.id, history, today);
+      return completions >= habit.weeklyTimesTarget;
+    }
+    return false;
+  };
   
-  const completedToday = todayHabits.filter(h => isCompletedStatus(todayData[h.id])).length;
-  const pendingToday = todayHabits.filter(h => !todayData[h.id]).length;
+  const completedToday = todayHabits.filter(h => isCompletedStatus(todayData[h.id]) || isWeeklyTargetMet(h)).length;
+  const pendingToday = todayHabits.filter(h => !todayData[h.id] && !isWeeklyTargetMet(h)).length;
 
   const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const todayName = dayNames[new Date().getDay()];
@@ -116,10 +124,10 @@ export default function HabitList() {
       ) : (
         <div className="flex flex-col gap-2">
           {[
-            // Primero los pendientes de hoy
-            ...todayHabits.filter(h => !todayData[h.id]),
-            // Después los que ya tienen estado hoy (completados / parciales / extra / fallados)
-            ...todayHabits.filter(h => todayData[h.id]),
+            // Primero los pendientes de hoy (incluye weekly_times sin objetivo cumplido)
+            ...todayHabits.filter(h => !todayData[h.id] && !isWeeklyTargetMet(h)),
+            // Después los que ya tienen estado hoy (completados / parciales / extra / fallados / weekly target met)
+            ...todayHabits.filter(h => todayData[h.id] || isWeeklyTargetMet(h)),
           ].map(habit => (
             <HabitCard 
               key={habit.id} 
@@ -181,44 +189,65 @@ export default function HabitList() {
                   <div className="text-quest-orange text-right">🔥 {selectedHabit.streak}</div>
                 </>
               )}
+              {selectedHabit.periodicity === 'weekly_times' && selectedHabit.weeklyTimesTarget && (
+                <>
+                  <div className="text-quest-textDim">Esta semana:</div>
+                  <div className="text-right text-quest-cyan">
+                    {getWeekCompletions(selectedHabit.id, history, today)}/{selectedHabit.weeklyTimesTarget}
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Sección completar hábito - si no está completado hoy */}
-            {!todayData[selectedHabit.id] ? (
-              <div className="space-y-2 mt-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={480}
-                    placeholder={String(selectedHabit.minutes)}
-                    className="input-pixel !w-20 text-center text-[9px]"
-                    value={customMinutes}
-                    onChange={(e) => {
-                      setCustomMinutes(e.target.value);
-                      setCustomError('');
-                    }}
-                  />
-                  <span className="text-[7px] text-quest-textMuted font-pixel">min (opcional)</span>
-                </div>
-                {customError && (
-                  <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
-                    {customError}
+            {/* Sección completar hábito - si no está completado hoy y objetivo semanal no alcanzado */}
+            {(() => {
+              const weeklyTargetMet = isWeeklyTargetMet(selectedHabit);
+              if (weeklyTargetMet) {
+                return (
+                  <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
+                    ✔ Objetivo semanal cumplido
                   </div>
-                )}
-                <button
-                  onClick={handleComplete}
-                  className="btn-pixel-green w-full text-[9px] py-3 font-bold"
-                >
-                  ✔ Completar
-                </button>
-              </div>
-            ) : (
-              <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
-                ✔ Hábito completado hoy
-              </div>
-            )}
+                );
+              }
+              if (!todayData[selectedHabit.id]) {
+                return (
+                  <div className="space-y-2 mt-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={480}
+                        placeholder={String(selectedHabit.minutes)}
+                        className="input-pixel !w-20 text-center text-[9px]"
+                        value={customMinutes}
+                        onChange={(e) => {
+                          setCustomMinutes(e.target.value);
+                          setCustomError('');
+                        }}
+                      />
+                      <span className="text-[7px] text-quest-textMuted font-pixel">min (opcional)</span>
+                    </div>
+                    {customError && (
+                      <div className="text-quest-red text-[7px] font-pixel bg-quest-red/10 px-2 py-1 border border-quest-red">
+                        {customError}
+                      </div>
+                    )}
+                    <button
+                      onClick={handleComplete}
+                      className="btn-pixel-green w-full text-[9px] py-3 font-bold"
+                    >
+                      ✔ Completar
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[9px] font-pixel">
+                  ✔ Hábito completado hoy
+                </div>
+              );
+            })()}
 
             <div className="flex flex-col gap-2 mt-2">
               <button

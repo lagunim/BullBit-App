@@ -82,12 +82,13 @@ export default function HabitHistory() {
     const isBeforeCreation = createdKey && date < createdKey;
 
     if (isBeforeCreation) {
-      // El hábito no existía aún en esta fecha: se muestra vacío/neutro.
       return 'none';
     }
 
     if (rawStatus === 'none' && !isToday && !isFuture) {
-      // Pasado sin registro explícito = fallo automático
+      if (habit.periodicity === 'weekly_times') {
+        return 'none';
+      }
       return 'failed';
     }
     return rawStatus;
@@ -331,6 +332,8 @@ export default function HabitHistory() {
               <div className="text-quest-red text-right">{detailFailed}</div>
               <div className="text-quest-textDim pt-2 border-t border-quest-border">TASA ÉXITO:</div>
               <div className="text-quest-gold text-right pt-2 border-t border-quest-border">{detailRate}%</div>
+              <div className="text-quest-textDim pt-2 border-t border-quest-border">MAYOR RACHA:</div>
+              <div className="text-quest-orange text-right pt-2 border-t border-quest-border">🔥 {detailMaxStreak}</div>
             </div>
 
             <div className="flex flex-col gap-2 mt-2">

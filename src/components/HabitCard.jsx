@@ -1,5 +1,5 @@
 import useGameStore from '../store/gameStore.js';
-import { getTodayKey, isHabitExpired } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitExpired, getWeekCompletions } from '../utils/gameLogic.js';
 import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
 
 export default function HabitCard({ habit, onEdit }) {
@@ -12,6 +12,11 @@ export default function HabitCard({ habit, onEdit }) {
   const isFailed = todayStatus === 'failed';
   const isDetermined = isDone || isFailed;
   const isExpired = isHabitExpired(habit, today, history);
+
+  const isWeeklyTimes = habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget;
+  const weeklyCompletions = isWeeklyTimes ? getWeekCompletions(habit.id, history, today) : 0;
+  const weeklyTargetMet = isWeeklyTimes && weeklyCompletions >= habit.weeklyTimesTarget;
+  const isWeeklyDone = isWeeklyTimes && weeklyTargetMet;
 
   const multColorClass = hasActiveEffect
     ? 'text-yellow-400'
@@ -63,7 +68,19 @@ export default function HabitCard({ habit, onEdit }) {
       </div>
 
       <div className="mt-1 w-full">
-        {isDetermined ? (
+        {isWeeklyTimes ? (
+          <div className="w-full flex justify-center">
+            {weeklyTargetMet ? (
+              <div className="px-3 py-2 text-[8px] font-pixel border text-quest-green border-quest-green bg-[#003322] shadow-pixel-sm">
+                ✔ Objetivo semanal cumplido
+              </div>
+            ) : (
+              <div className="px-3 py-2 text-[8px] font-pixel border text-quest-cyan border-quest-cyan/50 bg-quest-cyan/10">
+                {weeklyCompletions}/{habit.weeklyTimesTarget} ESTA SEMANA
+              </div>
+            )}
+          </div>
+        ) : isDetermined ? (
           <div className="w-full flex justify-center">
             <div
               className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${

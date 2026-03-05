@@ -6,7 +6,7 @@ import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function AddHabitModal({ onClose }) {
   const addHabit = useGameStore(s => s.addHabit);
-  const [form, setForm] = useState({ name: '', minutes: '', periodicity: 'daily', emoji: '🎯', customDays: '', customInterval: '' });
+  const [form, setForm] = useState({ name: '', minutes: '', periodicity: 'daily', emoji: '🎯', customDays: '', customInterval: '', customWeeklyTimes: '' });
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
@@ -14,7 +14,24 @@ export default function AddHabitModal({ onClose }) {
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
     const mins = form.minutes === '' ? 20 : Number(form.minutes);
     if (mins < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
-    addHabit({ ...form, minutes: mins });
+    const habitPayload = {
+      ...form,
+      minutes: mins,
+      weeklyTimesTarget: null,
+    };
+
+    if (form.periodicity === 'custom' && form.customWeeklyTimes) {
+      const target = Number(form.customWeeklyTimes);
+      if (!Number.isFinite(target) || target < 1) {
+        setError('¡MÍNIMO 1 VEZ POR SEMANA!');
+        return;
+      }
+      habitPayload.weeklyTimesTarget = target;
+      habitPayload.customDays = '';
+      habitPayload.customInterval = '';
+    }
+
+    addHabit(habitPayload);
     onClose();
   }
 
@@ -121,8 +138,14 @@ export default function AddHabitModal({ onClose }) {
           <CustomPeriodicityModal
             initialDays={form.customDays}
             initialInterval={form.customInterval}
+            initialWeeklyTimes={form.customWeeklyTimes}
             onSave={(data) => {
-              setForm(f => ({ ...f, customDays: data.days, customInterval: data.interval }));
+              setForm(f => ({
+                ...f,
+                customDays: data.days,
+                customInterval: data.interval,
+                customWeeklyTimes: data.weeklyTimes,
+              }));
               setShowCustomModal(false);
             }}
             onClose={() => setShowCustomModal(false)}

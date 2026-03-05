@@ -12,6 +12,8 @@ import {
   calcMultiplierOnFail,
   calcGlobalStreak,
   isHabitDueOnDate,
+  getWeekStart,
+  getWeekCompletions,
 } from '../utils/gameLogic.js';
 
 const useGameStore = create(
@@ -24,6 +26,7 @@ const useGameStore = create(
       lifetimePoints: 0,
       history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'partial' | 'over' | 'skipped' } }
       globalStreak: 0,
+      lastWeeklyProcessDate: null, // Track when weekly habits were last processed
 
       // Dailies
       currentDaily: null,   // { id, name, description, icon, difficulty, condition, rewards, progress, completed }
@@ -48,6 +51,7 @@ const useGameStore = create(
             emoji: habit.emoji ?? '🎯',
             customDays: habit.customDays,
             customInterval: habit.customInterval,
+            weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
             multiplier: 1.0,
             baseMultiplier: 1.0,
             streak: 0,
@@ -72,7 +76,8 @@ const useGameStore = create(
 
       // ── INITIALIZATION ────────────────────────────────────────────
       init() {
-        get()._processExpiredHabits(); // ← NUEVO: Procesar hábitos vencidos
+        get()._processExpiredHabits();
+        get()._processWeeklyHabits();
         get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
       },
@@ -550,6 +555,90 @@ const useGameStore = create(
 
         // Recalcular racha global después de los cambios
         get()._recalcGlobalStreak();
+      },
+
+      _processWeeklyHabits() {
+        const state = get();
+        const today = getTodayKey();
+        const todayDate = new Date(today + 'T12:00:00');
+        
+        // Solo procesar los lunes
+        if (todayDate.getDay() !== 1) return;
+        
+        // Ya procesamos esta semana
+        if (state.lastWeeklyProcessDate === today) return;
+        
+        // Obtener hábitos weekly_times
+        const weeklyHabits = state.habits.filter(h => h.periodicity === 'weekly_times' && h.weeklyTimesTarget);
+        if (weeklyHabits.length === 0) return;
+        
+        const yesterday = getYesterdayKey();
+        const lastWeekStart = getWeekStart(yesterday);
+        const activeEffects = state._getActiveEffects();
+        
+        const newHistory = { ...state.history };
+        const updatedHabits = [...state.habits];
+        let hasChanges = false;
+        
+        weeklyHabits.forEach(habit => {
+          const completions = getWeekCompletions(habit.id, state.history, yesterday);
+          const target = habit.weeklyTimesTarget;
+          
+          if (completions < target) {
+            const missedCount = target - completions;
+            const penaltyPerMiss = 0.4;
+            const totalPenalty = penaltyPerMiss * missedCount;
+            
+            // Calcular nuevo multiplicador con penalización y escudos
+            let newMult = habit.multiplier;
+            if (activeEffects.some(e => e.key === 'streak_shield')) {
+              // Shield protects - no penalty
+            } else if (activeEffects.some(e => e.key === 'golden_shield')) {
+              newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
+            } else {
+              const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
+              const actualPenalty = penaltyEffect ? penaltyEffect.value : totalPenalty;
+              newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
+            }
+            
+            // Marcar todos los días de la semana pasada como failed (para registro)
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(lastWeekStart + 'T12:00:00');
+              d.setDate(d.getDate() + i);
+              const dateKey = d.toISOString().split('T')[0];
+              if (!newHistory[dateKey]) newHistory[dateKey] = {};
+              if (!newHistory[dateKey][habit.id]) {
+                newHistory[dateKey][habit.id] = 'failed';
+                hasChanges = true;
+              }
+            }
+            
+            // Actualizar el hábito
+            const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+            if (habitIndex !== -1) {
+              updatedHabits[habitIndex] = {
+                ...updatedHabits[habitIndex],
+                multiplier: newMult,
+                streak: 0
+              };
+            }
+          }
+        });
+        
+        if (hasChanges || weeklyHabits.some(h => {
+          const completions = getWeekCompletions(h.id, state.history, yesterday);
+          return completions < h.weeklyTimesTarget;
+        })) {
+          set({
+            habits: updatedHabits,
+            history: newHistory,
+            lastWeeklyProcessDate: today
+          });
+          get()._recalcGlobalStreak();
+          get()._pushNotification('weekly_review', 'Resumen semanal de hábitos procesado');
+        } else {
+          set({ lastWeeklyProcessDate: today });
+        }
       },
 
       _recalcGlobalStreak() {

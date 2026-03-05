@@ -6,14 +6,14 @@ import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
-  
   const [form, setForm] = useState({ 
     name: habit.name, 
     minutes: habit.minutes, 
     periodicity: habit.periodicity, 
     emoji: habit.emoji,
     customDays: habit.customDays || '',
-    customInterval: habit.customInterval || ''
+    customInterval: habit.customInterval || '',
+    customWeeklyTimes: habit.weeklyTimesTarget ? String(habit.weeklyTimesTarget) : '',
   });
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
@@ -21,7 +21,21 @@ export default function EditHabitModal({ habit, onClose }) {
   function handleSubmit() {
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
     if (form.minutes < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
-    updateHabit(habit.id, form);
+    const habitPayload = {
+      ...form,
+      weeklyTimesTarget: null,
+    };
+    if (form.periodicity === 'custom' && form.customWeeklyTimes) {
+      const target = Number(form.customWeeklyTimes);
+      if (!Number.isFinite(target) || target < 1) {
+        setError('¡MÍNIMO 1 VEZ POR SEMANA!');
+        return;
+      }
+      habitPayload.weeklyTimesTarget = target;
+      habitPayload.customDays = '';
+      habitPayload.customInterval = '';
+    }
+    updateHabit(habit.id, habitPayload);
     onClose();
   }
 
@@ -114,6 +128,24 @@ export default function EditHabitModal({ habit, onClose }) {
             )}
           </div>
         </div>
+
+        {form.periodicity === 'weekly_times' && (
+          <div>
+            <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">VECES POR SEMANA</label>
+            <div className="flex items-center gap-3">
+              <input
+                className="input-pixel !w-20 text-center"
+                type="number"
+                inputMode="numeric"
+                min={1} max={7}
+                value={form.weeklyTimesTarget}
+                onChange={e => setForm(f => ({ ...f, weeklyTimesTarget: e.target.value }))}
+                placeholder="3"
+              />
+              <div className="text-[16px] sm:text-[7px] text-quest-textMuted uppercase">veces esta semana</div>
+            </div>
+          </div>
+        )}
 
         {error && <div className="text-quest-red text-[16px] sm:text-[7px] font-pixel animate-pulse bg-quest-red/10 p-2 border border-quest-red">{error}</div>}
 
