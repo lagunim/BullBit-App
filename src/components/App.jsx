@@ -24,8 +24,32 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const { init } = useGameStore();
   const [bounceOffset, setBounceOffset] = useState(0);
+  const [isTouchDevice, setIsTouchDevice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    return coarsePointer || navigator.maxTouchPoints > 0;
+  });
   const touchStartRef = useRef({ x: 0, y: 0 });
   const bounceTimer = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const coarsePointerMatcher = window.matchMedia('(pointer: coarse)');
+
+    const updateTouchDevice = () => {
+      setIsTouchDevice(coarsePointerMatcher.matches || navigator.maxTouchPoints > 0);
+    };
+
+    updateTouchDevice();
+
+    if (coarsePointerMatcher.addEventListener) {
+      coarsePointerMatcher.addEventListener('change', updateTouchDevice);
+      return () => coarsePointerMatcher.removeEventListener('change', updateTouchDevice);
+    }
+
+    coarsePointerMatcher.addListener(updateTouchDevice);
+    return () => coarsePointerMatcher.removeListener(updateTouchDevice);
+  }, []);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -77,10 +101,18 @@ export default function App() {
     }, 220);
   };
 
-  const handleSwipe = (endX, endY) => {
+  const handleTouchStart = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
     const { x: startX, y: startY } = touchStartRef.current;
-    const dx = endX - startX;
-    const dy = endY - startY;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
     if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 60) {
       if (Math.abs(dx) > 10) {
         applyBounce(dx < 0 ? -1 : 1);
@@ -100,28 +132,6 @@ export default function App() {
     }
     setBounceOffset(0);
     setTab(TABS[targetIndex].id);
-  };
-
-  const handleTouchStart = (event) => {
-    const touch = event.touches?.[0];
-    if (!touch) return;
-    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleTouchEnd = (event) => {
-    const touch = event.changedTouches?.[0];
-    if (!touch) return;
-    handleSwipe(touch.clientX, touch.clientY);
-  };
-
-  const handlePointerStart = (event) => {
-    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    touchStartRef.current = { x: event.clientX, y: event.clientY };
-  };
-
-  const handlePointerEnd = (event) => {
-    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
-    handleSwipe(event.clientX, event.clientY);
   };
 
   const handleTabChange = (newTab) => {
@@ -176,12 +186,9 @@ export default function App() {
     return <Auth />;
   }
 
-  const touchHandlers = {
-    onTouchStartCapture: handleTouchStart,
-    onTouchEndCapture: handleTouchEnd,
-    onPointerDownCapture: handlePointerStart,
-    onPointerUpCapture: handlePointerEnd,
-  };
+  const touchHandlers = isTouchDevice
+    ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd }
+    : {};
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
@@ -192,7 +199,7 @@ export default function App() {
           className="flex h-full transition-transform duration-300 ease-out"
           style={{
             transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))`,
-            touchAction: 'pan-y',
+            touchAction: isTouchDevice ? 'manipulation' : 'auto',
           }}
           {...touchHandlers}
         >
