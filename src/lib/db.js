@@ -3,18 +3,19 @@
  *
  * Todas las funciones son fire-and-forget seguras: capturan errores
  * internamente para no interrumpir la UI en caso de fallo de red.
- * La fuente de verdad local (Zustand + localStorage) sigue funcionando
- * aunque Supabase no esté disponible.
+ * La fuente de verdad es Supabase. El estado local solo actúa como
+ * memoria de UI y no persiste en localStorage.
  */
 
 import { supabase } from './supabase.js';
 
+const SERVER_ID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+
 // ── HELPERS ────────────────────────────────────────────────────────────────
 
 /** Convierte un hábito del store (camelCase) al formato de la tabla (snake_case). */
-function habitToRow(userId, habit) {
-  return {
-    id: habit.id,           // uuid en BD, string timestamp en store — ver nota abajo
+function habitToRow(userId, habit, includeId = true) {
+  const row = {
     user_id: userId,
     name: habit.name,
     minutes: habit.minutes,
@@ -28,6 +29,12 @@ function habitToRow(userId, habit) {
     weekly_times_target: habit.weeklyTimesTarget ?? null,
     created_at: habit.createdAt ?? new Date().toISOString(),
   };
+
+  if (includeId && habit.id && habit.id !== SERVER_ID_PLACEHOLDER) {
+    row.id = habit.id;
+  }
+
+  return row;
 }
 
 /** Convierte una fila de la tabla habits al formato del store. */
@@ -155,14 +162,50 @@ export async function saveProfile(userId, { level, points, lifetimePoints, globa
 // ── HÁBITOS ────────────────────────────────────────────────────────────────
 
 export async function saveHabit(userId, habit) {
-  const { error } = await supabase.from('habits').upsert(habitToRow(userId, habit));
-  if (error) console.error('[db] saveHabit:', error.message);
+  if (!habit) return null;
+  const hasValidId = Boolean(habit.id && habit.id !== SERVER_ID_PLACEHOLDER);
+  if (hasValidId) {
+    const { error } = await supabase.from('habits').upsert(habitToRow(userId, habit));
+    if (error) console.error('[db] saveHabit:', error.message);
+    return habit;
+  }
+
+  const { data, error } = await supabase
+    .from('habits')
+    .insert(habitToRow(userId, habit, false))
+    .select('*');
+
+  if (error) {
+    console.error('[db] saveHabit:', error.message);
+    return null;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? rowToHabit(row) : null;
 }
 
 export async function saveHabits(userId, habits) {
-  if (!habits.length) return;
-  const { error } = await supabase.from('habits').upsert(habits.map(h => habitToRow(userId, h)));
-  if (error) console.error('[db] saveHabits:', error.message);
+  if (!habits.length) return [];
+  const withId = habits.filter(h => h?.id && h.id !== SERVER_ID_PLACEHOLDER);
+  const withoutId = habits.filter(h => !h?.id || h.id === SERVER_ID_PLACEHOLDER);
+  const updated = [];
+
+  if (withId.length) {
+    const { error } = await supabase.from('habits').upsert(withId.map(h => habitToRow(userId, h)));
+    if (error) console.error('[db] saveHabits:', error.message);
+    updated.push(...withId);
+  }
+
+  if (withoutId.length) {
+    const { data, error } = await supabase
+      .from('habits')
+      .insert(withoutId.map(h => habitToRow(userId, h, false)))
+      .select('*');
+    if (error) console.error('[db] saveHabits:', error.message);
+    else updated.push(...(data ?? []).map(rowToHabit));
+  }
+
+  return updated;
 }
 
 export async function deleteHabit(habitId) {

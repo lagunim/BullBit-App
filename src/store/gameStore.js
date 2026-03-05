@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
 import { getRandomDaily, checkDailyProgress } from '../data/dailies.js';
@@ -28,10 +27,52 @@ import {
   saveAchievements,
   saveDaily,
 } from '../lib/db.js';
+import { loadState, clearState } from '../lib/storage.js';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value) {
+  return typeof value === 'string' && UUID_REGEX.test(value);
+}
+
+function createUuid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  const bytes = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function migrateHabitIds(habits) {
+  const idMap = new Map();
+  const migrated = habits.map(habit => {
+    if (habit?.id && isUuid(habit.id)) return habit;
+    const newId = createUuid();
+    if (habit?.id) idMap.set(habit.id, newId);
+    return { ...habit, id: newId };
+  });
+  return { habits: migrated, idMap };
+}
+
+function migrateHistory(history, idMap) {
+  if (!history || !Object.keys(history).length) return history ?? {};
+  const next = {};
+  for (const [date, dayMap] of Object.entries(history)) {
+    const nextDay = {};
+    for (const [habitId, status] of Object.entries(dayMap ?? {})) {
+      const mappedId = idMap.get(habitId) ?? habitId;
+      nextDay[mappedId] = status;
+    }
+    next[date] = nextDay;
+  }
+  return next;
+}
 
 const useGameStore = create(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       // Core
       _userId: null,        // Supabase user ID (set on init)
       habits: [],
@@ -57,7 +98,7 @@ const useGameStore = create(
       // ── HABITS ────────────────────────────────────────────────────
       addHabit(habit) {
         const newHabit = {
-          id: Date.now().toString(),
+          id: createUuid(),
           name: habit.name,
           minutes: habit.minutes,
           periodicity: habit.periodicity,
@@ -74,7 +115,17 @@ const useGameStore = create(
 
         // Persistir en BD
         const userId = get()._userId;
-        if (userId) saveHabit(userId, newHabit).catch(() => {});
+        if (userId) {
+          saveHabit(userId, newHabit)
+            .then(saved => {
+              if (saved && saved.id !== newHabit.id) {
+                set(state => ({
+                  habits: state.habits.map(h => h.id === newHabit.id ? saved : h),
+                }));
+              }
+            })
+            .catch(() => {});
+        }
 
         get()._checkAchievements();
         get()._checkAndGenerateDaily();
@@ -127,28 +178,82 @@ const useGameStore = create(
               lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
             });
           } else {
-            // ── BD vacía → usuario nuevo: resetear estado local y crear perfil ──
-            set({
-              habits: [],
-              level: 0,
-              points: 0,
-              lifetimePoints: 0,
-              history: {},
-              globalStreak: 0,
-              unlockedAchievements: [],
-              inventory: [],
-              activeEffects: [],
-              currentDaily: null,
-              lastDailyDate: null,
-              lastWeeklyProcessDate: null,
-            });
-            saveProfile(userId, {
-              level: 0,
-              points: 0,
-              lifetimePoints: 0,
-              globalStreak: 0,
-              lastWeeklyProcessDate: null,
-            }).catch(() => {});
+            // ── BD vacía → intentar migrar estado local (si existe) ──
+            const localState = loadState();
+            if (localState && Object.keys(localState).length) {
+              const { habits: migratedHabits, idMap } = migrateHabitIds(localState.habits ?? []);
+              const migratedHistory = migrateHistory(localState.history ?? {}, idMap);
+
+              set({
+                habits: migratedHabits,
+                level: localState.level ?? 0,
+                points: localState.points ?? 0,
+                lifetimePoints: localState.lifetimePoints ?? 0,
+                history: migratedHistory,
+                globalStreak: localState.globalStreak ?? 0,
+                unlockedAchievements: localState.unlockedAchievements ?? [],
+                inventory: localState.inventory ?? [],
+                activeEffects: localState.activeEffects ?? [],
+                currentDaily: localState.currentDaily ?? null,
+                lastDailyDate: localState.lastDailyDate ?? null,
+                lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
+              });
+
+              saveProfile(userId, {
+                level: localState.level ?? 0,
+                points: localState.points ?? 0,
+                lifetimePoints: localState.lifetimePoints ?? 0,
+                globalStreak: localState.globalStreak ?? 0,
+                lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
+              }).catch(() => {});
+
+              saveHabits(userId, migratedHabits)
+                .then(saved => {
+                  if (saved?.length) {
+                    set({ habits: saved });
+                  }
+                })
+                .catch(() => {});
+
+              const entries = [];
+              for (const [date, dayMap] of Object.entries(migratedHistory)) {
+                for (const [habitId, status] of Object.entries(dayMap)) {
+                  entries.push({ habitId, date, status });
+                }
+              }
+              if (entries.length) saveHabitEntries(userId, entries).catch(() => {});
+              if (localState.inventory?.length) saveInventory(userId, localState.inventory).catch(() => {});
+              if (localState.activeEffects?.length) saveActiveEffects(userId, localState.activeEffects).catch(() => {});
+              if (localState.unlockedAchievements?.length) saveAchievements(userId, localState.unlockedAchievements).catch(() => {});
+              if (localState.currentDaily && localState.lastDailyDate) {
+                saveDaily(userId, localState.currentDaily, localState.lastDailyDate).catch(() => {});
+              }
+
+              clearState();
+            } else {
+              // ── BD vacía y sin datos locales → usuario nuevo ──
+              set({
+                habits: [],
+                level: 0,
+                points: 0,
+                lifetimePoints: 0,
+                history: {},
+                globalStreak: 0,
+                unlockedAchievements: [],
+                inventory: [],
+                activeEffects: [],
+                currentDaily: null,
+                lastDailyDate: null,
+                lastWeeklyProcessDate: null,
+              });
+              saveProfile(userId, {
+                level: 0,
+                points: 0,
+                lifetimePoints: 0,
+                globalStreak: 0,
+                lastWeeklyProcessDate: null,
+              }).catch(() => {});
+            }
           }
         } catch (err) {
           // Si Supabase falla, seguir con el estado local sin interrumpir
@@ -1008,25 +1113,7 @@ const useGameStore = create(
         
         get()._pushNotification('daily', message);
       },
-    }),
-    {
-      name: 'habit-quest-v1',
-      partialize: (state) => ({
-        habits: state.habits,
-        level: state.level,
-        points: state.points,
-        lifetimePoints: state.lifetimePoints,
-        history: state.history,
-        globalStreak: state.globalStreak,
-        unlockedAchievements: state.unlockedAchievements,
-        inventory: state.inventory,
-        activeEffects: state.activeEffects,
-        currentDaily: state.currentDaily,
-        lastDailyDate: state.lastDailyDate,
-        lastWeeklyProcessDate: state.lastWeeklyProcessDate,
-      }),
-    }
-  )
+    })
 );
 
 export default useGameStore;
