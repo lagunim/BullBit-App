@@ -58,9 +58,9 @@ export default function CustomPeriodicityModal({
           <span className="text-[9px] text-quest-text font-pixel">Días específicos (1-7, separados por coma)</span>
         </label>
         {mode === 'days' && (
-          <div className="ml-6 w-full">
+          <div className="w-full flex flex-col items-center">
             <input
-              className="input-pixel w-full"
+              className="input-pixel w-full text-center"
               value={days}
               onChange={e => setDays(e.target.value)}
               placeholder="Ej: 1,3,5"
