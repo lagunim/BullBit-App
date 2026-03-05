@@ -503,6 +503,7 @@ const useGameStore = create(
           if (updatedHabit) saveHabit(userId5, updatedHabit).catch(() => {});
           saveHabitEntry(userId5, habitId, today, 'failed').catch(() => {});
           if (newActiveEffects.length !== state.activeEffects.length) saveActiveEffects(userId5, newActiveEffects).catch(() => {});
+          saveProfile(userId5, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
         }
 
         get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
@@ -659,11 +660,13 @@ const useGameStore = create(
 
       _purgeExpiredEffects() {
         const now = new Date();
-        set(state => ({
-          activeEffects: state.activeEffects.filter(e =>
-            !e.expiresAt || new Date(e.expiresAt) > now
-          ),
-        }));
+        const state = get();
+        const purged = state.activeEffects.filter(e =>
+          !e.expiresAt || new Date(e.expiresAt) > now
+        );
+        set({ activeEffects: purged });
+        const uid = get()._userId;
+        if (uid && purged.length !== state.activeEffects.length) saveActiveEffects(uid, purged).catch(() => {});
       },
 
       _processExpiredHabits() {
@@ -835,6 +838,8 @@ const useGameStore = create(
       _recalcGlobalStreak() {
         const { habits, history } = get();
         set({ globalStreak: calcGlobalStreak(habits, history) });
+        const uid = get()._userId;
+        if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
       },
 
       // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===
