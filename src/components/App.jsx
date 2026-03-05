@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from './Header.jsx';
 import LevelProgress from './LevelProgress.jsx';
 import HabitList from './HabitList.jsx';
@@ -11,20 +11,35 @@ import Auth from './Auth.jsx';
 import { supabase } from '../lib/supabase.js';
 import useGameStore from '../store/gameStore.js';
 
+const TABS = [
+  { id: 'home',    label: 'INICIO',    icon: '🏠' },
+  { id: 'history', label: 'HISTORIAL', icon: '📅' },
+  { id: 'items',   label: 'ITEMS',     icon: '🎒' },
+  { id: 'achieve', label: 'LOGROS',    icon: '🏆' },
+];
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('home');
   const { init } = useGameStore();
+  const [bounceOffset, setBounceOffset] = useState(0);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const bounceTimer = useRef(null);
 
   useEffect(() => {
-    // Check initial session
-    const checkSession = async () => {
-      // Failsafe timeout
-      const timeout = setTimeout(() => {
-        setLoading(false);
-      }, 5000);
+    if (typeof window === 'undefined') return undefined;
+    const matcher = window.matchMedia('(max-width: 768px)');
+    const handler = (ev) => setIsMobileView(ev.matches);
+    setIsMobileView(matcher.matches);
+    matcher.addEventListener('change', handler);
+    return () => matcher.removeEventListener('change', handler);
+  }, []);
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const timeout = setTimeout(() => setLoading(false), 5000);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         clearTimeout(timeout);
@@ -38,26 +53,82 @@ export default function App() {
 
     checkSession();
 
-    // Listen for changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+    } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
 
     return () => {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
 
-  // Initialize dailies when user is authenticated
   useEffect(() => {
     if (session) {
       init();
     }
   }, [session, init]);
 
-  // CHECK FOR MISSING ENV VARS
+  useEffect(() => {
+    return () => {
+      if (bounceTimer.current) {
+        clearTimeout(bounceTimer.current);
+      }
+    };
+  }, []);
+
+  const currentIndex = Math.max(0, TABS.findIndex(t => t.id === tab));
+
+  const applyBounce = (direction) => {
+    if (bounceTimer.current) clearTimeout(bounceTimer.current);
+    setBounceOffset(direction * 14);
+    bounceTimer.current = setTimeout(() => {
+      setBounceOffset(0);
+      bounceTimer.current = null;
+    }, 220);
+  };
+
+  const handleTouchStart = (event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    const { x: startX, y: startY } = touchStartRef.current;
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 60) {
+      if (Math.abs(dx) > 10) {
+        applyBounce(dx < 0 ? -1 : 1);
+      }
+      return;
+    }
+
+    const direction = dx < 0 ? 1 : -1;
+    const targetIndex = Math.max(0, Math.min(TABS.length - 1, currentIndex + direction));
+    if (targetIndex === currentIndex) {
+      applyBounce(direction * -1);
+      return;
+    }
+    if (bounceTimer.current) {
+      clearTimeout(bounceTimer.current);
+      bounceTimer.current = null;
+    }
+    setBounceOffset(0);
+    setTab(TABS[targetIndex].id);
+  };
+
+  const handleTabChange = (newTab) => {
+    if (bounceTimer.current) {
+      clearTimeout(bounceTimer.current);
+      bounceTimer.current = null;
+    }
+    setBounceOffset(0);
+    setTab(newTab);
+  };
+
   const isEnvMissing = !import.meta.env.PUBLIC_SUPABASE_URL || !import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
   if (isEnvMissing) {
@@ -97,55 +168,73 @@ export default function App() {
     );
   }
 
-  // AUTH GATE
   if (!session) {
     return <Auth />;
   }
 
-  const tabs = [
-    { id: 'home',      label: 'INICIO',    icon: '🏠' },
-    { id: 'history',   label: 'HISTORIAL', icon: '📅' },
-    { id: 'items',     label: 'ITEMS',     icon: '🎒' },
-    { id: 'achieve',   label: 'LOGROS',    icon: '🏆' },
-  ];
+  const touchHandlers = isMobileView
+    ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd }
+    : {};
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
       <Header />
 
-      <div className="flex-1 overflow-y-auto">
-        <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
-          {tab === 'home' && (
-            <div className="anim-fade-in">
-              <LevelProgress />
-              <DailyChallenge />
-              <HabitList />
+      <div className="flex-1 overflow-hidden relative">
+        <div
+          className="flex h-full transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))` }}
+          {...touchHandlers}
+        >
+          <section className="w-full flex-shrink-0">
+            <div className="h-full overflow-y-auto">
+              <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
+                <div className="anim-fade-in">
+                  <LevelProgress />
+                  <DailyChallenge />
+                  <HabitList />
+                </div>
+              </main>
             </div>
-          )}
-          {tab === 'history' && (
-            <div className="anim-fade-in">
-              <HabitHistory />
+          </section>
+
+          <section className="w-full flex-shrink-0">
+            <div className="h-full overflow-y-auto">
+              <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
+                <div className="anim-fade-in">
+                  <HabitHistory />
+                </div>
+              </main>
             </div>
-          )}
-          {tab === 'items' && (
-            <div className="anim-fade-in">
-              <InventoryPanel />
+          </section>
+
+          <section className="w-full flex-shrink-0">
+            <div className="h-full overflow-y-auto">
+              <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
+                <div className="anim-fade-in">
+                  <InventoryPanel />
+                </div>
+              </main>
             </div>
-          )}
-          {tab === 'achieve' && (
-            <div className="anim-fade-in">
-              <AchievementsPanel />
+          </section>
+
+          <section className="w-full flex-shrink-0">
+            <div className="h-full overflow-y-auto">
+              <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
+                <div className="anim-fade-in">
+                  <AchievementsPanel />
+                </div>
+              </main>
             </div>
-          )}
-        </main>
+          </section>
+        </div>
       </div>
 
-      {/* Bottom Navigation Menu */}
       <nav className="flex justify-around bg-quest-panel border-t-2 border-quest-border pb-[env(safe-area-inset-bottom)] shrink-0 z-[1000] shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
-        {tabs.map(t => (
+        {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => handleTabChange(t.id)}
             className={`flex-1 flex flex-col items-center gap-1 py-3 transition-opacity duration-200 cursor-pointer border-none bg-transparent ${
               tab === t.id ? 'opacity-100' : 'opacity-40 hover:opacity-70'
             }`}
