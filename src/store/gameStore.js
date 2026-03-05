@@ -17,7 +17,6 @@ import {
 } from '../utils/gameLogic.js';
 import {
   loadUserData,
-  migrateLocalStateToDb,
   saveProfile,
   saveHabit,
   saveHabits,
@@ -128,28 +127,28 @@ const useGameStore = create(
               lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
             });
           } else {
-            // ── BD vacía → usuario nuevo o migrar datos locales ──
-            const localState = get();
-            const hasLocalData =
-              localState.habits.length > 0 ||
-              localState.lifetimePoints > 0 ||
-              localState.unlockedAchievements.length > 0;
-
-            if (hasLocalData) {
-              // Migrar localStorage → Supabase (one-time)
-              migrateLocalStateToDb(userId, localState).catch(err =>
-                console.error('[store] Migración fallida:', err)
-              );
-            } else {
-              // Usuario completamente nuevo: crear perfil en BD
-              saveProfile(userId, {
-                level: 0,
-                points: 0,
-                lifetimePoints: 0,
-                globalStreak: 0,
-                lastWeeklyProcessDate: null,
-              }).catch(() => {});
-            }
+            // ── BD vacía → usuario nuevo: resetear estado local y crear perfil ──
+            set({
+              habits: [],
+              level: 0,
+              points: 0,
+              lifetimePoints: 0,
+              history: {},
+              globalStreak: 0,
+              unlockedAchievements: [],
+              inventory: [],
+              activeEffects: [],
+              currentDaily: null,
+              lastDailyDate: null,
+              lastWeeklyProcessDate: null,
+            });
+            saveProfile(userId, {
+              level: 0,
+              points: 0,
+              lifetimePoints: 0,
+              globalStreak: 0,
+              lastWeeklyProcessDate: null,
+            }).catch(() => {});
           }
         } catch (err) {
           // Si Supabase falla, seguir con el estado local sin interrumpir
@@ -1019,6 +1018,7 @@ const useGameStore = create(
         activeEffects: state.activeEffects,
         currentDaily: state.currentDaily,
         lastDailyDate: state.lastDailyDate,
+        lastWeeklyProcessDate: state.lastWeeklyProcessDate,
       }),
     }
   )
