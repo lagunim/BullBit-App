@@ -36,6 +36,25 @@ export default function HabitHistory() {
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
+  function getMaxStreak(habitId) {
+    const sortedDates = Object.keys(history).sort();
+    let maxStreak = 0;
+    let currentStreak = 0;
+
+    for (const dateKey of sortedDates) {
+      const status = history[dateKey]?.[habitId];
+      if (isCompletedStatus(status)) {
+        currentStreak++;
+        if (currentStreak > maxStreak) {
+          maxStreak = currentStreak;
+        }
+      } else {
+        currentStreak = 0;
+      }
+    }
+    return maxStreak;
+  }
+
   function getCreatedKey(habit) {
     const direct = (habit.createdAt || '').slice(0, 10);
     if (direct) return direct;
@@ -128,6 +147,7 @@ export default function HabitHistory() {
     detailCompleted + detailFailed > 0
       ? Math.round((detailCompleted / (detailCompleted + detailFailed)) * 100)
       : 0;
+  const detailMaxStreak = detailHabit ? getMaxStreak(detailHabit.id) : 0;
 
   const canRetroYesterdayForDetail = detailHabit
     ? (() => {
