@@ -65,6 +65,7 @@ function rowToEffect(row) {
     value: row.value !== null ? parseFloat(row.value) : undefined,
     expiresAt: row.expires_at ?? undefined,
     itemName: row.item_name ?? undefined,
+    targetHabitId: row.target_habit_id ?? undefined,
   };
 }
 
@@ -276,8 +277,8 @@ export async function saveInventory(userId, inventory) {
 // ── EFECTOS ACTIVOS ────────────────────────────────────────────────────────
 
 /**
- * Reemplaza todos los efectos activos del usuario.
- * effects = [{ key, value, expiresAt?, itemName? }]
+ * Guarda la lista de efectos activos del usuario.
+ * effects = [{ key, value, expiresAt?, itemName?, targetHabitId? }]
  */
 export async function saveActiveEffects(userId, effects) {
   await supabase.from('active_effects').delete().eq('user_id', userId);
@@ -288,6 +289,7 @@ export async function saveActiveEffects(userId, effects) {
     value: e.value ?? null,
     expires_at: e.expiresAt ?? null,
     item_name: e.itemName ?? null,
+    target_habit_id: e.targetHabitId ?? null,
   }));
   const { error } = await supabase.from('active_effects').insert(rows);
   if (error) console.error('[db] saveActiveEffects:', error.message);

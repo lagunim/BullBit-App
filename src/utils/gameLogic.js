@@ -162,20 +162,49 @@ export function isHabitExpired(habit, today, history) {
 
 /** Calculate points earned for completing a habit */
 export function calcPoints(habit, activeEffects = []) {
-  const basePoints = habit.minutes * habit.multiplier;
+  // Apply temporary multiplier boosts to base multiplier for calculation
+  let effectiveMultiplier = habit.multiplier;
+  
+  // Global boosts
+  const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
+  if (globalBoostEffect) {
+    effectiveMultiplier += globalBoostEffect.value;
+  }
+  
+  // Targeted habit boosts
+  const habitBoostEffect = activeEffects.find(e => 
+    e.key === 'habit_mult_boost' && 
+    (!e.targetHabitId || e.targetHabitId === habit.id)
+  );
+  if (habitBoostEffect) {
+    effectiveMultiplier += habitBoostEffect.value;
+  }
+  
+  const basePoints = habit.minutes * Math.min(3.0, effectiveMultiplier);
 
   let multiplier = 1;
   if (activeEffects.some(e => e.key === 'double_points')) multiplier *= 2;
-  if (activeEffects.some(e => e.key === 'next_triple')) multiplier *= 3;
+  // Check for targeted next_triple effect
+  if (activeEffects.some(e => e.key === 'next_triple' && e.targetHabitId === habit.id)) multiplier *= 3;
+  // Check for global next_triple effect (legacy)
+  if (activeEffects.some(e => e.key === 'next_triple' && !e.targetHabitId)) multiplier *= 3;
 
   return Math.round(basePoints * multiplier);
 }
 
 /** Calculate new multiplier after completing a habit */
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
-  const boostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
-  const boost = boostEffect ? boostEffect.value : 0;
-  return Math.min(3.0, parseFloat((habit.multiplier + 0.2 + boost).toFixed(1)));
+  const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
+  const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
+  
+  // Check for targeted habit boosts
+  const habitBoostEffect = activeEffects.find(e => 
+    e.key === 'habit_mult_boost' && 
+    (!e.targetHabitId || e.targetHabitId === habit.id)
+  );
+  const habitBoost = habitBoostEffect ? habitBoostEffect.value : 0;
+  
+  return Math.min(3.0, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost).toFixed(1)));
 }
 
 /** Calculate new multiplier after failing a habit */

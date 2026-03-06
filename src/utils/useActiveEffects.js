@@ -8,7 +8,8 @@ const EFFECT_ICONS = {
   reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.1', color: 'text-quest-green' },
   double_points: { icon: '✨', title: 'Elixir del Doble activo - Puntos duplicados', color: 'text-purple-400' },
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
-  next_triple: { icon: '🔺', title: 'Piedra de Poder activa - Próximo hábito darte 3x puntos', color: 'text-purple-400' },
+  next_triple: { icon: '🔺', title: 'Piedra de Poder activa - Próximo hábito completado dará 3x puntos', color: 'text-purple-400' },
+  habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
 };
 
 export function useActiveEffects() {
@@ -26,7 +27,8 @@ export function useActiveEffects() {
   const hasGlobalBoost = activeEffects.some(e => e.key === 'global_mult_boost');
   const hasReducedPenalty = activeEffects.some(e => e.key === 'reduced_penalty');
   const hasPointsBoost = activeEffects.some(e => 
-    e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple'
+    (e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple') &&
+    !e.targetHabitId // Only count global effects
   );
 
   const globalBoostValue = activeEffects.find(e => e.key === 'global_mult_boost')?.value || 0;
@@ -56,7 +58,8 @@ export function useActiveEffects() {
     
     if (hasPointsBoost && !hasGlobalBoost) {
       const pointsEffect = activeEffects.find(e => 
-        e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple'
+        (e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple') &&
+        !e.targetHabitId // Only show global effects
       );
       if (pointsEffect && EFFECT_ICONS[pointsEffect.key]) {
         icons.push(EFFECT_ICONS[pointsEffect.key]);

@@ -4,7 +4,7 @@ import useGameStore from '../store/gameStore.js';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
-import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
+import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
 import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor } from '../utils/gameLogic.js';
 
 export default function HabitList() {
@@ -184,6 +184,7 @@ export default function HabitList() {
                 <span className="text-xs text-quest-textDim uppercase ">Multiplicador actual</span>
                 <div className="flex items-center gap-2">
                   <MultiplierIcons />
+                  <HabitTargetedIcons habitId={selectedHabit.id} />
                   <span className={`text-sm font-bold ${getMultColor(selectedHabit.multiplier)}`}>
                     ×{(selectedHabit.multiplier ?? 1).toFixed(1)}
                   </span>

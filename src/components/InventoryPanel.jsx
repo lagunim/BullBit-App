@@ -27,17 +27,30 @@ export default function InventoryPanel() {
   });
 
   // Items that need a target habit (instant effects on habits)
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target'];
 
   function handleUse(itemId) {
     const item = ITEMS[itemId];
     if (habitTargetEffects.includes(item?.effectKey)) {
-      const eligible = habits.filter(h => (h?.multiplier ?? 1) < 3);
+      // For Piedra de Poder, any habit is eligible
+      const eligible = item.effectKey === 'next_triple_target' 
+        ? habits 
+        : habits.filter(h => (h?.multiplier ?? 1) < 3);
+      
       if (eligible.length === 0) {
-        pushNotification?.('item', 'Todos tus hábitos ya tienen multiplicador máximo.');
+        const message = item.effectKey === 'next_triple_target' 
+          ? 'No tienes hábitos disponibles.'
+          : 'Todos tus hábitos ya tienen multiplicador máximo.';
+        pushNotification?.('item', message);
         return;
       }
-      setPendingTargetItem({ itemId, name: item?.name ?? 'Objeto', icon: item?.icon ?? '🔮' });
+      setPendingTargetItem({ 
+        itemId, 
+        name: item?.name ?? 'Objeto', 
+        icon: item?.icon ?? '🔮', 
+        effectKey: item?.effectKey,
+        desc: item?.desc ?? 'Descripción no disponible'
+      });
       return;
     }
     useItem(itemId);
@@ -45,9 +58,12 @@ export default function InventoryPanel() {
 
   const eligibleHabits = useMemo(() => {
     if (!pendingTargetItem) return [];
-    return habits
-      .filter(habit => (habit?.multiplier ?? 1) < 3)
-      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+    // For Piedra de Poder, show all habits, for others filter by multiplier < 3
+    const filtered = pendingTargetItem.effectKey === 'next_triple_target'
+      ? habits
+      : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
+    
+    return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   }, [habits, pendingTargetItem]);
 
   function handleSelectHabit(habitId) {
@@ -156,10 +172,10 @@ export default function InventoryPanel() {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <div className="text-xs text-quest-cyan uppercase font-pixel tracking-widest">
-                  {pendingTargetItem.icon} Recuperar multiplicador
+                  {pendingTargetItem.icon} {pendingTargetItem.name}
                 </div>
                 <div className="text-[10px] text-quest-textDim font-pixel uppercase">
-                  Elige un hábito para aplicar el tótem
+                  {pendingTargetItem.desc}
                 </div>
               </div>
               <button

@@ -1,6 +1,6 @@
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey, isHabitExpired, getWeekCompletions } from '../utils/gameLogic.js';
-import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
+import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
@@ -61,6 +61,7 @@ export default function HabitCard({ habit, onEdit }) {
             </span>
           )}
           <MultiplierIcons />
+          <HabitTargetedIcons habitId={habit.id} />
           <span className={`text-[10px] font-pixel ${multColorClass}`}>
             ×{(habit.multiplier ?? 1).toFixed(1)}
           </span>

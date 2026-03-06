@@ -49,6 +49,43 @@ function createUuid() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+// ── TARGETED EFFECTS UTILITIES ─────────────────────────────────────────────
+
+/**
+ * Check if an effect requires habit targeting based on naming pattern.
+ * Effects ending with "_target" require the user to select a specific habit.
+ */
+function requiresTargeting(effectKey) {
+  return effectKey.endsWith('_target');
+}
+
+/**
+ * Creates a targeted effect object for the store.
+ */
+function createTargetedEffect(item, targetHabitId) {
+  return {
+    key: item.effectKey.replace('_target', ''), // Remove _target suffix for actual effect
+    value: item.effectValue,
+    targetHabitId,
+    itemName: item.name,
+    ...(item.effectType === 'timed' && {
+      expiresAt: (() => {
+        const expires = new Date();
+        expires.setDate(expires.getDate() + item.durationDays);
+        return expires.toISOString();
+      })()
+    })
+  };
+}
+
+/**
+ * Check if an effect should be applied to a specific habit.
+ * An effect applies if it's global (no targetHabitId) or targeted to this habit.
+ */
+function effectAppliesTo(effect, habitId) {
+  return !effect.targetHabitId || effect.targetHabitId === habitId;
+}
+
 function migrateHabitIds(habits) {
   const idMap = new Map();
   const migrated = habits.map(habit => {
@@ -291,8 +328,13 @@ const useGameStore = create(
         const newPoints = state.points + earned;
         const newLifetime = state.lifetimePoints + earned;
 
-        // Consume "next_triple" if present
-        const nextEffects = state.activeEffects.filter(e => e.key !== 'next_triple');
+        // Consume "next_triple" if present for this specific habit or global
+        const usedEffect = state.activeEffects.find(e => 
+          e.key === 'next_triple' && effectAppliesTo(e, habitId)
+        );
+        const nextEffects = usedEffect
+          ? state.activeEffects.filter(e => e !== usedEffect)
+          : state.activeEffects;
 
         // Update history
         const newHistory = {
@@ -372,7 +414,9 @@ const useGameStore = create(
         const basePoints = minutesDone * habit.multiplier;
         let bonusMult = 1;
         if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
-        if (activeEffects.some(e => e.key === 'next_triple')) bonusMult *= 3;
+        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' && 
+          effectAppliesTo(e, habitId));
+        if (nextTripleEffect) bonusMult *= 3;
         const earned = Math.round(basePoints * bonusMult);
 
         const newMult = calcMultiplierOnComplete(habit, activeEffects);
@@ -380,7 +424,9 @@ const useGameStore = create(
         const newLifetime = state.lifetimePoints + earned;
 
         // Consume "next_triple" if present
-        const nextEffects = state.activeEffects.filter(e => e.key !== 'next_triple');
+        const nextEffects = nextTripleEffect 
+          ? state.activeEffects.filter(e => e !== nextTripleEffect)
+          : state.activeEffects;
 
         // Update history
         const newHistory = {
@@ -454,7 +500,9 @@ const useGameStore = create(
         const basePoints = minutesDone * habit.multiplier;
         let bonusMult = 1;
         if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
-        if (activeEffects.some(e => e.key === 'next_triple')) bonusMult *= 3;
+        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' && 
+          effectAppliesTo(e, habitId));
+        if (nextTripleEffect) bonusMult *= 3;
         const earned = Math.round(basePoints * bonusMult);
 
         const newMult = calcMultiplierOnComplete(habit, activeEffects);
@@ -462,7 +510,9 @@ const useGameStore = create(
         const newLifetime = state.lifetimePoints + earned;
 
         // Consume "next_triple" if present
-        const nextEffects = state.activeEffects.filter(e => e.key !== 'next_triple');
+        const nextEffects = nextTripleEffect 
+          ? state.activeEffects.filter(e => e !== nextTripleEffect)
+          : state.activeEffects;
 
         // Update history
         const newHistory = {
@@ -575,17 +625,25 @@ const useGameStore = create(
           .filter(i => i.qty > 0);
 
         if (item.effectType === 'timed') {
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + item.durationDays);
+          // Support both global and targeted timed effects
+          const effect = requiresTargeting(item.effectKey) && targetHabitId
+            ? createTargetedEffect(item, targetHabitId)
+            : {
+                key: item.effectKey,
+                value: item.effectValue,
+                expiresAt: (() => {
+                  const expires = new Date();
+                  expires.setDate(expires.getDate() + item.durationDays);
+                  return expires.toISOString();
+                })(),
+                itemName: item.name,
+              };
+          
           set(state2 => ({
             inventory: newInventory,
-            activeEffects: [...state2.activeEffects, {
-              key: item.effectKey,
-              value: item.effectValue,
-              expiresAt: expiresAt.toISOString(),
-              itemName: item.name,
-            }],
+            activeEffects: [...state2.activeEffects, effect],
           }));
+          
           // Persistir en BD
           const uid = get()._userId;
           if (uid) {
@@ -595,14 +653,20 @@ const useGameStore = create(
           get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
         }
         else if (item.effectType === 'passive') {
+          // Support both global and targeted passive effects  
+          const effect = requiresTargeting(item.effectKey) && targetHabitId
+            ? createTargetedEffect(item, targetHabitId)
+            : {
+                key: item.effectKey,
+                value: item.effectValue,
+                itemName: item.name,
+              };
+              
           set(state2 => ({
             inventory: newInventory,
-            activeEffects: [...state2.activeEffects, {
-              key: item.effectKey,
-              value: item.effectValue,
-              itemName: item.name,
-            }],
+            activeEffects: [...state2.activeEffects, effect],
           }));
+          
           // Persistir en BD
           const uid = get()._userId;
           if (uid) {
@@ -612,7 +676,21 @@ const useGameStore = create(
           get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
         }
         else if (item.effectType === 'instant') {
-          if (item.effectKey === 'mult_recovery' && targetHabitId) {
+          // Handle targeted effects using generic system
+          if (requiresTargeting(item.effectKey) && targetHabitId) {
+            const targetedEffect = createTargetedEffect(item, targetHabitId);
+            set(state2 => ({
+              inventory: newInventory,
+              activeEffects: [...state2.activeEffects, targetedEffect],
+            }));
+            const uid = get()._userId;
+            if (uid) {
+              saveInventory(uid, get().inventory).catch(() => {});
+              saveActiveEffects(uid, get().activeEffects).catch(() => {});
+            }
+          }
+          // Legacy instant effects that modify habits directly
+          else if (item.effectKey === 'mult_recovery' && targetHabitId) {
             set(state2 => ({
               inventory: newInventory,
               habits: state2.habits.map(h =>
@@ -634,6 +712,21 @@ const useGameStore = create(
                 h.id === targetHabitId
                   ? { ...h, baseMultiplier: Math.min(3.0, parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1))),
                           multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
+                  : h
+              ),
+            }));
+            const uid = get()._userId;
+            if (uid) {
+              saveInventory(uid, get().inventory).catch(() => {});
+              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
+            }
+          } else if (item.effectKey === 'mult_boost_target' && targetHabitId) {
+            set(state2 => ({
+              inventory: newInventory,
+              habits: state2.habits.map(h =>
+                h.id === targetHabitId
+                  ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
                   : h
               ),
             }));

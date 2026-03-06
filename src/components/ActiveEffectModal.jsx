@@ -15,7 +15,9 @@ function getEffectDescription(effect) {
 
   switch (effect.key) {
     case 'double_points': return 'Duplica todos los puntos ganados.';
-    case 'next_triple': return 'Triplica los puntos del próximo hábito completado.';
+    case 'next_triple': return effect.targetHabitId 
+      ? `Triplica los puntos del hábito objetivo en su próxima completación.`
+      : 'Triplica los puntos del próximo hábito completado.';
     case 'global_mult_boost': return 'Aumenta todos los multiplicadores.';
     case 'streak_shield': return 'Protege tu multiplicador de una penalización.';
     case 'golden_shield': return 'El siguiente fallo no penaliza y suma +0.2.';

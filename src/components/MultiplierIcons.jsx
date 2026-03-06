@@ -8,7 +8,8 @@ const EFFECT_ICONS = {
   reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.1', color: 'text-quest-green' },
   double_points: { icon: '✨', title: 'Elixir del Doble activo - Puntos duplicados', color: 'text-purple-400' },
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
-  next_triple: { icon: '🔺', title: 'Piedra de Poder activa - Próximo hábito darte 3x puntos', color: 'text-purple-400' },
+  next_triple: { icon: '🔺', title: 'Piedra de Poder activa - 3x puntos en hábito específico', color: 'text-purple-400' },
+  habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
 };
 
 function hasActiveMultiplierEffect(rawEffects) {
@@ -33,6 +34,46 @@ export function useHasActiveMultiplierEffect() {
   return hasActiveMultiplierEffect(rawEffects);
 }
 
+export function useHabitTargetedEffects(habitId) {
+  const rawEffects = useGameStore(s => s.activeEffects ?? []);
+  const now = new Date();
+  const activeEffects = rawEffects.filter(e =>
+    !e.expiresAt || new Date(e.expiresAt) > now
+  );
+  
+  return activeEffects.filter(e => e.targetHabitId === habitId);
+}
+
+export function HabitTargetedIcons({ habitId, className = '' }) {
+  const targetedEffects = useHabitTargetedEffects(habitId);
+  
+  if (targetedEffects.length === 0) return null;
+  
+  const icons = [];
+  
+  targetedEffects.forEach(effect => {
+    if (EFFECT_ICONS[effect.key]) {
+      icons.push(EFFECT_ICONS[effect.key]);
+    }
+  });
+  
+  if (icons.length === 0) return null;
+  
+  return (
+    <span className={`flex items-center gap-0.5 ${className}`}>
+      {icons.map((effectIcon, index) => (
+        <span
+          key={index}
+          className={`text-[10px] ${effectIcon.color} animate-pulse`}
+          title={`${effectIcon.title} - Aplicado a este hábito`}
+        >
+          {effectIcon.icon}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export default function MultiplierIcons({ className = '' }) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   
@@ -51,7 +92,8 @@ export default function MultiplierIcons({ className = '' }) {
   const hasGlobalBoost = activeEffects.some(e => e.key === 'global_mult_boost');
   const hasReducedPenalty = activeEffects.some(e => e.key === 'reduced_penalty');
   const hasPointsBoost = activeEffects.some(e => 
-    e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple'
+    (e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple') &&
+    !e.targetHabitId // Only show global effects
   );
   
   if (hasShield) {
@@ -75,7 +117,8 @@ export default function MultiplierIcons({ className = '' }) {
   
   if (hasPointsBoost && !hasGlobalBoost) {
     const pointsEffect = activeEffects.find(e => 
-      e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple'
+      (e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple') &&
+      !e.targetHabitId // Only show global effects
     );
     if (pointsEffect && EFFECT_ICONS[pointsEffect.key]) {
       icons.push(EFFECT_ICONS[pointsEffect.key]);
