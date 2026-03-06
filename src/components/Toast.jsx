@@ -10,7 +10,7 @@ export default function Toast({ msg, type = 'info' }) {
   }[type] || 'border-quest-blue text-quest-blue';
   return (
     <div className={`toast-enter pixel-border bg-quest-panel border px-4 py-3 max-w-xs ${styles}`}>
-      <p className="font-pixel text-[9px] leading-relaxed">{msg}</p>
+      <p className="font-pixel text-[10px] leading-relaxed">{msg}</p>
     </div>
   );
 }

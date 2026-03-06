@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS, RARITY_COLORS } from '../data/items.js';
 import ActiveEffectModal from './ActiveEffectModal.jsx';
@@ -8,7 +9,9 @@ export default function InventoryPanel() {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   const useItem = useGameStore(s => s.useItem);
   const habits = useGameStore(s => s.habits ?? []);
+  const pushNotification = useGameStore(s => s._pushNotification);
   const [selectedEffect, setSelectedEffect] = useState(null);
+  const [pendingTargetItem, setPendingTargetItem] = useState(null);
 
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
@@ -29,12 +32,28 @@ export default function InventoryPanel() {
   function handleUse(itemId) {
     const item = ITEMS[itemId];
     if (habitTargetEffects.includes(item?.effectKey)) {
-      if (habits.length === 0) { return; }
-      const target = habits[0]?.id; // simplified: apply to first habit
-      useItem(itemId, target);
-    } else {
-      useItem(itemId);
+      const eligible = habits.filter(h => (h?.multiplier ?? 1) < 3);
+      if (eligible.length === 0) {
+        pushNotification?.('item', 'Todos tus hábitos ya tienen multiplicador máximo.');
+        return;
+      }
+      setPendingTargetItem({ itemId, name: item?.name ?? 'Objeto', icon: item?.icon ?? '🔮' });
+      return;
     }
+    useItem(itemId);
+  }
+
+  const eligibleHabits = useMemo(() => {
+    if (!pendingTargetItem) return [];
+    return habits
+      .filter(habit => (habit?.multiplier ?? 1) < 3)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }, [habits, pendingTargetItem]);
+
+  function handleSelectHabit(habitId) {
+    if (!pendingTargetItem) return;
+    useItem(pendingTargetItem.itemId, habitId);
+    setPendingTargetItem(null);
   }
 
   return (
@@ -76,7 +95,7 @@ export default function InventoryPanel() {
 
       {/* Inventory grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {allItems.map(item => {
+      {allItems.map(item => {
           const invEntry = inventory.find(i => i.itemId === item.id);
           const qty = invEntry?.qty ?? 0;
           const owned = qty > 0;
@@ -125,6 +144,60 @@ export default function InventoryPanel() {
           );
         })}
       </div>
+
+      {pendingTargetItem && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[12000] p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingTargetItem(null); }}
+        >
+          <div className="card-pixel w-full max-w-[520px] bg-quest-bg border border-quest-border relative p-5">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <div className="text-xs text-quest-cyan uppercase font-pixel tracking-widest">
+                  {pendingTargetItem.icon} Recuperar multiplicador
+                </div>
+                <div className="text-[10px] text-quest-textDim font-pixel uppercase">
+                  Elige un hábito para aplicar el tótem
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingTargetItem(null)}
+                className="btn-pixel-gray py-1 px-3 text-[10px]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[320px] overflow-y-auto">
+              {eligibleHabits.map(habit => (
+                <button
+                  key={habit.id}
+                  onClick={() => handleSelectHabit(habit.id)}
+                  className="w-full flex items-center gap-3 p-3 border border-quest-border text-left text-[10px] font-pixel uppercase rounded-md hover:border-quest-cyan hover:bg-quest-cyan/5 transition-colors"
+                >
+                  <span className="text-xl">{habit.emoji}</span>
+                  <div className="flex-1 truncate">
+                    <div className="truncate text-quest-text">{habit.name}</div>
+                    <div className="text-[8px] text-quest-textDim">×{(habit.multiplier ?? 1).toFixed(1)}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setPendingTargetItem(null)}
+                className="btn-pixel-gray text-[8px] py-2 uppercase"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {selectedEffect && (
         <ActiveEffectModal effect={selectedEffect} onClose={() => setSelectedEffect(null)} />
