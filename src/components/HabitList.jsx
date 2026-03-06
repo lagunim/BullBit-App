@@ -225,7 +225,7 @@ export default function HabitList() {
                         min={1}
                         max={480}
                         placeholder={String(selectedHabit.minutes)}
-                        className="input-pixel !w-20 text-center text-xs"
+                        className="input-pixel !w-20 text-center text-md"
                         value={customMinutes}
                         onChange={(e) => {
                           setCustomMinutes(e.target.value);
