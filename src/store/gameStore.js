@@ -98,6 +98,7 @@ const useGameStore = create(
       // Viajes e historias
       unlockedStories: [],  // [{ journeyId, storyId, unlockedAt }]
       pendingJourneyReward: null, // { journeyNumber, story, itemChoices } — flujo post-viaje
+      pendingDailyReward: null, // { dailyId, dailyName, points, itemChoices }
 
       // UI notifications queue
       notifications: [],
@@ -672,10 +673,10 @@ const useGameStore = create(
       // ── JOURNEY REWARDS ───────────────────────────────────────────
 
       /**
-       * Called when the user selects one of the 3 item choices after completing a journey.
-       * Grants the chosen item, records the story unlock, and clears pendingJourneyReward.
+       * Called when the user closes the story modal after completing a journey.
+       * Grants all 3 item rewards, records the story unlock, and clears pendingJourneyReward.
        */
-      claimJourneyItems(chosenItemId) {
+      claimJourneyItems() {
         const state = get();
         const reward = state.pendingJourneyReward;
         if (!reward) return;
@@ -692,10 +693,19 @@ const useGameStore = create(
             : state2.unlockedStories,
         }));
 
-        // Grant chosen item
-        if (chosenItemId) get().grantItem(chosenItemId);
+        // Grant all 3 items
+        if (reward.itemChoices && reward.itemChoices.length > 0) {
+          reward.itemChoices.forEach(itemId => {
+            get().grantItem(itemId);
+          });
+        }
 
-        get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO!`);
+        // Get item names for notification
+        const itemNames = reward.itemChoices
+          ? reward.itemChoices.map(id => ITEMS[id]?.name || id).join(', ')
+          : '';
+        
+        get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos`);
         get()._checkAchievements();
       },
 
@@ -729,6 +739,32 @@ const useGameStore = create(
           }
         }
         return chosen;
+      },
+
+      _pickDailyItemChoices(daily) {
+        if (!daily) return [];
+        const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
+        const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(ITEMS)));
+        const availablePool = [...basePool];
+        const pickCount = 3;
+        const choices = [];
+
+        for (let i = 0; i < pickCount && availablePool.length > 0; i++) {
+          const idx = Math.floor(Math.random() * availablePool.length);
+          choices.push(availablePool[idx]);
+          availablePool.splice(idx, 1);
+        }
+
+        if (choices.length < pickCount) {
+          const fallback = Object.keys(ITEMS).filter(id => !choices.includes(id));
+          while (choices.length < pickCount && fallback.length) {
+            const idx = Math.floor(Math.random() * fallback.length);
+            choices.push(fallback[idx]);
+            fallback.splice(idx, 1);
+          }
+        }
+
+        return choices;
       },
 
       // ── INTERNAL ──────────────────────────────────────────────────
@@ -1080,7 +1116,7 @@ const useGameStore = create(
         if (!state.currentDaily || !state.currentDaily.rewards) return;
         
         const { points, items } = state.currentDaily.rewards;
-        
+
         // Award points
         if (points) {
           set(state2 => {
@@ -1100,20 +1136,37 @@ const useGameStore = create(
           });
         }
         
-        // Award items
-        if (items && items.length > 0) {
-          items.forEach(itemId => {
-            get().grantItem(itemId);
+        const itemChoices = get()._pickDailyItemChoices(state.currentDaily);
+
+        if (itemChoices.length === 0) {
+          if (items && items.length > 0) {
+            items.forEach(itemId => get().grantItem(itemId));
+          }
+          get()._pushNotification('daily', `🏆 Daily completado! +${points} pts`);
+        } else {
+          set({
+            pendingDailyReward: {
+              dailyId: state.currentDaily.id,
+              dailyName: state.currentDaily.name,
+              points: points ?? 0,
+              itemChoices,
+            },
           });
         }
-        
-        // Notify user
-        const itemNames = items ? items.map(id => ITEMS[id]?.name || id).join(', ') : '';
-        const message = itemNames 
-          ? `🏆 Daily completado! +${points} pts, ${itemNames}`
-          : `🏆 Daily completado! +${points} pts`;
-        
-        get()._pushNotification('daily', message);
+      },
+
+      claimDailyItem(chosenItemId) {
+        const reward = get().pendingDailyReward;
+        if (!reward) return;
+
+        if (chosenItemId) {
+          get().grantItem(chosenItemId);
+        }
+
+        const itemName = chosenItemId ? ITEMS[chosenItemId]?.name : 'un objeto';
+        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
+
+        set({ pendingDailyReward: null });
       },
     })
 );

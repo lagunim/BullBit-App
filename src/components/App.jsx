@@ -10,6 +10,7 @@ import Notifications from './Notifications.jsx';
 import Auth from './Auth.jsx';
 import StoriesPanel from './StoriesPanel.jsx';
 import JourneyRewardFlow from './JourneyRewardFlow.jsx';
+import DailyRewardFlow from './DailyRewardFlow.jsx';
 import { supabase } from '../lib/supabase.js';
 import useGameStore from '../store/gameStore.js';
 
@@ -257,6 +258,7 @@ export default function App() {
 
       {/* Global journey reward flow — mounts story scroll then item choice */}
       <JourneyRewardFlow />
+      <DailyRewardFlow />
 
       {/* Stories panel — opened by clicking the LevelProgress card */}
       {storiesPanelOpen && (

@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
 import StoryScrollModal from './StoryScrollModal.jsx';
-import ItemChoiceModal from './ItemChoiceModal.jsx';
 
 /**
  * JourneyRewardFlow — globally mounted orchestrator for the post-journey reward sequence.
  *
  * Step 1: Show StoryScrollModal (pergamino) — user reads the unlocked story.
- * Step 2: After closing the story, show ItemChoiceModal — user picks 1 of 3 items.
+ * Step 2: After closing the story, all 3 items are granted automatically.
  *
  * Reads `pendingJourneyReward` from the store.
- * Calls `claimJourneyItems(chosenItemId)` when done.
+ * Calls `claimJourneyItems()` when the story is closed.
  *
  * Renders nothing when there is no pending reward.
  */
@@ -18,14 +17,13 @@ export default function JourneyRewardFlow() {
   const pendingReward = useGameStore(s => s.pendingJourneyReward);
   const claimJourneyItems = useGameStore(s => s.claimJourneyItems);
 
-  // 'story' | 'items' — which step we are currently showing
-  const [step, setStep] = useState('story');
+  // 'story' | null — whether we should show the story modal
+  const [showStory, setShowStory] = useState(false);
 
-  // When a new reward arrives (pendingReward goes from null to a value),
-  // reset the flow back to the story step.
+  // When a new reward arrives, show the story modal
   useEffect(() => {
     if (pendingReward) {
-      setStep('story');
+      setShowStory(true);
     }
   }, [pendingReward]);
 
@@ -33,31 +31,21 @@ export default function JourneyRewardFlow() {
 
   const { journeyNumber, story, itemChoices } = pendingReward;
 
-  // ── Step 1: Story ──────────────────────────────────────────────
-  if (step === 'story') {
-    // If there's no story to show (pool exhausted), skip straight to items
-    if (!story) {
-      setStep('items');
-      return null;
-    }
+  // If there's no story to show, grant items immediately
+  if (!story) {
+    claimJourneyItems();
+    return null;
+  }
 
+  // Show story modal
+  if (showStory) {
     return (
       <StoryScrollModal
         story={story}
         journeyNumber={journeyNumber}
-        onClose={() => setStep('items')}
-      />
-    );
-  }
-
-  // ── Step 2: Item choice ────────────────────────────────────────
-  if (step === 'items') {
-    return (
-      <ItemChoiceModal
-        journeyNumber={journeyNumber}
-        itemChoices={itemChoices ?? []}
-        onClaim={(chosenItemId) => {
-          claimJourneyItems(chosenItemId);
+        onClose={() => {
+          setShowStory(false);
+          claimJourneyItems();
         }}
       />
     );
