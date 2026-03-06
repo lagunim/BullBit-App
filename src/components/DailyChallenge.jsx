@@ -70,12 +70,12 @@ export default function DailyChallenge() {
             </span>
           </div>
           <div className="progress-bar !h-[10px]">
-            <div 
-              className="progress-bar-fill" 
-              style={{ 
+            <div
+              className="progress-bar-fill"
+              style={{
                 width: `${progressPercentage}%`,
                 color: getProgressColor(progressPercentage)
-              }} 
+              }}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import { ITEMS } from '../data/items.js';
+import { getProgressColor } from '../utils/gameLogic.js';
 
 export default function DailyChallengeModal({ daily, onClose }) {
   if (!daily) return null;
@@ -41,59 +42,56 @@ export default function DailyChallengeModal({ daily, onClose }) {
 
         {/* Icon & Name */}
         <div className="flex items-center gap-4">
-          <div className={`text-4xl p-4 rounded-lg border bg-gradient-to-r ${getDifficultyBg(difficulty)}`}>
+          <div className={`text-4xl p-4 border bg-gradient-to-r ${getDifficultyBg(difficulty)}`}>
             {icon}
           </div>
           <div className="flex-1">
-            <h2 className="text-base font-bold text-white">{name}</h2>
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${getDifficultyColor(difficulty)} ${getDifficultyBg(difficulty)}`}>
+            <h2 className="text-sm font-bold text-white">{name}</h2>
+            <span className={`text-[8px] font-semibold px-2 py-1 inline-block mt-2 rounded-full border ${getDifficultyColor(difficulty)} ${getDifficultyBg(difficulty)}`}>
               {difficulty.toUpperCase()}
             </span>
           </div>
         </div>
 
         {/* Description */}
-        <div className="bg-quest-bg/50 p-4 rounded-lg border border-quest-border">
+        <div className="bg-quest-bg/50 p-4 border border-quest-border">
           <p className="text-gray-300 text-xs">{description}</p>
         </div>
 
         {/* Progress */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400">Progreso</span>
-            <span className="text-sm text-white font-bold">
+          <div className="flex text-[10px] items-center justify-between mb-2">
+            <span className="text-gray-400">Progreso</span>
+            <span className="text-white font-bold">
               {progress.current} / {progress.target} ({progressPercentage}%)
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-4 relative overflow-hidden">
-            <div
-              className={`h-4 rounded-full transition-all duration-500 ease-out ${completed
-                ? 'bg-gradient-to-r from-green-400 to-green-600'
-                : 'bg-gradient-to-r from-blue-500 to-purple-500'
-                }`}
-              style={{ width: `${progressPercentage}%` }}
-            />
-            {progressPercentage > 0 && progressPercentage < 100 && (
-              <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-            )}
-          </div>
+        <div className="progress-bar">
+          <div
+            className="progress-bar-fill"
+            style={{
+              width: `${progressPercentage}%`,
+              color: getProgressColor(completed ? 100 : progressPercentage),
+            }}
+          />
         </div>
+      </div>
 
         {/* Status */}
         {completed && (
-          <div className="flex items-center justify-center gap-2 py-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-            <span className="text-green-400 text-xl">✓</span>
-            <span className="text-green-400 font-bold">MISIÓN COMPLETADA</span>
+          <div className="flex items-center justify-center gap-2 py-3 bg-green-500/20 border border-green-500/30 ">
+            <span className="text-green-400 text-2xl">✓</span>
+            <span className="text-green-400 text-[10px] font-bold">MISIÓN COMPLETADA</span>
           </div>
         )}
 
         {/* Rewards */}
         <div className="border-t border-quest-border pt-4">
           <h3 className="text-xs text-gray-400 uppercase mb-3 font-pixel">Recompensas</h3>
-          <div className="flex items-center justify-around gap-4">
-            <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-lg border border-yellow-500/30">
+          <div className="flex items-stretch justify-around gap-4">
+            <div className="flex  text-[10px] items-center gap-2 bg-yellow-500/20 px-4 py-2 border border-yellow-500/30">
               <span className="text-yellow-400 font-bold">+{rewards.points}</span>
-              <span className="text-yellow-400 text-sm">pts</span>
+              <span className="text-yellow-400 ">pts</span>
             </div>
             {rewards.items && rewards.items.length > 0 && (
               <div className="flex items-center gap-2">
@@ -102,13 +100,13 @@ export default function DailyChallengeModal({ daily, onClose }) {
                   return (
                     <div
                       key={idx}
-                      className={`flex items-center gap-1 px-3 py-2 rounded-lg border ${completed
+                      className={`flex items-center gap-1 px-3 py-2 border ${completed
                         ? 'bg-purple-500/20 border-purple-500/30'
                         : 'bg-purple-900/30 border-purple-500/50 animate-pulse'
                         }`}
                     >
                       <span>{completed ? (item?.icon || '📦') : '🎁'}</span>
-                      <span className={`text-sm ${completed ? 'text-purple-400' : 'text-purple-300'}`}>
+                      <span className={`text-[10px] ${completed ? 'text-purple-400' : 'text-purple-300'}`}>
                         {completed ? item?.name : 'Item'}
                       </span>
                     </div>
