@@ -83,7 +83,7 @@ export default function ActiveEffectModal({ effect, onClose }) {
 
         {/* Description */}
         <div className="bg-quest-bg/50 p-3 rounded-lg border border-quest-border">
-          <p className="text-[10px] text-gray-300 font-pixel leading-relaxed">
+          <p className="text-xs text-gray-300 font-pixel leading-relaxed">
             {getEffectDescription(effect)}
           </p>
         </div>
@@ -92,14 +92,14 @@ export default function ActiveEffectModal({ effect, onClose }) {
         <div className="grid grid-cols-2 gap-3">
           {effect.value !== undefined && (
             <div className="bg-quest-panel/50 p-2 rounded border border-quest-border">
-              <div className="text-[7px] text-quest-textMuted font-pixel uppercase mb-1">Valor</div>
-              <div className="text-[10px] text-quest-cyan font-pixel">+{effect.value}</div>
+              <div className="text-[10px] text-quest-textMuted font-pixel uppercase mb-1">Valor</div>
+              <div className="text-xs text-quest-cyan font-pixel">+{effect.value}</div>
             </div>
           )}
           {timeLeft !== null && (
             <div className="bg-quest-panel/50 p-2 rounded border border-quest-border">
-              <div className="text-[7px] text-quest-textMuted font-pixel uppercase mb-1">Tiempo</div>
-              <div className="text-[10px] text-quest-gold font-pixel">
+              <div className="text-[10px] text-quest-textMuted font-pixel uppercase mb-1">Tiempo</div>
+              <div className="text-xs text-quest-gold font-pixel">
                 {timeLeft === 0 ? '<1 día' : `${timeLeft} día${timeLeft > 1 ? 's' : ''}`}
               </div>
             </div>
@@ -117,13 +117,13 @@ export default function ActiveEffectModal({ effect, onClose }) {
 
         {/* Hint */}
         <div className="text-center pt-2 border-t border-quest-border/50">
-          <div className="text-[7px] text-quest-textMuted font-pixel">
+          <div className="text-xs text-quest-textMuted font-pixel">
             💡 Los efectos activos se aplican automáticamente
           </div>
         </div>
 
         {/* Close button */}
-        <button onClick={onClose} className="btn-pixel-gold w-full uppercase font-bold tracking-widest mt-1 !py-2 !text-[10px]">
+        <button onClick={onClose} className="btn-pixel-gold w-full uppercase font-bold tracking-widest mt-1 !py-2 !text-xs">
           Cerrar
         </button>
       </div>
