@@ -19,10 +19,10 @@ export default function Header() {
       {/* Title bar */}
       <div className="flex items-center justify-between gap-2 p-2 px-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <img 
-            src="/Habit-quest-logo.png" 
-            alt="HabitQuest" 
-            className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+          <img
+            src="/logo.png"
+            alt="HabitQuest"
+            className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-contain"
             style={{ imageRendering: 'pixelated' }}
           />
           <div className="text-[10px] sm:text-xs text-quest-green font-pixel tracking-widest drop-shadow-[0_0_8px_theme(colors.quest.green)] uppercase">
@@ -35,7 +35,7 @@ export default function Header() {
           <div className="hidden sm:flex gap-2">
             {activeEffects.map((eff, i) => (
               <div key={i} className="tooltip-wrap relative">
-                <div 
+                <div
                   onClick={() => setSelectedEffect(eff)}
                   className="flex items-center gap-1 bg-quest-panel border border-quest-cyan px-1.5 py-0.5 text-[6px] text-quest-cyan cursor-pointer hover:bg-quest-cyan/20 transition-colors"
                 >
@@ -46,14 +46,7 @@ export default function Header() {
             ))}
           </div>
 
-          {/* Journey badge */}
-          <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-gold px-2 py-0.5 sm:px-3 sm:py-1">
-            <span className="text-[6px] text-quest-textDim">VIAJE</span>
-            <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">
-              {level}
-            </span>
-          </div>
-
+          {/* <div className="flex flex-col gap-2 mr-2"> */}
           {/* Points */}
           <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-green px-2 py-0.5 sm:px-3 sm:py-1">
             <span className="text-[6px] text-quest-textDim">PTS</span>
@@ -61,6 +54,15 @@ export default function Header() {
               {points.toLocaleString()}
             </span>
           </div>
+
+          {/* Journey badge */}
+          <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-gold px-2 py-0.5 sm:px-3 sm:py-1">
+            <span className="text-[6px] text-quest-textDim">VIAJE</span>
+            <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">
+              {level}
+            </span>
+          </div>
+          {/* </div> */}
 
           {/* Logout Button */}
           <button
