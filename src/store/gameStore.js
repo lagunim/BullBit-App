@@ -1065,13 +1065,21 @@ const useGameStore = create(
         
         // Award points
         if (points) {
-          set(state2 => ({
-            points: state2.points + points,
-            lifetimePoints: state2.lifetimePoints + points,
-          }));
-          // Persistir perfil con puntos del daily
-          const uid = get()._userId;
-          if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
+          set(state2 => {
+            const newPoints = state2.points + points;
+            const newLifetime = state2.lifetimePoints + points;
+            const uid = get()._userId;
+            if (uid) {
+              saveProfile(uid, { 
+                level: state2.level, 
+                points: newPoints, 
+                lifetimePoints: newLifetime, 
+                globalStreak: get().globalStreak, 
+                lastWeeklyProcessDate: get().lastWeeklyProcessDate 
+              }).catch(() => {});
+            }
+            return { points: newPoints, lifetimePoints: newLifetime };
+          });
         }
         
         // Award items
