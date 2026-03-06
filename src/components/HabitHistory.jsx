@@ -6,10 +6,10 @@ import EditHabitModal from './EditHabitModal.jsx';
 
 const STATUS_STYLE = {
   completed: { bg: 'bg-[#003322]', border: 'border-quest-green', symbol: '✔', text: 'text-quest-green' },
-  // Menos tiempo: azul apagado
-  partial: { bg: 'bg-[#001933]', border: 'border-quest-blue', symbol: '✔', text: 'text-quest-blue' },
   // Más tiempo: dorado (tick “especial”)
   over: { bg: 'bg-[#332800]', border: 'border-quest-gold', symbol: '✔', text: 'text-quest-gold' },
+  // Menos tiempo: azul apagado
+  partial: { bg: 'bg-[#001933]', border: 'border-quest-blue', symbol: '✔', text: 'text-quest-blue' },
   failed: { bg: 'bg-[#330011]', border: 'border-quest-red', symbol: '✖', text: 'text-quest-red' },
   none: { bg: 'bg-quest-bg', border: 'border-quest-border', symbol: '·', text: 'text-quest-textMuted' },
 };
@@ -216,6 +216,7 @@ export default function HabitHistory() {
           const completed = dates.filter(d => isCompletedStatus(deriveStatus(d, habit))).length;
           const failed = dates.filter(d => deriveStatus(d, habit) === 'failed').length;
           const rate = completed + failed > 0 ? Math.round((completed / (completed + failed)) * 100) : 0;
+          const maxStreak = getMaxStreak(habit.id);
           return (
             <div
               key={habit.id}
@@ -229,13 +230,11 @@ export default function HabitHistory() {
                 <span>{habit.emoji}</span>
                 <span className="truncate">{habit.name}</span>
               </div>
-              <div className="grid grid-cols-2 gap-y-2 text-xs sm:text-[8px] font-pixel uppercase tracking-tighter">
-                <div className="text-quest-textDim">COMPLETADOS:</div>
-                <div className="text-quest-green text-right">{completed}</div>
-                <div className="text-quest-textDim">FALLADOS:</div>
-                <div className="text-quest-red text-right">{failed}</div>
+              <div className="grid grid-cols-[auto_1fr] gap-y-2 text-[10px] sm:text-[8px] font-pixel uppercase tracking-tighter">
                 <div className="text-quest-textDim pt-2 border-t border-quest-border">TASA ÉXITO:</div>
                 <div className="text-quest-gold text-right pt-2 border-t border-quest-border">{rate}%</div>
+                <div className="text-quest-textDim">MEJOR RACHA:</div>
+                <div className="text-quest-orange text-right">🔥 {maxStreak}</div>
               </div>
             </div>
           );
@@ -251,7 +250,7 @@ export default function HabitHistory() {
         >
           <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-4">
             <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-sm text-quest-cyan font-pixel uppercase tracking-[0.3em] flex items-center gap-2">
+              <div className="text-sm text-quest-cyan font-pixel uppercase flex items-center gap-2">
                 <span>{detailHabit.emoji}</span>
                 <span className="truncate">{detailHabit.name}</span>
               </div>

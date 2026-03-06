@@ -40,8 +40,8 @@ export default function InventoryPanel() {
   return (
     <div className="flex flex-col gap-6">
       <div className="border-b border-quest-border pb-3">
-        <div className="text-[10px] text-quest-cyan font-pixel mb-2 tracking-widest uppercase">🎒 Inventario</div>
-        <div className="text-[7px] text-quest-textDim leading-relaxed uppercase">
+        <div className="text-xs text-quest-cyan font-pixel mb-2 tracking-widest uppercase">🎒 Inventario</div>
+        <div className="text-[8px] text-quest-textDim leading-relaxed uppercase">
           Consigue objetos desbloqueando logros. Úsalos para potenciar tus rachas y recuperar multiplicadores.
         </div>
       </div>
@@ -54,14 +54,14 @@ export default function InventoryPanel() {
           </div>
           <div className="flex flex-wrap gap-3">
             {activeEffects.map((eff, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 onClick={() => setSelectedEffect(eff)}
                 className="bg-quest-panel/50 border-2 border-quest-gold px-3 py-2 shadow-[2px_2px_0_theme(colors.quest.goldDark)] text-quest-gold text-[7px] font-pixel flex items-center gap-3 cursor-pointer hover:bg-quest-gold/10 transition-colors"
               >
                 <span className="animate-blink">◆</span>
                 <div>
-                  <div className="mb-1 uppercase tracking-tighter">{eff.itemName ?? eff.key}</div>
+                  <div className="mb-1 uppercase text-[10px]">{eff.itemName ?? eff.key}</div>
                   {eff.expiresAt && (
                     <div className="text-quest-textMuted text-[6px]">
                       Expira: {new Date(eff.expiresAt).toLocaleDateString()}
@@ -83,9 +83,8 @@ export default function InventoryPanel() {
           const rarity = RARITY_COLORS[item.rarity];
 
           return (
-            <div key={item.id} className={`card-pixel transition-all duration-300 ${
-              owned ? 'border-quest-borderLight opacity-100' : 'opacity-30 grayscale saturate-50'
-            }`}>
+            <div key={item.id} className={`card-pixel transition-all duration-300 ${owned ? 'border-quest-borderLight opacity-100' : 'opacity-30 grayscale saturate-50'
+              }`}>
               {/* Qty badge */}
               {owned && (
                 <div className="absolute -top-3 -right-3 z-10 w-6 h-6 bg-quest-bg border-2 border-quest-cyan text-quest-cyan text-[9px] font-pixel flex items-center justify-center shadow-pixel-sm">
@@ -96,17 +95,17 @@ export default function InventoryPanel() {
               <div className="flex items-center gap-4 mb-3">
                 <div className="text-3xl drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]">{item.icon}</div>
                 <div className="min-w-0">
-                  <div className={`text-[9px] font-pixel mb-1 truncate ${owned ? 'text-quest-text' : 'text-quest-textMuted'}`}>
+                  <div className={`text-xs font-pixel mb-1 truncate ${owned ? 'text-quest-text' : 'text-quest-textMuted'}`}>
                     {item.name}
                   </div>
-                  <div className="inline-block text-[6px] px-1.5 py-0.5 border uppercase tracking-wider font-bold" 
-                       style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
+                  <div className="inline-block text-[6px] px-1.5 py-0.5 border uppercase tracking-wider font-bold"
+                    style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
                     {rarity.label}
                   </div>
                 </div>
               </div>
 
-              <div className="text-[7px] text-quest-textDim leading-relaxed min-h-[30px] mb-3 uppercase tracking-tighter">
+              <div className="text-[8px] text-quest-textDim leading-relaxed min-h-[30px] mb-3 uppercase">
                 {item.desc}
               </div>
 

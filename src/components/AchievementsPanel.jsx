@@ -80,9 +80,9 @@ export default function AchievementsPanel() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <div className="text-[10px] text-quest-gold font-pixel tracking-widest uppercase">🏆 Logros</div>
-        <div className="text-[8px] text-quest-textDim font-pixel uppercase">
+      <div className="flex text-xs justify-between items-center flex-wrap gap-2">
+        <div className="text-quest-gold font-pixel tracking-widest uppercase">🏆 Logros</div>
+        <div className="text-quest-textDim font-pixel uppercase">
           <span className="text-quest-gold">{unlockedCount}</span> / {total} <span className="hidden sm:inline">completados</span>
         </div>
       </div>
@@ -119,22 +119,22 @@ export default function AchievementsPanel() {
                   {ach.icon}
                 </div>
                 <div className="min-w-0">
-                  <div className={`text-[9px] font-pixel mb-1 truncate ${isUnlocked ? 'text-quest-text group-hover:text-quest-gold transition-colors' : 'text-quest-textDim'}`}>
+                  <div className={`text-xs font-pixel mb-1 truncate ${isUnlocked ? 'text-quest-text group-hover:text-quest-gold transition-colors' : 'text-quest-textDim'}`}>
                     {ach.name}
                   </div>
-                  <div className="inline-block text-[6px] px-2 py-0.5 border"
+                  <div className="inline-block text-[8px] px-2 py-0.5 border"
                     style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
                     {rarity.label}
                   </div>
                 </div>
               </div>
 
-              <div className="text-[7px] text-quest-textDim leading-relaxed uppercase tracking-tighter mb-2">
+              <div className="text-[10px] text-quest-textDim leading-relaxed uppercase tracking-tighter mb-2">
                 {ach.desc}
               </div>
 
               {ach.reward && (
-                <div className={`mt-auto pt-2 border-t border-quest-border/40 text-[6px] font-pixel flex items-center gap-2 ${isUnlocked ? 'text-quest-gold' : 'text-quest-textMuted'}`}>
+                <div className={`mt-auto pt-2 border-t border-quest-border/40 text-[8px] font-pixel flex items-center gap-2 ${isUnlocked ? 'text-quest-gold' : 'text-quest-textMuted'}`}>
                   <span>🎁</span>
                   <span>{isUnlocked ? 'RECOMPENSA RECLAMADA' : 'RECOMPENSA AL DESBLOQUEAR'}</span>
                 </div>

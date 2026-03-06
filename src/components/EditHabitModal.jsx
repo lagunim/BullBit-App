@@ -72,13 +72,13 @@ export default function EditHabitModal({ habit, onClose }) {
                 >
                   <span className="text-3xl leading-[1]">{theme.icon}</span>
                   {isSelected && (
-                    <span className="text-[10px] uppercase tracking-[0.3em] text-quest-textDim">{theme.label}</span>
+                    <span className="text-[10px] uppercase text-quest-textDim">{theme.label}</span>
                   )}
                 </button>
               );
             })}
           </div>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-quest-textDim mt-2">
+          <div className="text-[10px] uppercase text-quest-textDim mt-2">
             {HABIT_THEME_BY_ID[form.themeId]?.description}
           </div>
         </div>
