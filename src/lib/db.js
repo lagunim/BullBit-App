@@ -338,16 +338,17 @@ export async function saveDaily(userId, currentDaily, lastDailyDate) {
  * @param {string} userId
  * @param {number} journeyId - Número del viaje completado
  * @param {string} storyId   - ID de la historia asignada
+ * @param {number} [journeyId] - ID del viaje (0 o negativo para logros épicos/legendarios)
  */
 export async function saveStory(userId, journeyId, storyId) {
   const { error } = await supabase.from('user_stories').upsert(
     {
       user_id: userId,
-      journey_id: journeyId,
+      journey_id: journeyId ?? 0,
       story_id: storyId,
       unlocked_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id,journey_id', ignoreDuplicates: true }
+    { onConflict: 'user_id,story_id', ignoreDuplicates: true }
   );
   if (error) console.error('[db] saveStory:', error.message);
 }

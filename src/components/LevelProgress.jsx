@@ -1,5 +1,5 @@
 import useGameStore from '../store/gameStore.js';
-import { getLevelInfo } from '../utils/gameLogic.js';
+import { getLevelInfo, getProgressColor } from '../utils/gameLogic.js';
 
 export default function LevelProgress({ onOpenStories }) {
   const level = useGameStore(s => s.level ?? 0);
@@ -36,7 +36,7 @@ export default function LevelProgress({ onOpenStories }) {
           className="progress-bar-fill level-progress-bar-fill"
           style={{
             width: `${pct}%`,
-            color: pct > 80 ? '#ffd36a' : pct > 40 ? '#f1b64a' : '#d28a1e'
+            color: getProgressColor(pct)
           }}
         />
       </div>

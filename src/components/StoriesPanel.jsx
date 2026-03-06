@@ -20,6 +20,18 @@ export default function StoriesPanel({ onClose }) {
 
   // Sort by journey number
   const sorted = [...unlockedStories].sort((a, b) => a.journeyId - b.journeyId);
+  
+  // Separate stories by type
+  const journeyStories = sorted.filter(s => s.journeyId > 0);
+  const achievementStories = sorted.filter(s => s.journeyId <= 0);
+
+  const getStoryLabel = (entry) => {
+    return entry.journeyId > 0 ? `VIAJE ${entry.journeyId}` : 'LOGRO';
+  };
+
+  const getStoryIcon = (entry) => {
+    return entry.journeyId > 0 ? entry.journeyId : '🏆';
+  };
 
   return (
     <>

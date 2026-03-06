@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import DailyChallengeModal from './DailyChallengeModal.jsx';
+import { getProgressColor } from '../utils/gameLogic.js';
 
 export default function DailyChallenge() {
   const { currentDaily } = useGameStore();
@@ -68,23 +69,14 @@ export default function DailyChallenge() {
               <span className="hidden sm:inline">{progress.current} / {progress.target}</span>
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 sm:h-3 relative overflow-hidden">
-            <div
-              className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${completed
-                ? 'bg-gradient-to-r from-green-400 to-green-600'
-                : 'bg-gradient-to-r from-blue-500 to-purple-500'
-                }`}
-              style={{ width: `${progressPercentage}%` }}
+          <div className="progress-bar !h-[10px]">
+            <div 
+              className="progress-bar-fill" 
+              style={{ 
+                width: `${progressPercentage}%`,
+                color: getProgressColor(progressPercentage)
+              }} 
             />
-            {progressPercentage > 0 && progressPercentage < 100 && (
-              <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-            )}
-          </div>
-          <div className="text-center mt-1 hidden sm:block">
-            <span className={`text-[8px] sm:text-[10px] font-pixel font-medium ${progressPercentage === 100 ? 'text-quest-green' : 'text-blue-400'
-              }`}>
-              {progressPercentage}%
-            </span>
           </div>
         </div>
 

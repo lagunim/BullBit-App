@@ -5,7 +5,7 @@ import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect } from './MultiplierIcons.jsx';
-import { getTodayKey, isHabitDueOnDate, getWeekCompletions } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor } from '../utils/gameLogic.js';
 
 export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
@@ -103,7 +103,7 @@ export default function HabitList() {
         <div className="progress-bar mb-4 !h-xs">
           <div className="progress-bar-fill" style={{
             width: `${Math.round((completedToday / todayHabits.length) * 100)}%`,
-            color: '#00e676',
+            color: getProgressColor(Math.round((completedToday / todayHabits.length) * 100)),
           }} />
         </div>
       )}

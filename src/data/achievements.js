@@ -10,6 +10,7 @@ export const ACHIEVEMENTS = [
       Object.values(day).includes('completed')
     ),
     reward: 'random_common',
+    storyId: 'story_first_habit',
   },
   {
     id: 'first_habit_added',
@@ -19,6 +20,7 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.habits.length >= 1,
     reward: 'random_common',
+    storyId: 'story_first_habit_added',
   },
   {
     id: 'three_habits',
@@ -28,6 +30,7 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.habits.length >= 3,
     reward: 'random_common',
+    storyId: 'story_three_habits',
   },
 
   // === RACHAS ===
@@ -39,6 +42,7 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.habits.some(h => h.streak >= 3),
     reward: 'random_common',
+    storyId: 'story_streak_3',
   },
   {
     id: 'streak_7',
@@ -48,6 +52,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.habits.some(h => h.streak >= 7),
     reward: 'shield_of_streak',
+    storyId: 'story_streak_7',
   },
   {
     id: 'streak_14',
@@ -57,6 +62,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.habits.some(h => h.streak >= 14),
     reward: 'boost_potion',
+    storyId: 'story_streak_14',
   },
   {
     id: 'streak_30',
@@ -66,6 +72,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.habits.some(h => h.streak >= 30),
     reward: 'double_elixir',
+    storyId: 'story_streak_30',
   },
   {
     id: 'streak_100',
@@ -75,6 +82,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.habits.some(h => h.streak >= 100),
     reward: 'multiplier_gem',
+    storyId: 'story_streak_100',
   },
 
   // === TODOS LOS HÁBITOS ===
@@ -91,6 +99,7 @@ export const ACHIEVEMENTS = [
       );
     },
     reward: 'random_rare',
+    storyId: 'story_all_day',
   },
   {
     id: 'all_week',
@@ -100,6 +109,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.globalStreak >= 7,
     reward: 'amulet_constancy',
+    storyId: 'story_all_week',
   },
   {
     id: 'all_month',
@@ -109,6 +119,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.globalStreak >= 30,
     reward: 'multiplier_gem',
+    storyId: 'story_all_month',
   },
 
   // === MULTIPLICADORES ===
@@ -120,6 +131,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.habits.some(h => h.multiplier >= 2.0),
     reward: 'random_rare',
+    storyId: 'story_mult_2',
   },
   {
     id: 'mult_3',
@@ -129,6 +141,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.habits.some(h => h.multiplier >= 3.0),
     reward: 'boost_potion',
+    storyId: 'story_mult_3',
   },
   {
     id: 'mult_5',
@@ -138,6 +151,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.habits.some(h => h.multiplier >= 5.0),
     reward: 'double_elixir',
+    storyId: 'story_mult_5',
   },
 
   // === VIAJES ===
@@ -149,6 +163,7 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.level >= 1,
     reward: 'shield_of_streak',
+    storyId: 'story_level_1',
   },
   {
     id: 'level_2',
@@ -158,6 +173,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.level >= 2,
     reward: 'random_rare',
+    storyId: 'story_level_2',
   },
   {
     id: 'level_3',
@@ -167,6 +183,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.level >= 3,
     reward: 'double_elixir',
+    storyId: 'story_level_3',
   },
   {
     id: 'level_5',
@@ -176,6 +193,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.level >= 5,
     reward: 'multiplier_gem',
+    storyId: 'story_level_5',
   },
 
   // === COLECCIONISTA ===
@@ -187,6 +205,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.inventory.length >= 5,
     reward: 'random_rare',
+    storyId: 'story_collect_5',
   },
 
   // === PUNTOS ===
@@ -198,6 +217,7 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.lifetimePoints >= 1000,
     reward: 'random_common',
+    storyId: 'story_points_1000',
   },
   {
     id: 'points_10000',
@@ -207,6 +227,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.lifetimePoints >= 10000,
     reward: 'random_rare',
+    storyId: 'story_points_10000',
   },
   // === NUEVOS LOGROS - RACHAS LARGAS ===
   {
@@ -217,6 +238,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.habits.some(h => h.streak >= 60),
     reward: 'multiplier_gem',
+    storyId: 'story_streak_60',
   },
   {
     id: 'streak_100_inv',
@@ -226,6 +248,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.habits.some(h => h.streak >= 100),
     reward: 'multiplier_gem',
+    storyId: 'story_streak_100_inv',
   },
 
   // === NUEVOS LOGROS - MULTIPLICADOR MÁXIMO ===
@@ -237,6 +260,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.habits.some(h => h.multiplier >= 3.0),
     reward: 'boost_potion',
+    storyId: 'story_multiplier_3_max',
   },
 
   // === NUEVOS LOGROS - VIAJES AVANZADOS ===
@@ -248,6 +272,7 @@ export const ACHIEVEMENTS = [
     rarity: 'epic',
     check: (state) => state.level >= 10,
     reward: 'multiplier_gem',
+    storyId: 'story_level_10',
   },
   {
     id: 'level_20',
@@ -257,6 +282,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.level >= 20,
     reward: 'multiplier_gem',
+    storyId: 'story_level_20',
   },
 
   // === NUEVOS LOGROS - HÁBITOS MÚLTIPLES ===
@@ -268,6 +294,7 @@ export const ACHIEVEMENTS = [
     rarity: 'rare',
     check: (state) => state.habits.length >= 10,
     reward: 'random_rare',
+    storyId: 'story_habits_10',
   },
 
   // === NUEVOS LOGROS - COMPLETACIONES TOTALES ===
@@ -284,6 +311,7 @@ export const ACHIEVEMENTS = [
       return total >= 100;
     },
     reward: 'random_uncommon',
+    storyId: 'story_completions_100',
   },
   {
     id: 'completions_500',
@@ -298,6 +326,7 @@ export const ACHIEVEMENTS = [
       return total >= 500;
     },
     reward: 'boost_potion',
+    storyId: 'story_completions_500',
   },
   {
     id: 'completions_1000',
@@ -312,6 +341,7 @@ export const ACHIEVEMENTS = [
       return total >= 1000;
     },
     reward: 'multiplier_gem',
+    storyId: 'story_completions_1000',
   },
 
   // === NUEVOS LOGROS - PUNTOS EN PERIODO ===
@@ -337,6 +367,7 @@ export const ACHIEVEMENTS = [
       return points >= 100;
     },
     reward: 'random_uncommon',
+    storyId: 'story_points_day',
   },
   {
     id: 'points_week',
@@ -364,6 +395,7 @@ export const ACHIEVEMENTS = [
       return totalPoints >= 500;
     },
     reward: 'random_rare',
+    storyId: 'story_points_week',
   },
 
   // === NUEVOS LOGROS - TODOS LOS HÁBITOS AL MÁXIMO ===
@@ -378,6 +410,7 @@ export const ACHIEVEMENTS = [
       return state.habits.every(h => h.multiplier >= 2.0);
     },
     reward: 'random_epic',
+    storyId: 'story_all_x2',
   },
   {
     id: 'all_max',
@@ -389,6 +422,7 @@ export const ACHIEVEMENTS = [
       return state.habits.filter(h => h.multiplier >= 3.0).length >= 5;
     },
     reward: 'random_legendary',
+    storyId: 'story_all_max',
   },
 
   // === NUEVOS LOGROS - CONSISTENCIA EXTREMA ===
@@ -400,6 +434,7 @@ export const ACHIEVEMENTS = [
     rarity: 'legendary',
     check: (state) => state.globalStreak >= 30,
     reward: 'multiplier_gem',
+    storyId: 'story_no_miss_30',
   },
 
   // === NUEVOS LOGROS - COLECCIONISMO ===
@@ -414,6 +449,7 @@ export const ACHIEVEMENTS = [
       return uniqueItems.size >= 5;
     },
     reward: 'random_uncommon',
+    storyId: 'story_object_master',
   },
   {
     id: 'early_achiever',
@@ -423,13 +459,59 @@ export const ACHIEVEMENTS = [
     rarity: 'common',
     check: (state) => state.unlockedAchievements.length >= 5,
     reward: 'random_common',
+    storyId: 'story_early_achiever',
   },
+
+  {
+    id: 'streak_broken_5',
+    name: 'El Tropezón',
+    desc: 'Rompe una racha de 5 días consecutivos',
+    icon: '💔',
+    rarity: 'uncommon',
+    check: (state) => state.habits.some(h => h.lastStreakBroken === true && h.previousStreak >= 5),
+    reward: 'random_uncommon',
+    storyId: 'story_streak_broken_5',
+  },
+
+  {
+    id: 'streak_failed_5',
+    name: 'La Caída',
+    desc: 'Falla un hábito 5 días seguidos',
+    icon: '📉',
+    rarity: 'uncommon',
+    check: (state) => state.habits.some(h => h.failStreak >= 5),
+    reward: 'random_uncommon',
+    storyId: 'story_streak_failed_5',
+  },
+
+  {
+    id: 'speed_runner_5',
+    name: 'Rayo Veloz',
+    desc: 'Completa un hábito 5 días seguidos por debajo del tiempo configurado',
+    icon: '⚡',
+    rarity: 'rare',
+    check: (state) => state.habits.some(h => h.speedStreak >= 5),
+    reward: 'boost_potion',
+    storyId: 'story_speed_runner_5',
+  },
+
+  {
+    id: 'overachiever_5',
+    name: 'Sobreesforzo',
+    desc: 'Completa un hábito 5 días seguidos por encima del tiempo configurado',
+    icon: '🏃',
+    rarity: 'rare',
+    check: (state) => state.habits.some(h => h.overTimeStreak >= 5),
+    reward: 'boost_potion',
+    storyId: 'story_overachiever_5',
+  },
+
 ];
 
 export const RARITY_COLORS = {
-  common:    { color: '#a0a0c0', border: '#2a2a4a', label: 'COMÚN' },
-  uncommon:  { color: '#88ff88', border: '#226622', label: 'POCO COMÚN' },
-  rare:      { color: '#00e5ff', border: '#004466', label: 'RARO' },
-  epic:      { color: '#b44fff', border: '#330055', label: 'ÉPICO' },
+  common: { color: '#a0a0c0', border: '#2a2a4a', label: 'COMÚN' },
+  uncommon: { color: '#88ff88', border: '#226622', label: 'POCO COMÚN' },
+  rare: { color: '#00e5ff', border: '#004466', label: 'RARO' },
+  epic: { color: '#b44fff', border: '#330055', label: 'ÉPICO' },
   legendary: { color: '#ffd700', border: '#664400', label: 'LEGENDARIO' },
 };

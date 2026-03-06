@@ -3,6 +3,26 @@
 // Pattern continues with increasing requirements
 export const LEVEL_THRESHOLDS = [627, 2268, 4872, 9072, 15552, 25194, 39366, 59049];
 
+function interpolateColor(color1, color2, factor) {
+  const r1 = parseInt(color1.slice(1, 3), 16);
+  const g1 = parseInt(color1.slice(3, 5), 16);
+  const b1 = parseInt(color1.slice(5, 7), 16);
+  const r2 = parseInt(color2.slice(1, 3), 16);
+  const g2 = parseInt(color2.slice(3, 5), 16);
+  const b2 = parseInt(color2.slice(5, 7), 16);
+  const r = Math.round(r1 + (r2 - r1) * factor);
+  const g = Math.round(g1 + (g2 - g1) * factor);
+  const b = Math.round(b1 + (b2 - b1) * factor);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+export function getProgressColor(pct) {
+  if (pct >= 100) return '#3b82f6';
+  if (pct <= 0) return '#ef4444';
+  const factor = pct / 100;
+  return interpolateColor('#ef4444', '#22c55e', factor);
+}
+
 export function getLevelInfo(level, points) {
   const threshold = LEVEL_THRESHOLDS[level] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] * (level - LEVEL_THRESHOLDS.length + 2);
   const pct = Math.min(100, Math.round((points / threshold) * 100));

@@ -19,7 +19,12 @@ export default function Header() {
       {/* Title bar */}
       <div className="flex items-center justify-between gap-2 p-2 px-3 sm:px-4">
         <div className="flex items-center gap-2">
-          <div className="text-base sm:text-lg shrink-0">⚔️</div>
+          <img 
+            src="/Habit-quest-logo.png" 
+            alt="HabitQuest" 
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
+            style={{ imageRendering: 'pixelated' }}
+          />
           <div className="text-[10px] sm:text-xs text-quest-green font-pixel tracking-widest drop-shadow-[0_0_8px_theme(colors.quest.green)] uppercase">
             Habit<span className="text-quest-gold">Quest</span>
           </div>

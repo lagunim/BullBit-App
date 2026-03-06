@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
 import { getRandomDaily, checkDailyProgress } from '../data/dailies.js';
-import { assignStoryForJourney } from '../data/stories.js';
 import {
   LEVEL_THRESHOLDS,
   getTodayKey,
@@ -16,6 +15,7 @@ import {
   getWeekCompletions,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
+import { assignStoryForJourney, assignStoryForEpicAchievement, assignStoryForLegendaryAchievement } from '../data/stories.js';
 import {
   loadUserData,
   saveProfile,
@@ -976,6 +976,24 @@ const useGameStore = create(
 
           newlyUnlocked.forEach(ach => {
             get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
+            
+            // Desbloquear historia específica si tiene storyId
+            if (ach.storyId) {
+              const newStory = { journeyId: 0, storyId: ach.storyId, unlockedAt: new Date().toISOString() };
+              
+              // Verificar si ya está desbloqueada (por seguridad)
+              const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
+              
+              if (!alreadyUnlocked) {
+                set(state3 => ({
+                  unlockedStories: [...state3.unlockedStories, newStory],
+                }));
+                if (uid) saveStory(uid, 0, ach.storyId).catch(() => {});
+                get()._pushNotification('story', `📜 Historia desbloqueada`);
+              }
+            }
+
+            // Otorgar recompensa de item
             if (ach.reward) {
               const rewardId = ach.reward.startsWith('random_') 
                 ? get()._selectRandomReward(ach.reward)
@@ -995,7 +1013,7 @@ const useGameStore = create(
           set(state => ({
             notifications: state.notifications.filter(n => n.id !== id),
           }));
-        }, 6000);
+        }, 10000);
       },
 
       dismissNotification(id) {
