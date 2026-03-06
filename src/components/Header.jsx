@@ -41,9 +41,9 @@ export default function Header() {
             ))}
           </div>
 
-          {/* Level badge */}
+          {/* Journey badge */}
           <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-gold px-2 py-0.5 sm:px-3 sm:py-1">
-            <span className="text-[6px] text-quest-textDim">LV</span>
+            <span className="text-[6px] text-quest-textDim">VIAJE</span>
             <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">
               {level}
             </span>

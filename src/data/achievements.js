@@ -140,11 +140,11 @@ export const ACHIEVEMENTS = [
     reward: 'double_elixir',
   },
 
-  // === NIVELES ===
+  // === VIAJES ===
   {
     id: 'level_1',
     name: 'Iniciado',
-    desc: 'Alcanza el Nivel 1',
+    desc: 'Completa el Viaje 1',
     icon: '🥉',
     rarity: 'common',
     check: (state) => state.level >= 1,
@@ -153,7 +153,7 @@ export const ACHIEVEMENTS = [
   {
     id: 'level_2',
     name: 'Aventurero',
-    desc: 'Alcanza el Nivel 2',
+    desc: 'Completa el Viaje 2',
     icon: '🥈',
     rarity: 'rare',
     check: (state) => state.level >= 2,
@@ -162,7 +162,7 @@ export const ACHIEVEMENTS = [
   {
     id: 'level_3',
     name: 'Maestro',
-    desc: 'Alcanza el Nivel 3',
+    desc: 'Completa el Viaje 3',
     icon: '🥇',
     rarity: 'epic',
     check: (state) => state.level >= 3,
@@ -171,7 +171,7 @@ export const ACHIEVEMENTS = [
   {
     id: 'level_5',
     name: 'Leyenda',
-    desc: 'Alcanza el Nivel 5',
+    desc: 'Completa el Viaje 5',
     icon: '🏆',
     rarity: 'legendary',
     check: (state) => state.level >= 5,
@@ -239,11 +239,11 @@ export const ACHIEVEMENTS = [
     reward: 'boost_potion',
   },
 
-  // === NUEVOS LOGROS - NIVELES ALTOS ===
+  // === NUEVOS LOGROS - VIAJES AVANZADOS ===
   {
     id: 'level_10',
     name: 'Maestro',
-    desc: 'Alcanza el Nivel 10',
+    desc: 'Completa el Viaje 10',
     icon: '🏅',
     rarity: 'epic',
     check: (state) => state.level >= 10,
@@ -252,7 +252,7 @@ export const ACHIEVEMENTS = [
   {
     id: 'level_20',
     name: 'Leyenda',
-    desc: 'Alcanza el Nivel 20',
+    desc: 'Completa el Viaje 20',
     icon: '👑',
     rarity: 'legendary',
     check: (state) => state.level >= 20,

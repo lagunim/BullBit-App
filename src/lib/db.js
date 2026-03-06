@@ -83,6 +83,7 @@ export async function loadUserData(userId) {
     effectsRes,
     achievementsRes,
     dailyRes,
+    storiesRes,
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('habits').select('*').eq('user_id', userId),
@@ -91,6 +92,7 @@ export async function loadUserData(userId) {
     supabase.from('active_effects').select('*').eq('user_id', userId),
     supabase.from('user_achievements').select('achievement_id, unlocked_at').eq('user_id', userId),
     supabase.from('user_daily_progress').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1),
+    supabase.from('user_stories').select('journey_id, story_id, unlocked_at').eq('user_id', userId).order('journey_id', { ascending: true }),
   ]);
 
   // Si el perfil no existe → usuario nuevo, sin datos en BD
@@ -113,6 +115,12 @@ export async function loadUserData(userId) {
 
   const activeEffects = (effectsRes.data ?? []).map(rowToEffect);
   const unlockedAchievements = (achievementsRes.data ?? []).map(r => r.achievement_id);
+
+  const unlockedStories = (storiesRes.data ?? []).map(row => ({
+    journeyId: row.journey_id,
+    storyId: row.story_id,
+    unlockedAt: row.unlocked_at,
+  }));
 
   // Daily challenge
   let currentDaily = null;
@@ -142,6 +150,7 @@ export async function loadUserData(userId) {
     inventory,
     activeEffects,
     unlockedAchievements,
+    unlockedStories,
     currentDaily,
     lastDailyDate,
   };
@@ -320,6 +329,50 @@ export async function saveDaily(userId, currentDaily, lastDailyDate) {
     progress_target: currentDaily.progress?.target ?? 1,
   }, { onConflict: 'user_id,date' });
   if (error) console.error('[db] saveDaily:', error.message);
+}
+
+// ── HISTORIAS DE VIAJE ─────────────────────────────────────────────────────
+
+/**
+ * Guarda una historia desbloqueada al completar un viaje.
+ * @param {string} userId
+ * @param {number} journeyId - Número del viaje completado
+ * @param {string} storyId   - ID de la historia asignada
+ */
+export async function saveStory(userId, journeyId, storyId) {
+  const { error } = await supabase.from('user_stories').upsert(
+    {
+      user_id: userId,
+      journey_id: journeyId,
+      story_id: storyId,
+      unlocked_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,journey_id', ignoreDuplicates: true }
+  );
+  if (error) console.error('[db] saveStory:', error.message);
+}
+
+/**
+ * Carga todas las historias desbloqueadas de un usuario.
+ * @returns {Array<{ journeyId: number, storyId: string, unlockedAt: string }>}
+ */
+export async function loadUserStories(userId) {
+  const { data, error } = await supabase
+    .from('user_stories')
+    .select('journey_id, story_id, unlocked_at')
+    .eq('user_id', userId)
+    .order('journey_id', { ascending: true });
+
+  if (error) {
+    console.error('[db] loadUserStories:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map(row => ({
+    journeyId: row.journey_id,
+    storyId: row.story_id,
+    unlockedAt: row.unlocked_at,
+  }));
 }
 
 // ── FIN DEL ARCHIVO ────────────────────────────────────────────────────────

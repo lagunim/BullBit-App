@@ -8,6 +8,8 @@ import InventoryPanel from './InventoryPanel.jsx';
 import DailyChallenge from './DailyChallenge.jsx';
 import Notifications from './Notifications.jsx';
 import Auth from './Auth.jsx';
+import StoriesPanel from './StoriesPanel.jsx';
+import JourneyRewardFlow from './JourneyRewardFlow.jsx';
 import { supabase } from '../lib/supabase.js';
 import useGameStore from '../store/gameStore.js';
 
@@ -22,6 +24,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('home');
+  const [storiesPanelOpen, setStoriesPanelOpen] = useState(false);
   const { init } = useGameStore();
   const [bounceOffset, setBounceOffset] = useState(0);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -190,7 +193,7 @@ export default function App() {
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
                 <div className="anim-fade-in">
-                  <LevelProgress />
+                  <LevelProgress onOpenStories={() => setStoriesPanelOpen(true)} />
                   <DailyChallenge />
                   <HabitList />
                 </div>
@@ -251,6 +254,14 @@ export default function App() {
       </nav>
 
       <Notifications />
+
+      {/* Global journey reward flow — mounts story scroll then item choice */}
+      <JourneyRewardFlow />
+
+      {/* Stories panel — opened by clicking the LevelProgress card */}
+      {storiesPanelOpen && (
+        <StoriesPanel onClose={() => setStoriesPanelOpen(false)} />
+      )}
     </div>
   );
 }

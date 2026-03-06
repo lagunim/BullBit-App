@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
 import { getRandomDaily, checkDailyProgress } from '../data/dailies.js';
+import { assignStoryForJourney } from '../data/stories.js';
 import {
   LEVEL_THRESHOLDS,
   getTodayKey,
@@ -27,6 +28,7 @@ import {
   saveActiveEffects,
   saveAchievements,
   saveDaily,
+  saveStory,
 } from '../lib/db.js';
 import { loadState, clearState } from '../lib/storage.js';
 
@@ -92,6 +94,10 @@ const useGameStore = create(
       unlockedAchievements: [],
       inventory: [],        // [{ itemId, qty }]
       activeEffects: [],    // [{ key, value, expiresAt (ISO date) }]
+
+      // Viajes e historias
+      unlockedStories: [],  // [{ journeyId, storyId, unlockedAt }]
+      pendingJourneyReward: null, // { journeyNumber, story, itemChoices } — flujo post-viaje
 
       // UI notifications queue
       notifications: [],
@@ -173,6 +179,7 @@ const useGameStore = create(
               history: remoteData.history,
               globalStreak: remoteData.globalStreak,
               unlockedAchievements: remoteData.unlockedAchievements,
+              unlockedStories: remoteData.unlockedStories ?? [],
               inventory: remoteData.inventory,
               activeEffects: remoteData.activeEffects,
               currentDaily: remoteData.currentDaily,
@@ -292,16 +299,20 @@ const useGameStore = create(
           [today]: { ...(state.history[today] ?? {}), [habitId]: 'completed' },
         };
 
-        // Level up check
+        // Journey (level) up check
         const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
         let finalLevel = state.level;
         let finalPoints = newPoints;
-        let levelUpMsg = null;
+        let journeyReward = null;
 
         if (newPoints >= threshold) {
           finalLevel = state.level + 1;
           finalPoints = newPoints - threshold;
-          levelUpMsg = `¡NIVEL ${finalLevel} ALCANZADO!`;
+          // Assign a story for this journey
+          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+          // Pick 3 random item choices, weighted by journey number
+          const choices = get()._pickJourneyItemChoices(finalLevel);
+          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
         }
 
         set(state2 => ({
@@ -315,9 +326,8 @@ const useGameStore = create(
           level: finalLevel,
           history: newHistory,
           activeEffects: nextEffects,
-          notifications: levelUpMsg
-            ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
-            : state2.notifications,
+          // Only set pendingJourneyReward if there isn't one already queued
+          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
         }));
 
         // Persistir en BD (fire & forget)
@@ -328,6 +338,10 @@ const useGameStore = create(
           saveHabitEntry(userId, habitId, today, 'completed').catch(() => {});
           saveProfile(userId, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
           if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId, nextEffects).catch(() => {});
+          // Persist new story unlock
+          if (journeyReward?.story) {
+            saveStory(userId, finalLevel, journeyReward.story.id).catch(() => {});
+          }
         }
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
@@ -373,16 +387,18 @@ const useGameStore = create(
           [today]: { ...(state.history[today] ?? {}), [habitId]: 'partial' },
         };
 
-        // Level up check
+        // Journey (level) up check
         const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
         let finalLevel = state.level;
         let finalPoints = newPoints;
-        let levelUpMsg = null;
+        let journeyReward = null;
 
         if (newPoints >= threshold) {
           finalLevel = state.level + 1;
           finalPoints = newPoints - threshold;
-          levelUpMsg = `¡NIVEL ${finalLevel} ALCANZADO!`;
+          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+          const choices = get()._pickJourneyItemChoices(finalLevel);
+          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
         }
 
         set(state2 => ({
@@ -396,9 +412,7 @@ const useGameStore = create(
           level: finalLevel,
           history: newHistory,
           activeEffects: nextEffects,
-          notifications: levelUpMsg
-            ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
-            : state2.notifications,
+          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
         }));
 
         // Persistir en BD (fire & forget)
@@ -409,6 +423,9 @@ const useGameStore = create(
           saveHabitEntry(userId2, habitId, today, 'partial').catch(() => {});
           saveProfile(userId2, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
           if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId2, nextEffects).catch(() => {});
+          if (journeyReward?.story) {
+            saveStory(userId2, finalLevel, journeyReward.story.id).catch(() => {});
+          }
         }
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
@@ -452,16 +469,18 @@ const useGameStore = create(
           [today]: { ...(state.history[today] ?? {}), [habitId]: 'over' },
         };
 
-        // Level up check
+        // Journey (level) up check
         const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
         let finalLevel = state.level;
         let finalPoints = newPoints;
-        let levelUpMsg = null;
+        let journeyReward = null;
 
         if (newPoints >= threshold) {
           finalLevel = state.level + 1;
           finalPoints = newPoints - threshold;
-          levelUpMsg = `¡NIVEL ${finalLevel} ALCANZADO!`;
+          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+          const choices = get()._pickJourneyItemChoices(finalLevel);
+          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
         }
 
         set(state2 => ({
@@ -475,9 +494,7 @@ const useGameStore = create(
           level: finalLevel,
           history: newHistory,
           activeEffects: nextEffects,
-          notifications: levelUpMsg
-            ? [...state2.notifications, { id: Date.now(), type: 'level', msg: levelUpMsg }]
-            : state2.notifications,
+          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
         }));
 
         // Persistir en BD (fire & forget)
@@ -488,6 +505,9 @@ const useGameStore = create(
           saveHabitEntry(userId3, habitId, today, 'over').catch(() => {});
           saveProfile(userId3, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
           if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId3, nextEffects).catch(() => {});
+          if (journeyReward?.story) {
+            saveStory(userId3, finalLevel, journeyReward.story.id).catch(() => {});
+          }
         }
 
         get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
@@ -647,6 +667,68 @@ const useGameStore = create(
         // Persistir en BD
         const uid = get()._userId;
         if (uid) saveInventory(uid, get().inventory).catch(() => {});
+      },
+
+      // ── JOURNEY REWARDS ───────────────────────────────────────────
+
+      /**
+       * Called when the user selects one of the 3 item choices after completing a journey.
+       * Grants the chosen item, records the story unlock, and clears pendingJourneyReward.
+       */
+      claimJourneyItems(chosenItemId) {
+        const state = get();
+        const reward = state.pendingJourneyReward;
+        if (!reward) return;
+
+        // Record the story as unlocked in the store
+        const newStory = reward.story
+          ? { journeyId: reward.journeyNumber, storyId: reward.story.id, unlockedAt: new Date().toISOString() }
+          : null;
+
+        set(state2 => ({
+          pendingJourneyReward: null,
+          unlockedStories: newStory
+            ? [...state2.unlockedStories, newStory]
+            : state2.unlockedStories,
+        }));
+
+        // Grant chosen item
+        if (chosenItemId) get().grantItem(chosenItemId);
+
+        get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO!`);
+        get()._checkAchievements();
+      },
+
+      /**
+       * Picks 3 distinct random item choices for a journey reward.
+       * Higher journeys get better rarities.
+       */
+      _pickJourneyItemChoices(journeyNumber) {
+        const allItemIds = Object.keys(ITEMS);
+        const rarityByJourney = journeyNumber <= 2 ? ['common', 'common', 'rare']
+          : journeyNumber <= 4 ? ['common', 'rare', 'rare']
+          : journeyNumber <= 6 ? ['rare', 'rare', 'epic']
+          : ['rare', 'epic', 'epic'];
+
+        const chosen = [];
+        const usedIds = new Set();
+
+        for (const rarity of rarityByJourney) {
+          const pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
+          if (pool.length === 0) {
+            // Fallback: any unused item
+            const fallback = allItemIds.filter(id => !usedIds.has(id));
+            if (fallback.length === 0) break;
+            const pick = fallback[Math.floor(Math.random() * fallback.length)];
+            chosen.push(pick);
+            usedIds.add(pick);
+          } else {
+            const pick = pool[Math.floor(Math.random() * pool.length)];
+            chosen.push(pick);
+            usedIds.add(pick);
+          }
+        }
+        return chosen;
       },
 
       // ── INTERNAL ──────────────────────────────────────────────────
