@@ -27,27 +27,27 @@ export default function InventoryPanel() {
   });
 
   // Items that need a target habit (instant effects on habits)
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target'];
 
   function handleUse(itemId) {
     const item = ITEMS[itemId];
     if (habitTargetEffects.includes(item?.effectKey)) {
       // For Piedra de Poder, any habit is eligible
-      const eligible = item.effectKey === 'next_triple_target' 
-        ? habits 
+      const eligible = item.effectKey === 'next_triple_target'
+        ? habits
         : habits.filter(h => (h?.multiplier ?? 1) < 3);
-      
+
       if (eligible.length === 0) {
-        const message = item.effectKey === 'next_triple_target' 
+        const message = item.effectKey === 'next_triple_target'
           ? 'No tienes hábitos disponibles.'
           : 'Todos tus hábitos ya tienen multiplicador máximo.';
         pushNotification?.('item', message);
         return;
       }
-      setPendingTargetItem({ 
-        itemId, 
-        name: item?.name ?? 'Objeto', 
-        icon: item?.icon ?? '🔮', 
+      setPendingTargetItem({
+        itemId,
+        name: item?.name ?? 'Objeto',
+        icon: item?.icon ?? '🔮',
         effectKey: item?.effectKey,
         desc: item?.desc ?? 'Descripción no disponible'
       });
@@ -62,7 +62,7 @@ export default function InventoryPanel() {
     const filtered = pendingTargetItem.effectKey === 'next_triple_target'
       ? habits
       : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
-    
+
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   }, [habits, pendingTargetItem]);
 
@@ -84,10 +84,12 @@ export default function InventoryPanel() {
       {/* Active effects */}
       {activeEffects.length > 0 && (
         <div className="anim-fade-in">
-          <div className="text-[7px] text-quest-gold font-pixel mb-3 flex items-center gap-2">
-            <span className="animate-pulse">★</span> EFECTOS ACTIVOS
+          <div className="text-xs text-quest-gold font-pixel mb-3 flex items-center gap-2">
+            <h2 className='text-[10px] sm:text-xs font-pixel uppercase'>
+              <span className="animate-pulse">★</span> EFECTOS ACTIVOS
+            </h2>
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {activeEffects.map((eff, i) => (
               <div
                 key={i}
@@ -96,7 +98,7 @@ export default function InventoryPanel() {
               >
                 <span className="animate-blink">◆</span>
                 <div>
-                  <div className="mb-1 uppercase text-[10px]">{eff.itemName ?? eff.key}</div>
+                  <div className="mb-1 uppercase text-[8px]">{eff.itemName ?? eff.key}</div>
                   {eff.expiresAt && (
                     <div className="text-quest-textMuted text-[6px]">
                       Expira: {new Date(eff.expiresAt).toLocaleDateString()}
@@ -111,7 +113,10 @@ export default function InventoryPanel() {
 
       {/* Inventory grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {allItems.map(item => {
+        <h2 className='text-[10px] sm:text-xs font-pixel text-quest-purple uppercase flex items-center gap-2'>
+          <span className="animate-pulse">💎</span> Objetos
+        </h2>
+        {allItems.map(item => {
           const invEntry = inventory.find(i => i.itemId === item.id);
           const qty = invEntry?.qty ?? 0;
           const owned = qty > 0;

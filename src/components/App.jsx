@@ -194,6 +194,9 @@ export default function App() {
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
                 <div className="anim-fade-in">
+                  <div className="mb-2">
+                    <h2 className="text-[10px] sm:text-xs font-pixel text-quest-gold uppercase tracking-wider">🌟 Aventura del Viajero</h2>
+                  </div>
                   <LevelProgress onOpenStories={() => setStoriesPanelOpen(true)} />
                   <DailyChallenge />
                   <HabitList />

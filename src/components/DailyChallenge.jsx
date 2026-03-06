@@ -32,6 +32,9 @@ export default function DailyChallenge() {
 
   return (
     <>
+      <div className="mb-2">
+        <h2 className="text-[10px] sm:text-xs font-pixel text-quest-gold uppercase tracking-wider">🏆 Misión Diaria</h2>
+      </div>
       <div
         className={`mb-6 p-3 sm:p-4 border bg-gradient-to-r ${getDifficultyBg(difficulty)} backdrop-blur-sm card-pixel cursor-pointer hover:scale-[1.02] transition-transform`}
         onClick={() => setShowModal(true)}

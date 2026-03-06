@@ -6,12 +6,17 @@ import {
   LEVEL_THRESHOLDS,
   getTodayKey,
   getYesterdayKey,
+  getDateKey,
   calcPoints,
   calcMultiplierOnComplete,
   calcMultiplierOnFail,
   calcGlobalStreak,
   isHabitDueOnDate,
+  isHabitCompletedThisPeriod,
   getWeekStart,
+  getWeekEnd,
+  getMonthStart,
+  getMonthEnd,
   getWeekCompletions,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
@@ -882,66 +887,131 @@ const useGameStore = create(
       _processExpiredHabits() {
         const state = get();
         const today = getTodayKey();
-        const yesterday = getYesterdayKey();
         
-        // Buscar hábitos que estaban programados ayer pero no se completaron
-        const expiredHabits = state.habits.filter(habit => {
-          const wasDueYesterday = isHabitDueOnDate(habit, yesterday);
-          const yesterdayStatus = state.history[yesterday]?.[habit.id];
-          const wasNotResolved = !yesterdayStatus; // No completed, failed, partial, etc.
-          
-          return wasDueYesterday && wasNotResolved;
-        });
+        const isCompletedStatus = (status) =>
+          status === 'completed' || status === 'partial' || status === 'over';
 
-        if (expiredHabits.length === 0) return;
-
-        // Marcar como failed automáticamente y aplicar penalizaciones
-        const newHistory = { ...state.history };
-        if (!newHistory[yesterday]) newHistory[yesterday] = {};
-
+        const failedEntries = [];
         const updatedHabits = [...state.habits];
+        const newHistory = { ...state.history };
         const activeEffects = state._getActiveEffects();
-
-        expiredHabits.forEach(habit => {
-          // Marcar como failed en el historial
-          newHistory[yesterday][habit.id] = 'failed';
+        
+        for (const habit of state.habits) {
+          if (habit.periodicity === 'weekly_times' || habit.periodicity === 'custom') continue;
           
-          // Aplicar penalización de multiplicador
-          const newMult = calcMultiplierOnFail(habit, activeEffects);
+          const habitCreatedDate = new Date(habit.createdAt);
+          habitCreatedDate.setHours(0, 0, 0, 0);
+          const todayDate = new Date(today + 'T12:00:00');
           
-          // Actualizar hábito con multiplicador penalizado y streak a 0
-          const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
-          if (habitIndex !== -1) {
-            updatedHabits[habitIndex] = {
-              ...updatedHabits[habitIndex],
-              multiplier: newMult,
-              streak: 0
-            };
+          if (habit.periodicity === 'daily') {
+            for (let d = new Date(habitCreatedDate); d <= todayDate; d.setDate(d.getDate() + 1)) {
+              const dateStr = d.toISOString().split('T')[0];
+              const dayStatus = newHistory[dateStr]?.[habit.id];
+              
+              if (!isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
+                if (!newHistory[dateStr]) newHistory[dateStr] = {};
+                newHistory[dateStr][habit.id] = 'failed';
+                failedEntries.push({ habitId: habit.id, date: dateStr, status: 'failed' });
+                
+                const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+                if (habitIndex !== -1) {
+                  const newMult = calcMultiplierOnFail(habit, activeEffects);
+                  updatedHabits[habitIndex] = {
+                    ...updatedHabits[habitIndex],
+                    multiplier: newMult,
+                    streak: 0
+                  };
+                }
+              }
+            }
+          } else if (habit.periodicity === 'weekly') {
+            let currentWeekStart = getWeekStart(habitCreatedDate.toISOString().split('T')[0]);
+            let currentWeekStartDate = new Date(currentWeekStart + 'T12:00:00');
+            const todayWeekStart = getWeekStart(today);
+            const todayWeekStartDate = new Date(todayWeekStart + 'T12:00:00');
+            
+            while (currentWeekStartDate <= todayWeekStartDate) {
+              const weekEnd = getWeekEnd(currentWeekStart);
+              const weekEndDate = new Date(weekEnd + 'T12:00:00');
+              const now = new Date();
+              
+              if (now >= weekEndDate) {
+                const wasAlreadyFailed = (newHistory[weekEnd]?.[habit.id] === 'failed');
+                if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, weekEnd, newHistory)) {
+                  if (!newHistory[weekEnd]) newHistory[weekEnd] = {};
+                  newHistory[weekEnd][habit.id] = 'failed';
+                  failedEntries.push({ habitId: habit.id, date: weekEnd, status: 'failed' });
+                  
+                  const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+                  if (habitIndex !== -1) {
+                    const newMult = calcMultiplierOnFail(habit, activeEffects);
+                    updatedHabits[habitIndex] = {
+                      ...updatedHabits[habitIndex],
+                      multiplier: newMult,
+                      streak: 0
+                    };
+                  }
+                }
+              }
+              
+              currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
+              currentWeekStart = currentWeekStartDate.toISOString().split('T')[0];
+            }
+          } else if (habit.periodicity === 'monthly') {
+            let currentMonthStart = getMonthStart(habitCreatedDate.toISOString().split('T')[0]);
+            let currentMonthStartDate = new Date(currentMonthStart + 'T12:00:00');
+            const todayMonthStart = getMonthStart(today);
+            const todayMonthStartDate = new Date(todayMonthStart + 'T12:00:00');
+            
+            while (currentMonthStartDate <= todayMonthStartDate) {
+              const monthEnd = getMonthEnd(currentMonthStart);
+              const monthEndDate = new Date(monthEnd + 'T12:00:00');
+              const now = new Date();
+              
+              if (now >= monthEndDate) {
+                const wasAlreadyFailed = (newHistory[monthEnd]?.[habit.id] === 'failed');
+                if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, monthEnd, newHistory)) {
+                  if (!newHistory[monthEnd]) newHistory[monthEnd] = {};
+                  newHistory[monthEnd][habit.id] = 'failed';
+                  failedEntries.push({ habitId: habit.id, date: monthEnd, status: 'failed' });
+                  
+                  const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+                  if (habitIndex !== -1) {
+                    const newMult = calcMultiplierOnFail(habit, activeEffects);
+                    updatedHabits[habitIndex] = {
+                      ...updatedHabits[habitIndex],
+                      multiplier: newMult,
+                      streak: 0
+                    };
+                  }
+                }
+              }
+              
+              currentMonthStartDate.setMonth(currentMonthStartDate.getMonth() + 1);
+              currentMonthStart = currentMonthStartDate.toISOString().split('T')[0];
+            }
           }
-        });
+        }
 
-        // Aplicar todos los cambios
+        if (failedEntries.length === 0) return;
+
         set({
           habits: updatedHabits,
           history: newHistory
         });
 
-        // Persistir en BD (fire & forget)
         const uid = get()._userId;
         if (uid) {
           saveHabits(uid, updatedHabits).catch(() => {});
-          const entries = expiredHabits.map(h => ({ habitId: h.id, date: yesterday, status: 'failed' }));
-          saveHabitEntries(uid, entries).catch(() => {});
+          if (failedEntries.length > 0) saveHabitEntries(uid, failedEntries).catch(() => {});
         }
 
-        // Notificar al usuario
-        const message = expiredHabits.length === 1 
-          ? `Hábito "${expiredHabits[0].name}" marcado como fallido automáticamente`
-          : `${expiredHabits.length} hábitos marcados como fallidos automáticamente`;
+        const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
+        const message = uniqueFailedHabits.length === 1 
+          ? `Hábito marcado como fallido automáticamente`
+          : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
         
         get()._pushNotification('auto_fail', message);
-
-        // Recalcular racha global después de los cambios
         get()._recalcGlobalStreak();
       },
 

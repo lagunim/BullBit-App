@@ -28,7 +28,7 @@ export default function HabitList() {
     status === 'completed' || status === 'partial' || status === 'over';
 
   // Filtrar solo hábitos que corresponden al día actual
-  const todayHabits = habits.filter(habit => isHabitDueOnDate(habit, today));
+  const todayHabits = habits.filter(habit => isHabitDueOnDate(habit, today, history));
 
   const isWeeklyTargetMet = (habit) => {
     if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
@@ -85,17 +85,23 @@ export default function HabitList() {
 
   return (
     <div>
+      {/* New Habit button */}
+      <button onClick={() => setShowModal(true)} className="block mx-auto mt-2 mb-5 btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-3 sm:py-2 text-xs sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
+        ✚ NUEVO HÁBITO
+      </button>
       {/* Today header */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <div>
-          <div className="text-xs text-quest-textDim uppercase tracking-wide">HOY — {todayName} {today}</div>
-          <div className="text-xs text-quest-text mt-1 font-pixel">
-            {completedToday}/{todayHabits.length} <span className="text-quest-green">COMPLETADOS</span>
+      <div className="mb-4">
+        <h2 className="text-[10px] sm:text-xs font-pixel text-quest-cyan uppercase tracking-wider mb-2">📋 Hábitos de Hoy</h2>
+
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div>
+            <div className="text-xs text-quest-textDim uppercase tracking-wide">HOY — {todayName} {today}</div>
+            <div className="text-xs text-quest-text mt-1 font-pixel">
+              {completedToday}/{todayHabits.length} <span className="text-quest-green">COMPLETADOS</span>
+            </div>
           </div>
+
         </div>
-        <button onClick={() => setShowModal(true)} className="btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-3 sm:py-2 text-xs sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
-          ✚ NUEVO HÁBITO
-        </button>
       </div>
 
       {/* Daily progress bar */}
@@ -105,6 +111,13 @@ export default function HabitList() {
             width: `${Math.round((completedToday / todayHabits.length) * 100)}%`,
             color: getProgressColor(Math.round((completedToday / todayHabits.length) * 100)),
           }} />
+        </div>
+      )}
+
+      {/* Pending habits */}
+      {pendingToday > 0 && todayHabits.length > 0 && (
+        <div className="text-center text-xs text-quest-textDim mt-4 uppercase mb-2">
+          <span className="animate-blink text-quest-cyan">▶</span> {pendingToday} HÁBITO{pendingToday !== 1 ? 'S' : ''} PENDIENTE{pendingToday !== 1 ? 'S' : ''}
         </div>
       )}
 
@@ -141,11 +154,7 @@ export default function HabitList() {
         </div>
       )}
 
-      {pendingToday > 0 && todayHabits.length > 0 && (
-        <div className="text-center text-xs text-quest-textDim mt-4 uppercase">
-          <span className="animate-blink text-quest-cyan">▶</span> {pendingToday} HÁBITO{pendingToday !== 1 ? 'S' : ''} PENDIENTE{pendingToday !== 1 ? 'S' : ''}
-        </div>
-      )}
+
 
       {showModal && <AddHabitModal onClose={() => setShowModal(false)} />}
 

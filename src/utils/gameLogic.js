@@ -17,7 +17,7 @@ function interpolateColor(color1, color2, factor) {
 }
 
 export function getProgressColor(pct) {
-  if (pct >= 100) return '#3b82f6';
+  if (pct >= 100) return '#22c55e';
   if (pct <= 0) return '#ef4444';
   const factor = pct / 100;
   return interpolateColor('#ef4444', '#22c55e', factor);
@@ -45,7 +45,7 @@ export function getDateKey(daysAgo = 0) {
   return d.toISOString().split('T')[0];
 }
 
-export function isHabitDueOnDate(habit, dateStr) {
+export function isHabitDueOnDate(habit, dateStr, history = {}) {
   if (habit.weeklyTimesTarget) return true;
   const date = new Date(dateStr + 'T12:00:00');
   
@@ -54,10 +54,10 @@ export function isHabitDueOnDate(habit, dateStr) {
       return true;
       
     case 'weekly':
-      return date.getDay() === 1; // Monday
+      return !isHabitCompletedThisPeriod(habit, dateStr, history);
       
     case 'monthly':
-      return date.getDate() === 1;
+      return !isHabitCompletedThisPeriod(habit, dateStr, history);
       
     case 'custom':
       return _checkCustomPeriodicity(habit, date);
@@ -146,14 +146,39 @@ function _parseCustomDays(customDays) {
 export function isHabitExpired(habit, today, history) {
   if (habit.weeklyTimesTarget) return false;
   
-  // Si ya tiene un estado para hoy, no está vencido
+  // For weekly and monthly, check if the period has ended
+  if (habit.periodicity === 'weekly') {
+    const weekEnd = getWeekEnd(today);
+    const todayDate = new Date(today + 'T12:00:00');
+    const weekEndDate = new Date(weekEnd + 'T12:00:00');
+    const now = new Date();
+    
+    // Only expired if we're past the week end AND not completed in this period
+    if (now > weekEndDate && !isHabitCompletedThisPeriod(habit, today, history)) {
+      return true;
+    }
+    return false;
+  }
+  
+  if (habit.periodicity === 'monthly') {
+    const monthEnd = getMonthEnd(today);
+    const todayDate = new Date(today + 'T12:00:00');
+    const monthEndDate = new Date(monthEnd + 'T12:00:00');
+    const now = new Date();
+    
+    // Only expired if we're past the month end AND not completed in this period
+    if (now > monthEndDate && !isHabitCompletedThisPeriod(habit, today, history)) {
+      return true;
+    }
+    return false;
+  }
+  
+  // Daily and custom: original logic
   const todayStatus = history[today]?.[habit.id];
   if (todayStatus) return false;
   
-  // Solo puede estar vencido si era debido hoy
-  if (!isHabitDueOnDate(habit, today)) return false;
+  if (!isHabitDueOnDate(habit, today, history)) return false;
   
-  // Verificar si ya pasó la medianoche (00:00)
   const now = new Date();
   const todayEnd = new Date(today + 'T23:59:59');
   
@@ -244,7 +269,7 @@ export function calcGlobalStreak(habits, history) {
     const day = history[key];
     if (!day) break;
 
-    const dueHabits = habits.filter(h => isHabitDueOnDate(h, key));
+    const dueHabits = habits.filter(h => isHabitDueOnDate(h, key, history));
     if (dueHabits.length === 0) continue;
 
     const allCompleted = dueHabits.every(h => isCompletedStatus(day[h.id]));
@@ -262,6 +287,75 @@ export function getWeekStart(dateStr) {
   const monday = new Date(date);
   monday.setDate(date.getDate() + diff);
   return monday.toISOString().split('T')[0];
+}
+
+/** Get the Sunday of the week for a given date */
+export function getWeekEnd(dateStr) {
+  const weekStart = getWeekStart(dateStr);
+  const monday = new Date(weekStart + 'T12:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return sunday.toISOString().split('T')[0];
+}
+
+/** Get the first day of the month for a given date */
+export function getMonthStart(dateStr) {
+  const date = new Date(dateStr + 'T12:00:00');
+  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+}
+
+/** Get the last day of the month for a given date */
+export function getMonthEnd(dateStr) {
+  const date = new Date(dateStr + 'T12:00:00');
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+}
+
+/** Check if a habit has been completed in the current period (week or month) */
+export function isHabitCompletedThisPeriod(habit, dateStr, history) {
+  if (!history || Object.keys(history).length === 0) return false;
+  
+  const date = new Date(dateStr + 'T12:00:00');
+  const isCompletedStatus = (status) =>
+    status === 'completed' || status === 'partial' || status === 'over';
+  
+  if (habit.periodicity === 'weekly') {
+    const weekStart = getWeekStart(dateStr);
+    const weekEnd = getWeekEnd(dateStr);
+    const weekStartDate = new Date(weekStart + 'T12:00:00');
+    
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(weekStartDate);
+      currentDate.setDate(weekStartDate.getDate() + i);
+      const dateKey = currentDate.toISOString().split('T')[0];
+      const dayData = history[dateKey] ?? {};
+      if (isCompletedStatus(dayData[habit.id])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  if (habit.periodicity === 'monthly') {
+    const monthStart = getMonthStart(dateStr);
+    const monthEnd = getMonthEnd(dateStr);
+    const startDate = new Date(monthStart + 'T12:00:00');
+    const endDate = new Date(monthEnd + 'T12:00:00');
+    
+    const daysInMonth = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    for (let i = 0; i < daysInMonth; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+      const dateKey = currentDate.toISOString().split('T')[0];
+      const dayData = history[dateKey] ?? {};
+      if (isCompletedStatus(dayData[habit.id])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  return false;
 }
 
 /** Get completions count for a weekly_times habit in a given week (Mon-Sun) */
