@@ -29,9 +29,9 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
   const items = itemChoices.map(id => ITEMS[id]).filter(Boolean);
 
   return (
-    <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/90 p-4" style={{ backdropFilter: 'blur(4px)' }}>
+    <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className={`w-full max-w-xl bg-quest-card border border-quest-gold shadow-[0_0_60px_rgba(0,0,0,0.7)] transformation ${visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'} transition-all duration-300`}
-           style={{ borderWidth: 3 }}>
+        style={{ borderWidth: 3 }}>
         <div className="px-6 py-5 text-center">
           <h3 className="text-xs uppercase tracking-[0.35em] text-quest-gold mb-1">Daily completado</h3>
           <p className="font-pixel text-[10px] leading-tight text-quest-text">{dailyName}</p>

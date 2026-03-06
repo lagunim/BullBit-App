@@ -243,7 +243,7 @@ export default function HabitHistory() {
       </div>
       {detailHabit && createPortal(
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[11000] p-4 backdrop-blur-[18px]"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[11000] p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           tabIndex={-1}

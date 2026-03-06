@@ -18,8 +18,8 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signUp({ 
-          email, 
+        const { error } = await supabase.auth.signUp({
+          email,
           password,
           options: {
             data: {
@@ -42,8 +42,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-quest-bg relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-quest-purple rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-quest-blue rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-quest-purple rounded-full backdrop-blur-sm" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-quest-blue rounded-full backdrop-blur-sm" />
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #2a2a6e 1px, transparent 0)', backgroundSize: '24px 24px' }} />
       </div>
 

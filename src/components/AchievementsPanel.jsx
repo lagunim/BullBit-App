@@ -9,18 +9,18 @@ function StoryModal({ story, onClose }) {
   if (!story) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn" onClick={onClose}>
-      <div 
-        className="bg-quest-card border-2 border-quest-gold shadow-[0_0_50px_rgba(255,215,0,0.15)] max-w-lg w-full max-h-[85vh] flex flex-col relative p-6 sm:p-8 animate-scaleIn"
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 anim-fade-in" onClick={onClose}>
+      <div
+        className="bg-quest-card border-2 border-quest-gold shadow-[0_0_50px_rgba(255,215,0,0.15)] max-w-lg w-full max-h-[85vh] flex flex-col relative p-6 sm:p-8 anim-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 text-quest-textDim hover:text-quest-gold transition-colors text-xl"
         >
           ✕
         </button>
-        
+
         <div className="text-center mb-6">
           <div className="text-4xl mb-4">📜</div>
           <h2 className="text-xl sm:text-2xl font-pixel text-quest-gold uppercase tracking-wider mb-2">
@@ -38,7 +38,7 @@ function StoryModal({ story, onClose }) {
         </div>
 
         <div className="mt-8 text-center">
-          <button 
+          <button
             onClick={onClose}
             className="btn-pixel text-[10px] py-2 px-6"
           >
@@ -104,8 +104,8 @@ export default function AchievementsPanel() {
               key={ach.id}
               onClick={() => handleAchievementClick(ach)}
               className={`card-pixel transition-all duration-300 relative group
-                ${isUnlocked 
-                  ? 'border-quest-gold shadow-[3px_3px_0_theme(colors.quest.goldDark)] cursor-pointer hover:translate-y-[-2px] hover:shadow-[4px_4px_0_theme(colors.quest.goldDark)] active:translate-y-[1px] active:shadow-none' 
+                ${isUnlocked
+                  ? 'border-quest-gold shadow-[3px_3px_0_theme(colors.quest.goldDark)] cursor-pointer hover:translate-y-[-2px] hover:shadow-[4px_4px_0_theme(colors.quest.goldDark)] active:translate-y-[1px] active:shadow-none'
                   : 'opacity-40 grayscale saturate-50 border-quest-border cursor-not-allowed'}`}
             >
               {isUnlocked && hasStory && (
@@ -122,13 +122,13 @@ export default function AchievementsPanel() {
                   <div className={`text-[9px] font-pixel mb-1 truncate ${isUnlocked ? 'text-quest-text group-hover:text-quest-gold transition-colors' : 'text-quest-textDim'}`}>
                     {ach.name}
                   </div>
-                  <div className="inline-block text-[6px] px-2 py-0.5 border" 
-                       style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
+                  <div className="inline-block text-[6px] px-2 py-0.5 border"
+                    style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}>
                     {rarity.label}
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-[7px] text-quest-textDim leading-relaxed uppercase tracking-tighter mb-2">
                 {ach.desc}
               </div>
@@ -145,9 +145,9 @@ export default function AchievementsPanel() {
       </div>
 
       {selectedStory && (
-        <StoryModal 
-          story={selectedStory} 
-          onClose={() => setSelectedStory(null)} 
+        <StoryModal
+          story={selectedStory}
+          onClose={() => setSelectedStory(null)}
         />
       )}
     </div>

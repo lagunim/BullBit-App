@@ -20,7 +20,7 @@ export default function StoriesPanel({ onClose }) {
 
   // Sort by journey number
   const sorted = [...unlockedStories].sort((a, b) => a.journeyId - b.journeyId);
-  
+
   // Separate stories by type
   const journeyStories = sorted.filter(s => s.journeyId > 0);
   const achievementStories = sorted.filter(s => s.journeyId <= 0);
@@ -37,10 +37,9 @@ export default function StoriesPanel({ onClose }) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[500] transition-opacity duration-200"
+        className="fixed inset-0 z-[500] backdrop-blur-sm transition-opacity duration-200"
         style={{
           background: 'rgba(0,0,0,0.50)',
-          backdropFilter: 'blur(4px)',
           opacity: visible ? 1 : 0,
         }}
         onClick={handleClose}
