@@ -113,7 +113,7 @@ export default function StoriesPanel({ onClose }) {
                 if (!story) return null;
                 return (
                   <button
-                    key={entry.journeyId}
+                    key={entry.storyId}
                     type="button"
                     onClick={() => setSelectedStory(story)}
                     className="w-full text-left group"
