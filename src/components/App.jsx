@@ -73,28 +73,31 @@ export default function App() {
 
   /** Sesión actual del usuario (null si no está autenticado) */
   const [session, setSession] = useState(null);
-  
+
   /** Estado de carga inicial */
   const [loading, setLoading] = useState(true);
-  
+
   /** Pestaña activa actualmente */
   const [tab, setTab] = useState('home');
-  
+
   /** Control del panel de historias */
   const [storiesPanelOpen, setStoriesPanelOpen] = useState(false);
-  
+
   /** Función para inicializar el store del juego */
   const { init, dailyOptions, dailySelectionMade, currentDaily, selectDaily } = useGameStore();
-  
+
   /** Efecto visual de rebote al cambiar pestañas (en móvil) */
   const [bounceOffset, setBounceOffset] = useState(0);
-  
+
   /** Detecta si estamos en vista móvil (< 768px) */
   const [isMobileView, setIsMobileView] = useState(false);
-  
+
   /** Referencias para manejar gestos táctiles */
   const touchStartRef = useRef({ x: 0, y: 0 });
-  
+
+  /** Evita reinicializar el store múltiples veces para el mismo usuario */
+  const lastInitializedUserIdRef = useRef(null);
+
   /** Timer para el efecto de rebote */
   const bounceTimer = useRef(null);
 
@@ -154,9 +157,19 @@ export default function App() {
    * Cuando el usuario inicia sesión, cargamos sus datos.
    */
   useEffect(() => {
-    if (session) {
-      init(session.user.id);
+    const userId = session?.user?.id ?? null;
+
+    if (!userId) {
+      lastInitializedUserIdRef.current = null;
+      return;
     }
+
+    if (lastInitializedUserIdRef.current === userId) {
+      return;
+    }
+
+    lastInitializedUserIdRef.current = userId;
+    init(userId);
   }, [session, init]);
 
   /**
@@ -223,7 +236,7 @@ export default function App() {
     const { x: startX, y: startY } = touchStartRef.current;
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
-    
+
     // Movimiento más vertical que horizontal o muy pequeño
     if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 60) {
       if (Math.abs(dx) > 10) {
@@ -235,13 +248,13 @@ export default function App() {
     // Determinar dirección del swipe
     const direction = dx < 0 ? 1 : -1;
     const targetIndex = Math.max(0, Math.min(TABS.length - 1, currentIndex + direction));
-    
+
     // Si no hay cambio de pestaña, aplicar rebote
     if (targetIndex === currentIndex) {
       applyBounce(direction * -1);
       return;
     }
-    
+
     // Limpiar timer y cambiar de pestaña
     if (bounceTimer.current) {
       clearTimeout(bounceTimer.current);
@@ -414,17 +427,17 @@ export default function App() {
 
       {/* Flujo de recompensas de viaje (aparece al subir de nivel) */}
       <JourneyRewardFlow />
-      
+
       {/* Flujo de recompensas diarias (aparece al completar daily) */}
       <DailyRewardFlow />
 
       {/* Modal de elección de misión diaria (aparece al abrir app por primera vez en el día) */}
       {(() => {
-        const shouldShowModal = dailyOptions && 
-                               dailyOptions.length > 0 && 
-                               !dailySelectionMade && 
-                               !currentDaily;
-        
+        const shouldShowModal = dailyOptions &&
+          dailyOptions.length > 0 &&
+          !dailySelectionMade &&
+          !currentDaily;
+
         return shouldShowModal && (
           <DailyChoiceModal
             options={dailyOptions}

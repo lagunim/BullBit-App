@@ -124,101 +124,118 @@ function migrateHistory(history, idMap) {
 
 const useGameStore = create(
   (set, get) => ({
-      // Core
-      _userId: null,        // Supabase user ID (set on init)
-      habits: [],
-      level: 0,
-      points: 0,
-      lifetimePoints: 0,
-      history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'partial' | 'over' | 'skipped' } }
-      globalStreak: 0,
-      lastWeeklyProcessDate: null, // Track when weekly habits were last processed
+    // Core
+    _userId: null,        // Supabase user ID (set on init)
+    _initPromise: null,
+    _initializingUserId: null,
+    _initializedUserId: null,
+    _dailyCheckPromise: null,
+    habits: [],
+    level: 0,
+    points: 0,
+    lifetimePoints: 0,
+    history: {},          // { 'YYYY-MM-DD': { [habitId]: 'completed' | 'failed' | 'partial' | 'over' | 'skipped' } }
+    globalStreak: 0,
+    lastWeeklyProcessDate: null, // Track when weekly habits were last processed
 
-      // Dailies
-      currentDaily: null,   // { id, name, description, icon, difficulty, condition, rewards, progress, completed }
-      dailyOptions: null,   // Array de 3 opciones para elegir
-      dailySelectionMade: false, // Si el usuario ya eligió su daily
-      lastDailyDate: null,  // 'YYYY-MM-DD'
+    // Dailies
+    currentDaily: null,   // { id, name, description, icon, difficulty, condition, rewards, progress, completed }
+    dailyOptions: null,   // Array de 3 opciones para elegir
+    dailySelectionMade: false, // Si el usuario ya eligió su daily
+    lastDailyDate: null,  // 'YYYY-MM-DD'
 
-      // Gamification
-      unlockedAchievements: [],
-      inventory: [],        // [{ itemId, qty }]
-      activeEffects: [],    // [{ key, value, expiresAt (ISO date) }]
+    // Gamification
+    unlockedAchievements: [],
+    inventory: [],        // [{ itemId, qty }]
+    activeEffects: [],    // [{ key, value, expiresAt (ISO date) }]
 
-      // Viajes e historias
-      unlockedStories: [],  // [{ journeyId, storyId, unlockedAt }]
-      pendingJourneyReward: null, // { journeyNumber, story, itemChoices } — flujo post-viaje
-      pendingDailyReward: null, // { dailyId, dailyName, points, itemChoices }
+    // Viajes e historias
+    unlockedStories: [],  // [{ journeyId, storyId, unlockedAt }]
+    pendingJourneyReward: null, // { journeyNumber, story, itemChoices } — flujo post-viaje
+    pendingDailyReward: null, // { dailyId, dailyName, points, itemChoices }
 
-      // Planes
-      plans: {}, // { 'YYYY-MM-DD': { id, date, name, tasks: [...], tripleApplied } }
+    // Planes
+    plans: {}, // { 'YYYY-MM-DD': { id, date, name, tasks: [...], tripleApplied } }
 
-      // UI notifications queue
-      notifications: [],
+    // UI notifications queue
+    notifications: [],
 
-      // ── HABITS ────────────────────────────────────────────────────
-      addHabit(habit) {
-        const newHabit = {
-          id: createUuid(),
-          name: habit.name,
-          minutes: habit.minutes,
-          periodicity: habit.periodicity,
-          emoji: habit.emoji ?? HABIT_THEME_BY_ID[habit.themeId ?? DEFAULT_HABIT_THEME]?.icon ?? '🎯',
-          themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
-          customDays: habit.customDays,
-          customInterval: habit.customInterval,
-          weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
-          multiplier: 1.0,
-          baseMultiplier: 1.0,
-          streak: 0,
-          createdAt: new Date().toISOString(),
-        };
-        set(state => ({ habits: [...state.habits, newHabit] }));
+    // ── HABITS ────────────────────────────────────────────────────
+    addHabit(habit) {
+      const newHabit = {
+        id: createUuid(),
+        name: habit.name,
+        minutes: habit.minutes,
+        periodicity: habit.periodicity,
+        emoji: habit.emoji ?? HABIT_THEME_BY_ID[habit.themeId ?? DEFAULT_HABIT_THEME]?.icon ?? '🎯',
+        themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
+        customDays: habit.customDays,
+        customInterval: habit.customInterval,
+        weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
+        multiplier: 1.0,
+        baseMultiplier: 1.0,
+        streak: 0,
+        createdAt: new Date().toISOString(),
+      };
+      set(state => ({ habits: [...state.habits, newHabit] }));
 
-        // Persistir en BD
-        const userId = get()._userId;
-        if (userId) {
-          saveHabit(userId, newHabit)
-            .then(saved => {
-              if (saved && saved.id !== newHabit.id) {
-                set(state => ({
-                  habits: state.habits.map(h => h.id === newHabit.id ? saved : h),
-                }));
-              }
-            })
-            .catch(() => {});
-        }
+      // Persistir en BD
+      const userId = get()._userId;
+      if (userId) {
+        saveHabit(userId, newHabit)
+          .then(saved => {
+            if (saved && saved.id !== newHabit.id) {
+              set(state => ({
+                habits: state.habits.map(h => h.id === newHabit.id ? saved : h),
+              }));
+            }
+          })
+          .catch(() => { });
+      }
 
-        get()._checkAchievements();
-        get()._checkAndGenerateDaily().catch(err => console.error('[store] Error in addHabit daily check:', err));
-      },
+      get()._checkAchievements();
+      get()._checkAndGenerateDaily().catch(err => console.error('[store] Error in addHabit daily check:', err));
+    },
 
-      removeHabit(id) {
-        set(state => ({ habits: state.habits.filter(h => h.id !== id) }));
+    removeHabit(id) {
+      set(state => ({ habits: state.habits.filter(h => h.id !== id) }));
 
-        // Persistir en BD
-        if (get()._userId) dbDeleteHabit(id).catch(() => {});
-      },
+      // Persistir en BD
+      if (get()._userId) dbDeleteHabit(id).catch(() => { });
+    },
 
-      updateHabit(id, updates) {
-        set(state => ({
-          habits: state.habits.map(h =>
-            h.id === id ? { ...h, ...updates } : h
-          )
-        }));
+    updateHabit(id, updates) {
+      set(state => ({
+        habits: state.habits.map(h =>
+          h.id === id ? { ...h, ...updates } : h
+        )
+      }));
 
-        // Persistir en BD
-        const userId = get()._userId;
-        if (userId) {
-          const updated = get().habits.find(h => h.id === id);
-          if (updated) saveHabit(userId, updated).catch(() => {});
-        }
-      },
+      // Persistir en BD
+      const userId = get()._userId;
+      if (userId) {
+        const updated = get().habits.find(h => h.id === id);
+        if (updated) saveHabit(userId, updated).catch(() => { });
+      }
+    },
 
-      // ── INITIALIZATION ────────────────────────────────────────────
-      async init(userId) {
+    // ── INITIALIZATION ────────────────────────────────────────────
+    async init(userId) {
+      if (!userId) return;
+
+      const state = get();
+      if (state._initPromise && state._initializingUserId === userId) {
+        await state._initPromise;
+        return;
+      }
+
+      if (!state._initPromise && state._initializedUserId === userId) {
+        return;
+      }
+
+      const initPromise = (async () => {
         // Guardar el userId en el store para que las acciones puedan acceder a él
-        set({ _userId: userId });
+        set({ _userId: userId, _initializingUserId: userId });
 
         try {
           const remoteData = await loadUserData(userId);
@@ -271,7 +288,7 @@ const useGameStore = create(
                 lifetimePoints: localState.lifetimePoints ?? 0,
                 globalStreak: localState.globalStreak ?? 0,
                 lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
-              }).catch(() => {});
+              }).catch(() => { });
 
               saveHabits(userId, migratedHabits)
                 .then(saved => {
@@ -279,7 +296,7 @@ const useGameStore = create(
                     set({ habits: saved });
                   }
                 })
-                .catch(() => {});
+                .catch(() => { });
 
               const entries = [];
               for (const [date, dayMap] of Object.entries(migratedHistory)) {
@@ -287,12 +304,12 @@ const useGameStore = create(
                   entries.push({ habitId, date, status });
                 }
               }
-              if (entries.length) saveHabitEntries(userId, entries).catch(() => {});
-              if (localState.inventory?.length) saveInventory(userId, localState.inventory).catch(() => {});
-              if (localState.activeEffects?.length) saveActiveEffects(userId, localState.activeEffects).catch(() => {});
-              if (localState.unlockedAchievements?.length) saveAchievements(userId, localState.unlockedAchievements).catch(() => {});
+              if (entries.length) saveHabitEntries(userId, entries).catch(() => { });
+              if (localState.inventory?.length) saveInventory(userId, localState.inventory).catch(() => { });
+              if (localState.activeEffects?.length) saveActiveEffects(userId, localState.activeEffects).catch(() => { });
+              if (localState.unlockedAchievements?.length) saveAchievements(userId, localState.unlockedAchievements).catch(() => { });
               if (localState.currentDaily && localState.lastDailyDate) {
-                saveDaily(userId, localState.currentDaily, localState.lastDailyDate).catch(() => {});
+                saveDaily(userId, localState.currentDaily, localState.lastDailyDate).catch(() => { });
               }
 
               clearState();
@@ -319,7 +336,7 @@ const useGameStore = create(
                 lifetimePoints: 0,
                 globalStreak: 0,
                 lastWeeklyProcessDate: null,
-              }).catch(() => {});
+              }).catch(() => { });
             }
           }
         } catch (err) {
@@ -332,602 +349,648 @@ const useGameStore = create(
         get()._processWeeklyHabits();
         await get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
-      },
+        set({ _initializedUserId: userId });
+      })();
 
-      // ── COMPLETING / FAILING ──────────────────────────────────────
-      completeHabit(habitId) {
-        const state = get();
-        const today = getTodayKey();
-        const habit = state.habits.find(h => h.id === habitId);
-        if (!habit) return;
-        if (state.history[today]?.[habitId] === 'completed') return; // already done
+      set({ _initPromise: initPromise });
 
-        const activeEffects = state._getActiveEffects();
-        const earned = calcPoints(habit, activeEffects);
-        const newMult = calcMultiplierOnComplete(habit, activeEffects);
-        const newPoints = state.points + earned;
-        const newLifetime = state.lifetimePoints + earned;
-
-        // Consume "next_triple" if present for this specific habit or global
-        const usedEffect = state.activeEffects.find(e => 
-          e.key === 'next_triple' && effectAppliesTo(e, habitId)
-        );
-        const nextEffects = usedEffect
-          ? state.activeEffects.filter(e => e !== usedEffect)
-          : state.activeEffects;
-
-        // Update history
-        const newHistory = {
-          ...state.history,
-          [today]: { ...(state.history[today] ?? {}), [habitId]: 'completed' },
-        };
-
-        // Journey (level) up check
-        const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
-        let finalLevel = state.level;
-        let finalPoints = newPoints;
-        let journeyReward = null;
-
-        if (newPoints >= threshold) {
-          finalLevel = state.level + 1;
-          finalPoints = newPoints - threshold;
-          // Assign a story for this journey
-          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
-          // Pick 3 random item choices, weighted by journey number
-          const choices = get()._pickJourneyItemChoices(finalLevel);
-          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
+      try {
+        await initPromise;
+      } finally {
+        const latestState = get();
+        if (latestState._initializingUserId === userId) {
+          set({ _initPromise: null, _initializingUserId: null });
+        } else {
+          set({ _initPromise: null });
         }
+      }
+    },
 
-        set(state2 => ({
-          habits: state2.habits.map(h =>
-            h.id === habitId
-              ? { ...h, multiplier: newMult, streak: h.streak + 1 }
-              : h
-          ),
-          points: finalPoints,
-          lifetimePoints: newLifetime,
-          level: finalLevel,
-          history: newHistory,
-          activeEffects: nextEffects,
-          // Only set pendingJourneyReward if there isn't one already queued
-          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
-        }));
+    // ── COMPLETING / FAILING ──────────────────────────────────────
+    completeHabit(habitId) {
+      const state = get();
+      const today = getTodayKey();
+      const habit = state.habits.find(h => h.id === habitId);
+      if (!habit) return;
+      if (state.history[today]?.[habitId] === 'completed') return; // already done
 
-        // Persistir en BD (fire & forget)
-        const userId = get()._userId;
-        if (userId) {
-          const updatedHabit = get().habits.find(h => h.id === habitId);
-          if (updatedHabit) saveHabit(userId, updatedHabit).catch(() => {});
-          saveHabitEntry(userId, habitId, today, 'completed').catch(() => {});
-          saveProfile(userId, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId, nextEffects).catch(() => {});
-          // Persist new story unlock
-          if (journeyReward?.story) {
-            saveStory(userId, finalLevel, journeyReward.story.id).catch(() => {});
-          }
+      const activeEffects = state._getActiveEffects();
+      const earned = calcPoints(habit, activeEffects);
+      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      const newPoints = state.points + earned;
+      const newLifetime = state.lifetimePoints + earned;
+
+      // Consume "next_triple" if present for this specific habit or global
+      const usedEffect = state.activeEffects.find(e =>
+        e.key === 'next_triple' && effectAppliesTo(e, habitId)
+      );
+      const nextEffects = usedEffect
+        ? state.activeEffects.filter(e => e !== usedEffect)
+        : state.activeEffects;
+
+      // Update history
+      const newHistory = {
+        ...state.history,
+        [today]: { ...(state.history[today] ?? {}), [habitId]: 'completed' },
+      };
+
+      // Journey (level) up check
+      const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
+      let finalLevel = state.level;
+      let finalPoints = newPoints;
+      let journeyReward = null;
+
+      if (newPoints >= threshold) {
+        finalLevel = state.level + 1;
+        finalPoints = newPoints - threshold;
+        // Assign a story for this journey
+        const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+        // Pick 3 random item choices, weighted by journey number
+        const choices = get()._pickJourneyItemChoices(finalLevel);
+        journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
+      }
+
+      set(state2 => ({
+        habits: state2.habits.map(h =>
+          h.id === habitId
+            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            : h
+        ),
+        points: finalPoints,
+        lifetimePoints: newLifetime,
+        level: finalLevel,
+        history: newHistory,
+        activeEffects: nextEffects,
+        // Only set pendingJourneyReward if there isn't one already queued
+        pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
+      }));
+
+      // Persistir en BD (fire & forget)
+      const userId = get()._userId;
+      if (userId) {
+        const updatedHabit = get().habits.find(h => h.id === habitId);
+        if (updatedHabit) saveHabit(userId, updatedHabit).catch(() => { });
+        saveHabitEntry(userId, habitId, today, 'completed').catch(() => { });
+        saveProfile(userId, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId, nextEffects).catch(() => { });
+        // Persist new story unlock
+        if (journeyReward?.story) {
+          saveStory(userId, finalLevel, journeyReward.story.id).catch(() => { });
         }
+      }
 
-        get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
-        get()._recalcGlobalStreak();
-        get()._checkAchievements();
-        get()._updateDailyProgress();
-      },
+      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
+      get()._recalcGlobalStreak();
+      get()._checkAchievements();
+      get()._updateDailyProgress();
+    },
 
-      /**
-       * Mark habit as done for LESS time than configured.
-       * - Uses the actual minutes provided for points.
-       * - Multiplier increases as in a normal completion.
-       * - Keeps/extends the streak.
-       * - History status: "partial" (shown en amarillo).
-       */
-      completeHabitPartial(habitId, minutesDone) {
-        const state = get();
-        const today = getTodayKey();
-        const habit = state.habits.find(h => h.id === habitId);
-        if (!habit) return;
-        if (state.history[today]?.[habitId]) return; // already resolved today
+    /**
+     * Mark habit as done for LESS time than configured.
+     * - Uses the actual minutes provided for points.
+     * - Multiplier increases as in a normal completion.
+     * - Keeps/extends the streak.
+     * - History status: "partial" (shown en amarillo).
+     */
+    completeHabitPartial(habitId, minutesDone) {
+      const state = get();
+      const today = getTodayKey();
+      const habit = state.habits.find(h => h.id === habitId);
+      if (!habit) return;
+      if (state.history[today]?.[habitId]) return; // already resolved today
 
-        const activeEffects = state._getActiveEffects();
+      const activeEffects = state._getActiveEffects();
 
-        // Points calculation reusing the same bonus effects as calcPoints,
-        // but with the real minutes done.
-        const basePoints = minutesDone * habit.multiplier;
-        let bonusMult = 1;
-        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
-        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' && 
-          effectAppliesTo(e, habitId));
-        if (nextTripleEffect) bonusMult *= 3;
-        const earned = Math.round(basePoints * bonusMult);
+      // Points calculation reusing the same bonus effects as calcPoints,
+      // but with the real minutes done.
+      const basePoints = minutesDone * habit.multiplier;
+      let bonusMult = 1;
+      if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
+        effectAppliesTo(e, habitId));
+      if (nextTripleEffect) bonusMult *= 3;
+      const earned = Math.round(basePoints * bonusMult);
 
-        const newMult = calcMultiplierOnComplete(habit, activeEffects);
-        const newPoints = state.points + earned;
-        const newLifetime = state.lifetimePoints + earned;
+      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      const newPoints = state.points + earned;
+      const newLifetime = state.lifetimePoints + earned;
 
-        // Consume "next_triple" if present
-        const nextEffects = nextTripleEffect 
-          ? state.activeEffects.filter(e => e !== nextTripleEffect)
-          : state.activeEffects;
+      // Consume "next_triple" if present
+      const nextEffects = nextTripleEffect
+        ? state.activeEffects.filter(e => e !== nextTripleEffect)
+        : state.activeEffects;
 
-        // Update history
-        const newHistory = {
-          ...state.history,
-          [today]: { ...(state.history[today] ?? {}), [habitId]: 'partial' },
-        };
+      // Update history
+      const newHistory = {
+        ...state.history,
+        [today]: { ...(state.history[today] ?? {}), [habitId]: 'partial' },
+      };
 
-        // Journey (level) up check
-        const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
-        let finalLevel = state.level;
-        let finalPoints = newPoints;
-        let journeyReward = null;
+      // Journey (level) up check
+      const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
+      let finalLevel = state.level;
+      let finalPoints = newPoints;
+      let journeyReward = null;
 
-        if (newPoints >= threshold) {
-          finalLevel = state.level + 1;
-          finalPoints = newPoints - threshold;
-          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
-          const choices = get()._pickJourneyItemChoices(finalLevel);
-          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
+      if (newPoints >= threshold) {
+        finalLevel = state.level + 1;
+        finalPoints = newPoints - threshold;
+        const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+        const choices = get()._pickJourneyItemChoices(finalLevel);
+        journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
+      }
+
+      set(state2 => ({
+        habits: state2.habits.map(h =>
+          h.id === habitId
+            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            : h
+        ),
+        points: finalPoints,
+        lifetimePoints: newLifetime,
+        level: finalLevel,
+        history: newHistory,
+        activeEffects: nextEffects,
+        pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
+      }));
+
+      // Persistir en BD (fire & forget)
+      const userId2 = get()._userId;
+      if (userId2) {
+        const updatedHabit = get().habits.find(h => h.id === habitId);
+        if (updatedHabit) saveHabit(userId2, updatedHabit).catch(() => { });
+        saveHabitEntry(userId2, habitId, today, 'partial').catch(() => { });
+        saveProfile(userId2, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId2, nextEffects).catch(() => { });
+        if (journeyReward?.story) {
+          saveStory(userId2, finalLevel, journeyReward.story.id).catch(() => { });
         }
+      }
 
-        set(state2 => ({
-          habits: state2.habits.map(h =>
-            h.id === habitId
-              ? { ...h, multiplier: newMult, streak: h.streak + 1 }
-              : h
-          ),
-          points: finalPoints,
-          lifetimePoints: newLifetime,
-          level: finalLevel,
-          history: newHistory,
-          activeEffects: nextEffects,
-          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
-        }));
+      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
+      get()._recalcGlobalStreak();
+      get()._checkAchievements();
+      get()._updateDailyProgress();
+    },
 
-        // Persistir en BD (fire & forget)
-        const userId2 = get()._userId;
-        if (userId2) {
-          const updatedHabit = get().habits.find(h => h.id === habitId);
-          if (updatedHabit) saveHabit(userId2, updatedHabit).catch(() => {});
-          saveHabitEntry(userId2, habitId, today, 'partial').catch(() => {});
-          saveProfile(userId2, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId2, nextEffects).catch(() => {});
-          if (journeyReward?.story) {
-            saveStory(userId2, finalLevel, journeyReward.story.id).catch(() => {});
-          }
+    /**
+     * Mark habit as done for MORE time than configured.
+     * - Uses the actual minutes provided for points.
+     * - Multiplier increases as in a normal completion.
+     * - History status: "over" (tick violeta).
+     */
+    completeHabitOvertime(habitId, minutesDone) {
+      const state = get();
+      const today = getTodayKey();
+      const habit = state.habits.find(h => h.id === habitId);
+      if (!habit) return;
+      if (state.history[today]?.[habitId]) return; // already resolved today
+
+      const activeEffects = state._getActiveEffects();
+
+      // Points based on real minutes done, preserving bonus effects.
+      const basePoints = minutesDone * habit.multiplier;
+      let bonusMult = 1;
+      if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
+        effectAppliesTo(e, habitId));
+      if (nextTripleEffect) bonusMult *= 3;
+      const earned = Math.round(basePoints * bonusMult);
+
+      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      const newPoints = state.points + earned;
+      const newLifetime = state.lifetimePoints + earned;
+
+      // Consume "next_triple" if present
+      const nextEffects = nextTripleEffect
+        ? state.activeEffects.filter(e => e !== nextTripleEffect)
+        : state.activeEffects;
+
+      // Update history
+      const newHistory = {
+        ...state.history,
+        [today]: { ...(state.history[today] ?? {}), [habitId]: 'over' },
+      };
+
+      // Journey (level) up check
+      const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
+      let finalLevel = state.level;
+      let finalPoints = newPoints;
+      let journeyReward = null;
+
+      if (newPoints >= threshold) {
+        finalLevel = state.level + 1;
+        finalPoints = newPoints - threshold;
+        const story = assignStoryForJourney(finalLevel, state.unlockedStories);
+        const choices = get()._pickJourneyItemChoices(finalLevel);
+        journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
+      }
+
+      set(state2 => ({
+        habits: state2.habits.map(h =>
+          h.id === habitId
+            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            : h
+        ),
+        points: finalPoints,
+        lifetimePoints: newLifetime,
+        level: finalLevel,
+        history: newHistory,
+        activeEffects: nextEffects,
+        pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
+      }));
+
+      // Persistir en BD (fire & forget)
+      const userId3 = get()._userId;
+      if (userId3) {
+        const updatedHabit = get().habits.find(h => h.id === habitId);
+        if (updatedHabit) saveHabit(userId3, updatedHabit).catch(() => { });
+        saveHabitEntry(userId3, habitId, today, 'over').catch(() => { });
+        saveProfile(userId3, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId3, nextEffects).catch(() => { });
+        if (journeyReward?.story) {
+          saveStory(userId3, finalLevel, journeyReward.story.id).catch(() => { });
         }
+      }
 
-        get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
-        get()._recalcGlobalStreak();
-        get()._checkAchievements();
-        get()._updateDailyProgress();
-      },
-
-      /**
-       * Mark habit as done for MORE time than configured.
-       * - Uses the actual minutes provided for points.
-       * - Multiplier increases as in a normal completion.
-       * - History status: "over" (tick violeta).
-       */
-      completeHabitOvertime(habitId, minutesDone) {
-        const state = get();
-        const today = getTodayKey();
-        const habit = state.habits.find(h => h.id === habitId);
-        if (!habit) return;
-        if (state.history[today]?.[habitId]) return; // already resolved today
-
-        const activeEffects = state._getActiveEffects();
-
-        // Points based on real minutes done, preserving bonus effects.
-        const basePoints = minutesDone * habit.multiplier;
-        let bonusMult = 1;
-        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
-        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' && 
-          effectAppliesTo(e, habitId));
-        if (nextTripleEffect) bonusMult *= 3;
-        const earned = Math.round(basePoints * bonusMult);
-
-        const newMult = calcMultiplierOnComplete(habit, activeEffects);
-        const newPoints = state.points + earned;
-        const newLifetime = state.lifetimePoints + earned;
-
-        // Consume "next_triple" if present
-        const nextEffects = nextTripleEffect 
-          ? state.activeEffects.filter(e => e !== nextTripleEffect)
-          : state.activeEffects;
-
-        // Update history
-        const newHistory = {
-          ...state.history,
-          [today]: { ...(state.history[today] ?? {}), [habitId]: 'over' },
-        };
-
-        // Journey (level) up check
-        const threshold = LEVEL_THRESHOLDS[state.level] ?? 999999;
-        let finalLevel = state.level;
-        let finalPoints = newPoints;
-        let journeyReward = null;
-
-        if (newPoints >= threshold) {
-          finalLevel = state.level + 1;
-          finalPoints = newPoints - threshold;
-          const story = assignStoryForJourney(finalLevel, state.unlockedStories);
-          const choices = get()._pickJourneyItemChoices(finalLevel);
-          journeyReward = { journeyNumber: finalLevel, story, itemChoices: choices };
-        }
-
-        set(state2 => ({
-          habits: state2.habits.map(h =>
-            h.id === habitId
-              ? { ...h, multiplier: newMult, streak: h.streak + 1 }
-              : h
-          ),
-          points: finalPoints,
-          lifetimePoints: newLifetime,
-          level: finalLevel,
-          history: newHistory,
-          activeEffects: nextEffects,
-          pendingJourneyReward: journeyReward ?? state2.pendingJourneyReward,
-        }));
-
-        // Persistir en BD (fire & forget)
-        const userId3 = get()._userId;
-        if (userId3) {
-          const updatedHabit = get().habits.find(h => h.id === habitId);
-          if (updatedHabit) saveHabit(userId3, updatedHabit).catch(() => {});
-          saveHabitEntry(userId3, habitId, today, 'over').catch(() => {});
-          saveProfile(userId3, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-          if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId3, nextEffects).catch(() => {});
-          if (journeyReward?.story) {
-            saveStory(userId3, finalLevel, journeyReward.story.id).catch(() => {});
-          }
-        }
-
-        get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
-        get()._recalcGlobalStreak();
-        get()._checkAchievements();
-        get()._updateDailyProgress();
-      },
+      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
+      get()._recalcGlobalStreak();
+      get()._checkAchievements();
+      get()._updateDailyProgress();
+    },
 
 
-      failHabit(habitId) {
-        const state = get();
-        const today = getTodayKey();
-        const habit = state.habits.find(h => h.id === habitId);
-        if (!habit) return;
-        if (state.history[today]?.[habitId]) return;
+    failHabit(habitId) {
+      const state = get();
+      const today = getTodayKey();
+      const habit = state.habits.find(h => h.id === habitId);
+      if (!habit) return;
+      if (state.history[today]?.[habitId]) return;
 
-        const activeEffects = state._getActiveEffects();
-        const newMult = calcMultiplierOnFail(habit, activeEffects);
+      const activeEffects = state._getActiveEffects();
+      const newMult = calcMultiplierOnFail(habit, activeEffects);
 
-        // Consume shield if used
-        let newActiveEffects = [...state.activeEffects];
-        const shieldIdx = newActiveEffects.findIndex(e => e.key === 'streak_shield' || e.key === 'golden_shield');
-        if (shieldIdx !== -1) newActiveEffects.splice(shieldIdx, 1);
+      // Consume shield if used
+      let newActiveEffects = [...state.activeEffects];
+      const shieldIdx = newActiveEffects.findIndex(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+      if (shieldIdx !== -1) newActiveEffects.splice(shieldIdx, 1);
 
-        const newHistory = {
-          ...state.history,
-          [today]: { ...(state.history[today] ?? {}), [habitId]: 'failed' },
-        };
+      const newHistory = {
+        ...state.history,
+        [today]: { ...(state.history[today] ?? {}), [habitId]: 'failed' },
+      };
 
-        set(state2 => ({
-          habits: state2.habits.map(h =>
-            h.id === habitId ? { ...h, multiplier: newMult, streak: 0 } : h
-          ),
-          history: newHistory,
-          activeEffects: newActiveEffects,
-        }));
+      set(state2 => ({
+        habits: state2.habits.map(h =>
+          h.id === habitId ? { ...h, multiplier: newMult, streak: 0 } : h
+        ),
+        history: newHistory,
+        activeEffects: newActiveEffects,
+      }));
 
-        // Persistir en BD (fire & forget)
-        const userId5 = get()._userId;
-        if (userId5) {
-          const updatedHabit = get().habits.find(h => h.id === habitId);
-          if (updatedHabit) saveHabit(userId5, updatedHabit).catch(() => {});
-          saveHabitEntry(userId5, habitId, today, 'failed').catch(() => {});
-          if (newActiveEffects.length !== state.activeEffects.length) saveActiveEffects(userId5, newActiveEffects).catch(() => {});
-          saveProfile(userId5, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-        }
+      // Persistir en BD (fire & forget)
+      const userId5 = get()._userId;
+      if (userId5) {
+        const updatedHabit = get().habits.find(h => h.id === habitId);
+        if (updatedHabit) saveHabit(userId5, updatedHabit).catch(() => { });
+        saveHabitEntry(userId5, habitId, today, 'failed').catch(() => { });
+        if (newActiveEffects.length !== state.activeEffects.length) saveActiveEffects(userId5, newActiveEffects).catch(() => { });
+        saveProfile(userId5, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+      }
 
-        get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
-        get()._recalcGlobalStreak();
-        get()._updateDailyProgress();
-      },
+      get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
+      get()._recalcGlobalStreak();
+      get()._updateDailyProgress();
+    },
 
-      // ── ITEMS ──────────────────────────────────────────────────────
-      useItem(itemId, targetHabitId = null) {
-        const state = get();
-        const item = ITEMS[itemId];
-        if (!item) return;
-        const invEntry = state.inventory.find(i => i.itemId === itemId);
-        if (!invEntry || invEntry.qty < 1) return;
+    // ── ITEMS ──────────────────────────────────────────────────────
+    useItem(itemId, targetHabitId = null) {
+      const state = get();
+      const item = ITEMS[itemId];
+      if (!item) return;
+      const invEntry = state.inventory.find(i => i.itemId === itemId);
+      if (!invEntry || invEntry.qty < 1) return;
 
-        // Remove one from inventory
-        const newInventory = state.inventory
-          .map(i => i.itemId === itemId ? { ...i, qty: i.qty - 1 } : i)
-          .filter(i => i.qty > 0);
+      // Remove one from inventory
+      const newInventory = state.inventory
+        .map(i => i.itemId === itemId ? { ...i, qty: i.qty - 1 } : i)
+        .filter(i => i.qty > 0);
 
-        if (item.effectType === 'timed') {
-          // Support both global and targeted timed effects
-          const effect = requiresTargeting(item.effectKey) && targetHabitId
-            ? createTargetedEffect(item, targetHabitId)
-            : {
-                key: item.effectKey,
-                value: item.effectValue,
-                expiresAt: (() => {
-                  const expires = new Date();
-                  expires.setDate(expires.getDate() + item.durationDays);
-                  return expires.toISOString();
-                })(),
-                itemName: item.name,
-              };
-          
-          set(state2 => ({
-            inventory: newInventory,
-            activeEffects: [...state2.activeEffects, effect],
-          }));
-          
-          // Persistir en BD
-          const uid = get()._userId;
-          if (uid) {
-            saveInventory(uid, get().inventory).catch(() => {});
-            saveActiveEffects(uid, get().activeEffects).catch(() => {});
-          }
-          get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
-        }
-        else if (item.effectType === 'passive') {
-          // Support both global and targeted passive effects  
-          const effect = requiresTargeting(item.effectKey) && targetHabitId
-            ? createTargetedEffect(item, targetHabitId)
-            : {
-                key: item.effectKey,
-                value: item.effectValue,
-                itemName: item.name,
-              };
-              
-          set(state2 => ({
-            inventory: newInventory,
-            activeEffects: [...state2.activeEffects, effect],
-          }));
-          
-          // Persistir en BD
-          const uid = get()._userId;
-          if (uid) {
-            saveInventory(uid, get().inventory).catch(() => {});
-            saveActiveEffects(uid, get().activeEffects).catch(() => {});
-          }
-          get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
-        }
-        else if (item.effectType === 'instant') {
-          // Handle targeted effects using generic system
-          if (requiresTargeting(item.effectKey) && targetHabitId) {
-            const targetedEffect = createTargetedEffect(item, targetHabitId);
-            set(state2 => ({
-              inventory: newInventory,
-              activeEffects: [...state2.activeEffects, targetedEffect],
-            }));
-            const uid = get()._userId;
-            if (uid) {
-              saveInventory(uid, get().inventory).catch(() => {});
-              saveActiveEffects(uid, get().activeEffects).catch(() => {});
-            }
-          }
-          // Legacy instant effects that modify habits directly
-          else if (item.effectKey === 'mult_recovery' && targetHabitId) {
-            set(state2 => ({
-              inventory: newInventory,
-              habits: state2.habits.map(h =>
-                h.id === targetHabitId
-                  ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
-                  : h
-              ),
-            }));
-            const uid = get()._userId;
-            if (uid) {
-              saveInventory(uid, get().inventory).catch(() => {});
-              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
-            }
-          } else if (item.effectKey === 'perm_base_mult' && targetHabitId) {
-            set(state2 => ({
-              inventory: newInventory,
-              habits: state2.habits.map(h =>
-                h.id === targetHabitId
-                  ? { ...h, baseMultiplier: Math.min(3.0, parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1))),
-                          multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
-                  : h
-              ),
-            }));
-            const uid = get()._userId;
-            if (uid) {
-              saveInventory(uid, get().inventory).catch(() => {});
-              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
-            }
-          } else if (item.effectKey === 'mult_boost_target' && targetHabitId) {
-            set(state2 => ({
-              inventory: newInventory,
-              habits: state2.habits.map(h =>
-                h.id === targetHabitId
-                  ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
-                  : h
-              ),
-            }));
-            const uid = get()._userId;
-            if (uid) {
-              saveInventory(uid, get().inventory).catch(() => {});
-              const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-              if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => {});
-            }
-          } else {
-            set({ inventory: newInventory });
-            const uid = get()._userId;
-            if (uid) saveInventory(uid, get().inventory).catch(() => {});
-          }
-          get()._pushNotification('item', `${item.icon} ${item.name} usado!`);
-        }
-      },
-
-      grantItem(itemId) {
-        const item = ITEMS[itemId];
-        if (!item) return;
-        set(state => {
-          const existing = state.inventory.find(i => i.itemId === itemId);
-          const maxStack = item.maxStack ?? 99;
-          if (existing && existing.qty >= maxStack) return {};
-          return {
-            inventory: existing
-              ? state.inventory.map(i => i.itemId === itemId ? { ...i, qty: i.qty + 1 } : i)
-              : [...state.inventory, { itemId, qty: 1 }],
+      if (item.effectType === 'timed') {
+        // Support both global and targeted timed effects
+        const effect = requiresTargeting(item.effectKey) && targetHabitId
+          ? createTargetedEffect(item, targetHabitId)
+          : {
+            key: item.effectKey,
+            value: item.effectValue,
+            expiresAt: (() => {
+              const expires = new Date();
+              expires.setDate(expires.getDate() + item.durationDays);
+              return expires.toISOString();
+            })(),
+            itemName: item.name,
           };
-        });
+
+        set(state2 => ({
+          inventory: newInventory,
+          activeEffects: [...state2.activeEffects, effect],
+        }));
+
         // Persistir en BD
         const uid = get()._userId;
-        if (uid) saveInventory(uid, get().inventory).catch(() => {});
-      },
-
-      // ── JOURNEY REWARDS ───────────────────────────────────────────
-
-      /**
-       * Called when the user closes the story modal after completing a journey.
-       * Grants all 3 item rewards, records the story unlock, and clears pendingJourneyReward.
-       */
-      claimJourneyItems() {
-        const state = get();
-        const reward = state.pendingJourneyReward;
-        if (!reward) return;
-
-        // Record the story as unlocked in the store
-        const newStory = reward.story
-          ? { journeyId: reward.journeyNumber, storyId: reward.story.id, unlockedAt: new Date().toISOString() }
-          : null;
+        if (uid) {
+          saveInventory(uid, get().inventory).catch(() => { });
+          saveActiveEffects(uid, get().activeEffects).catch(() => { });
+        }
+        get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
+      }
+      else if (item.effectType === 'passive') {
+        // Support both global and targeted passive effects  
+        const effect = requiresTargeting(item.effectKey) && targetHabitId
+          ? createTargetedEffect(item, targetHabitId)
+          : {
+            key: item.effectKey,
+            value: item.effectValue,
+            itemName: item.name,
+          };
 
         set(state2 => ({
-          pendingJourneyReward: null,
-          unlockedStories: newStory
-            ? [...state2.unlockedStories, newStory]
-            : state2.unlockedStories,
+          inventory: newInventory,
+          activeEffects: [...state2.activeEffects, effect],
         }));
 
-        // Grant all 3 items
-        if (reward.itemChoices && reward.itemChoices.length > 0) {
-          reward.itemChoices.forEach(itemId => {
-            get().grantItem(itemId);
-          });
-        }
-
-        // Get item names for notification
-        const itemNames = reward.itemChoices
-          ? reward.itemChoices.map(id => ITEMS[id]?.name || id).join(', ')
-          : '';
-        
-        get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos`);
-        get()._checkAchievements();
-      },
-
-      /**
-       * Picks 3 distinct random item choices for a journey reward.
-       * Higher journeys get better rarities.
-       */
-      _pickJourneyItemChoices(journeyNumber) {
-        const allItemIds = Object.keys(ITEMS);
-        const rarityByJourney = journeyNumber <= 2 ? ['common', 'common', 'rare']
-          : journeyNumber <= 4 ? ['common', 'rare', 'rare']
-          : journeyNumber <= 6 ? ['rare', 'rare', 'epic']
-          : ['rare', 'epic', 'epic'];
-
-        const chosen = [];
-        const usedIds = new Set();
-
-        for (const rarity of rarityByJourney) {
-          const pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
-          if (pool.length === 0) {
-            // Fallback: any unused item
-            const fallback = allItemIds.filter(id => !usedIds.has(id));
-            if (fallback.length === 0) break;
-            const pick = fallback[Math.floor(Math.random() * fallback.length)];
-            chosen.push(pick);
-            usedIds.add(pick);
-          } else {
-            const pick = pool[Math.floor(Math.random() * pool.length)];
-            chosen.push(pick);
-            usedIds.add(pick);
-          }
-        }
-        return chosen;
-      },
-
-      _pickDailyItemChoices(daily) {
-        if (!daily) return [];
-        const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
-        const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(ITEMS)));
-        const availablePool = [...basePool];
-        const pickCount = 3;
-        const choices = [];
-
-        for (let i = 0; i < pickCount && availablePool.length > 0; i++) {
-          const idx = Math.floor(Math.random() * availablePool.length);
-          choices.push(availablePool[idx]);
-          availablePool.splice(idx, 1);
-        }
-
-        if (choices.length < pickCount) {
-          const fallback = Object.keys(ITEMS).filter(id => !choices.includes(id));
-          while (choices.length < pickCount && fallback.length) {
-            const idx = Math.floor(Math.random() * fallback.length);
-            choices.push(fallback[idx]);
-            fallback.splice(idx, 1);
-          }
-        }
-
-        return choices;
-      },
-
-      // ── INTERNAL ──────────────────────────────────────────────────
-      _getActiveEffects() {
-        const now = new Date();
-        return get().activeEffects.filter(e =>
-          !e.expiresAt || new Date(e.expiresAt) > now
-        );
-      },
-
-      _purgeExpiredEffects() {
-        const now = new Date();
-        const state = get();
-        const purged = state.activeEffects.filter(e =>
-          !e.expiresAt || new Date(e.expiresAt) > now
-        );
-        set({ activeEffects: purged });
+        // Persistir en BD
         const uid = get()._userId;
-        if (uid && purged.length !== state.activeEffects.length) saveActiveEffects(uid, purged).catch(() => {});
-      },
+        if (uid) {
+          saveInventory(uid, get().inventory).catch(() => { });
+          saveActiveEffects(uid, get().activeEffects).catch(() => { });
+        }
+        get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
+      }
+      else if (item.effectType === 'instant') {
+        // Handle targeted effects using generic system
+        if (requiresTargeting(item.effectKey) && targetHabitId) {
+          const targetedEffect = createTargetedEffect(item, targetHabitId);
+          set(state2 => ({
+            inventory: newInventory,
+            activeEffects: [...state2.activeEffects, targetedEffect],
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+          }
+        }
+        // Legacy instant effects that modify habits directly
+        else if (item.effectKey === 'mult_recovery' && targetHabitId) {
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId
+                ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
+                : h
+            ),
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        } else if (item.effectKey === 'perm_base_mult' && targetHabitId) {
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId
+                ? {
+                  ...h, baseMultiplier: Math.min(3.0, parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1))),
+                  multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1)))
+                }
+                : h
+            ),
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        } else if (item.effectKey === 'mult_boost_target' && targetHabitId) {
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId
+                ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
+                : h
+            ),
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        } else {
+          set({ inventory: newInventory });
+          const uid = get()._userId;
+          if (uid) saveInventory(uid, get().inventory).catch(() => { });
+        }
+        get()._pushNotification('item', `${item.icon} ${item.name} usado!`);
+      }
+    },
 
-      _processExpiredHabits() {
-        const state = get();
-        const today = getTodayKey();
-        
-        const isCompletedStatus = (status) =>
-          status === 'completed' || status === 'partial' || status === 'over';
+    grantItem(itemId) {
+      const item = ITEMS[itemId];
+      if (!item) return;
+      set(state => {
+        const existing = state.inventory.find(i => i.itemId === itemId);
+        const maxStack = item.maxStack ?? 99;
+        if (existing && existing.qty >= maxStack) return {};
+        return {
+          inventory: existing
+            ? state.inventory.map(i => i.itemId === itemId ? { ...i, qty: i.qty + 1 } : i)
+            : [...state.inventory, { itemId, qty: 1 }],
+        };
+      });
+      // Persistir en BD
+      const uid = get()._userId;
+      if (uid) saveInventory(uid, get().inventory).catch(() => { });
+    },
 
-        const failedEntries = [];
-        const updatedHabits = [...state.habits];
-        const newHistory = { ...state.history };
-        const activeEffects = state._getActiveEffects();
-        
-        for (const habit of state.habits) {
-          if (habit.periodicity === 'weekly_times' || habit.periodicity === 'custom') continue;
-          
-          const habitCreatedDate = new Date(habit.createdAt);
-          habitCreatedDate.setHours(0, 0, 0, 0);
-          const todayDate = new Date(today + 'T12:00:00');
-          
-          if (habit.periodicity === 'daily') {
-            for (let d = new Date(habitCreatedDate); d <= todayDate; d.setDate(d.getDate() + 1)) {
-              const dateStr = d.toISOString().split('T')[0];
-              const dayStatus = newHistory[dateStr]?.[habit.id];
-              
-              if (!isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
-                if (!newHistory[dateStr]) newHistory[dateStr] = {};
-                newHistory[dateStr][habit.id] = 'failed';
-                failedEntries.push({ habitId: habit.id, date: dateStr, status: 'failed' });
-                
+    // ── JOURNEY REWARDS ───────────────────────────────────────────
+
+    /**
+     * Called when the user closes the story modal after completing a journey.
+     * Grants all 3 item rewards, records the story unlock, and clears pendingJourneyReward.
+     */
+    claimJourneyItems() {
+      const state = get();
+      const reward = state.pendingJourneyReward;
+      if (!reward) return;
+
+      // Record the story as unlocked in the store
+      const newStory = reward.story
+        ? { journeyId: reward.journeyNumber, storyId: reward.story.id, unlockedAt: new Date().toISOString() }
+        : null;
+
+      set(state2 => ({
+        pendingJourneyReward: null,
+        unlockedStories: newStory
+          ? [...state2.unlockedStories, newStory]
+          : state2.unlockedStories,
+      }));
+
+      // Grant all 3 items
+      if (reward.itemChoices && reward.itemChoices.length > 0) {
+        reward.itemChoices.forEach(itemId => {
+          get().grantItem(itemId);
+        });
+      }
+
+      // Get item names for notification
+      const itemNames = reward.itemChoices
+        ? reward.itemChoices.map(id => ITEMS[id]?.name || id).join(', ')
+        : '';
+
+      get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos`);
+      get()._checkAchievements();
+    },
+
+    /**
+     * Picks 3 distinct random item choices for a journey reward.
+     * Higher journeys get better rarities.
+     */
+    _pickJourneyItemChoices(journeyNumber) {
+      const allItemIds = Object.keys(ITEMS);
+      const rarityByJourney = journeyNumber <= 2 ? ['common', 'common', 'rare']
+        : journeyNumber <= 4 ? ['common', 'rare', 'rare']
+          : journeyNumber <= 6 ? ['rare', 'rare', 'epic']
+            : ['rare', 'epic', 'epic'];
+
+      const chosen = [];
+      const usedIds = new Set();
+
+      for (const rarity of rarityByJourney) {
+        const pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
+        if (pool.length === 0) {
+          // Fallback: any unused item
+          const fallback = allItemIds.filter(id => !usedIds.has(id));
+          if (fallback.length === 0) break;
+          const pick = fallback[Math.floor(Math.random() * fallback.length)];
+          chosen.push(pick);
+          usedIds.add(pick);
+        } else {
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          chosen.push(pick);
+          usedIds.add(pick);
+        }
+      }
+      return chosen;
+    },
+
+    _pickDailyItemChoices(daily) {
+      if (!daily) return [];
+      const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
+      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(ITEMS)));
+      const availablePool = [...basePool];
+      const pickCount = 3;
+      const choices = [];
+
+      for (let i = 0; i < pickCount && availablePool.length > 0; i++) {
+        const idx = Math.floor(Math.random() * availablePool.length);
+        choices.push(availablePool[idx]);
+        availablePool.splice(idx, 1);
+      }
+
+      if (choices.length < pickCount) {
+        const fallback = Object.keys(ITEMS).filter(id => !choices.includes(id));
+        while (choices.length < pickCount && fallback.length) {
+          const idx = Math.floor(Math.random() * fallback.length);
+          choices.push(fallback[idx]);
+          fallback.splice(idx, 1);
+        }
+      }
+
+      return choices;
+    },
+
+    // ── INTERNAL ──────────────────────────────────────────────────
+    _getActiveEffects() {
+      const now = new Date();
+      return get().activeEffects.filter(e =>
+        !e.expiresAt || new Date(e.expiresAt) > now
+      );
+    },
+
+    _purgeExpiredEffects() {
+      const now = new Date();
+      const state = get();
+      const purged = state.activeEffects.filter(e =>
+        !e.expiresAt || new Date(e.expiresAt) > now
+      );
+      set({ activeEffects: purged });
+      const uid = get()._userId;
+      if (uid && purged.length !== state.activeEffects.length) saveActiveEffects(uid, purged).catch(() => { });
+    },
+
+    _processExpiredHabits() {
+      const state = get();
+      const today = getTodayKey();
+
+      const isCompletedStatus = (status) =>
+        status === 'completed' || status === 'partial' || status === 'over';
+
+      const failedEntries = [];
+      const updatedHabits = [...state.habits];
+      const newHistory = { ...state.history };
+      const activeEffects = state._getActiveEffects();
+
+      for (const habit of state.habits) {
+        if (habit.periodicity === 'weekly_times' || habit.periodicity === 'custom') continue;
+
+        const habitCreatedDate = new Date(habit.createdAt);
+        habitCreatedDate.setHours(0, 0, 0, 0);
+        const todayDate = new Date(today + 'T12:00:00');
+
+        if (habit.periodicity === 'daily') {
+          for (let d = new Date(habitCreatedDate); d <= todayDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const dayStatus = newHistory[dateStr]?.[habit.id];
+
+            if (!isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
+              if (!newHistory[dateStr]) newHistory[dateStr] = {};
+              newHistory[dateStr][habit.id] = 'failed';
+              failedEntries.push({ habitId: habit.id, date: dateStr, status: 'failed' });
+
+              const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+              if (habitIndex !== -1) {
+                const newMult = calcMultiplierOnFail(habit, activeEffects);
+                updatedHabits[habitIndex] = {
+                  ...updatedHabits[habitIndex],
+                  multiplier: newMult,
+                  streak: 0
+                };
+              }
+            }
+          }
+        } else if (habit.periodicity === 'weekly') {
+          let currentWeekStart = getWeekStart(habitCreatedDate.toISOString().split('T')[0]);
+          let currentWeekStartDate = new Date(currentWeekStart + 'T12:00:00');
+          const todayWeekStart = getWeekStart(today);
+          const todayWeekStartDate = new Date(todayWeekStart + 'T12:00:00');
+
+          while (currentWeekStartDate <= todayWeekStartDate) {
+            const weekEnd = getWeekEnd(currentWeekStart);
+            const weekEndDate = new Date(weekEnd + 'T12:00:00');
+            const now = new Date();
+
+            if (now >= weekEndDate) {
+              const wasAlreadyFailed = (newHistory[weekEnd]?.[habit.id] === 'failed');
+              if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, weekEnd, newHistory)) {
+                if (!newHistory[weekEnd]) newHistory[weekEnd] = {};
+                newHistory[weekEnd][habit.id] = 'failed';
+                failedEntries.push({ habitId: habit.id, date: weekEnd, status: 'failed' });
+
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
                   const newMult = calcMultiplierOnFail(habit, activeEffects);
@@ -939,309 +1002,287 @@ const useGameStore = create(
                 }
               }
             }
-          } else if (habit.periodicity === 'weekly') {
-            let currentWeekStart = getWeekStart(habitCreatedDate.toISOString().split('T')[0]);
-            let currentWeekStartDate = new Date(currentWeekStart + 'T12:00:00');
-            const todayWeekStart = getWeekStart(today);
-            const todayWeekStartDate = new Date(todayWeekStart + 'T12:00:00');
-            
-            while (currentWeekStartDate <= todayWeekStartDate) {
-              const weekEnd = getWeekEnd(currentWeekStart);
-              const weekEndDate = new Date(weekEnd + 'T12:00:00');
-              const now = new Date();
-              
-              if (now >= weekEndDate) {
-                const wasAlreadyFailed = (newHistory[weekEnd]?.[habit.id] === 'failed');
-                if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, weekEnd, newHistory)) {
-                  if (!newHistory[weekEnd]) newHistory[weekEnd] = {};
-                  newHistory[weekEnd][habit.id] = 'failed';
-                  failedEntries.push({ habitId: habit.id, date: weekEnd, status: 'failed' });
-                  
-                  const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
-                  if (habitIndex !== -1) {
-                    const newMult = calcMultiplierOnFail(habit, activeEffects);
-                    updatedHabits[habitIndex] = {
-                      ...updatedHabits[habitIndex],
-                      multiplier: newMult,
-                      streak: 0
-                    };
-                  }
+
+            currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
+            currentWeekStart = currentWeekStartDate.toISOString().split('T')[0];
+          }
+        } else if (habit.periodicity === 'monthly') {
+          let currentMonthStart = getMonthStart(habitCreatedDate.toISOString().split('T')[0]);
+          let currentMonthStartDate = new Date(currentMonthStart + 'T12:00:00');
+          const todayMonthStart = getMonthStart(today);
+          const todayMonthStartDate = new Date(todayMonthStart + 'T12:00:00');
+
+          while (currentMonthStartDate <= todayMonthStartDate) {
+            const monthEnd = getMonthEnd(currentMonthStart);
+            const monthEndDate = new Date(monthEnd + 'T12:00:00');
+            const now = new Date();
+
+            if (now >= monthEndDate) {
+              const wasAlreadyFailed = (newHistory[monthEnd]?.[habit.id] === 'failed');
+              if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, monthEnd, newHistory)) {
+                if (!newHistory[monthEnd]) newHistory[monthEnd] = {};
+                newHistory[monthEnd][habit.id] = 'failed';
+                failedEntries.push({ habitId: habit.id, date: monthEnd, status: 'failed' });
+
+                const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+                if (habitIndex !== -1) {
+                  const newMult = calcMultiplierOnFail(habit, activeEffects);
+                  updatedHabits[habitIndex] = {
+                    ...updatedHabits[habitIndex],
+                    multiplier: newMult,
+                    streak: 0
+                  };
                 }
               }
-              
-              currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
-              currentWeekStart = currentWeekStartDate.toISOString().split('T')[0];
             }
-          } else if (habit.periodicity === 'monthly') {
-            let currentMonthStart = getMonthStart(habitCreatedDate.toISOString().split('T')[0]);
-            let currentMonthStartDate = new Date(currentMonthStart + 'T12:00:00');
-            const todayMonthStart = getMonthStart(today);
-            const todayMonthStartDate = new Date(todayMonthStart + 'T12:00:00');
-            
-            while (currentMonthStartDate <= todayMonthStartDate) {
-              const monthEnd = getMonthEnd(currentMonthStart);
-              const monthEndDate = new Date(monthEnd + 'T12:00:00');
-              const now = new Date();
-              
-              if (now >= monthEndDate) {
-                const wasAlreadyFailed = (newHistory[monthEnd]?.[habit.id] === 'failed');
-                if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, monthEnd, newHistory)) {
-                  if (!newHistory[monthEnd]) newHistory[monthEnd] = {};
-                  newHistory[monthEnd][habit.id] = 'failed';
-                  failedEntries.push({ habitId: habit.id, date: monthEnd, status: 'failed' });
-                  
-                  const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
-                  if (habitIndex !== -1) {
-                    const newMult = calcMultiplierOnFail(habit, activeEffects);
-                    updatedHabits[habitIndex] = {
-                      ...updatedHabits[habitIndex],
-                      multiplier: newMult,
-                      streak: 0
-                    };
-                  }
-                }
-              }
-              
-              currentMonthStartDate.setMonth(currentMonthStartDate.getMonth() + 1);
-              currentMonthStart = currentMonthStartDate.toISOString().split('T')[0];
-            }
+
+            currentMonthStartDate.setMonth(currentMonthStartDate.getMonth() + 1);
+            currentMonthStart = currentMonthStartDate.toISOString().split('T')[0];
           }
         }
+      }
 
-        if (failedEntries.length === 0) return;
+      if (failedEntries.length === 0) return;
 
+      set({
+        habits: updatedHabits,
+        history: newHistory
+      });
+
+      const uid = get()._userId;
+      if (uid) {
+        saveHabits(uid, updatedHabits).catch(() => { });
+        if (failedEntries.length > 0) saveHabitEntries(uid, failedEntries).catch(() => { });
+      }
+
+      const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
+      const message = uniqueFailedHabits.length === 1
+        ? `Hábito marcado como fallido automáticamente`
+        : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
+
+      get()._pushNotification('auto_fail', message);
+      get()._recalcGlobalStreak();
+    },
+
+    _processWeeklyHabits() {
+      const state = get();
+      const today = getTodayKey();
+      const todayDate = new Date(today + 'T12:00:00');
+
+      // Solo procesar los lunes
+      if (todayDate.getDay() !== 1) return;
+
+      // Ya procesamos esta semana
+      if (state.lastWeeklyProcessDate === today) return;
+
+      // Obtener hábitos weekly_times
+      const weeklyHabits = state.habits.filter(h => h.periodicity === 'weekly_times' && h.weeklyTimesTarget);
+      if (weeklyHabits.length === 0) return;
+
+      const yesterday = getYesterdayKey();
+      const lastWeekStart = getWeekStart(yesterday);
+      const activeEffects = state._getActiveEffects();
+
+      const newHistory = { ...state.history };
+      const updatedHabits = [...state.habits];
+      let hasChanges = false;
+
+      weeklyHabits.forEach(habit => {
+        const completions = getWeekCompletions(habit.id, state.history, yesterday);
+        const target = habit.weeklyTimesTarget;
+
+        if (completions < target) {
+          const missedCount = target - completions;
+          const penaltyPerMiss = 0.4;
+          const totalPenalty = penaltyPerMiss * missedCount;
+
+          // Calcular nuevo multiplicador con penalización y escudos
+          let newMult = habit.multiplier;
+          if (activeEffects.some(e => e.key === 'streak_shield')) {
+            // Shield protects - no penalty
+          } else if (activeEffects.some(e => e.key === 'golden_shield')) {
+            newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
+          } else {
+            const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
+            const actualPenalty = penaltyEffect ? penaltyEffect.value : totalPenalty;
+            newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
+          }
+
+          // Marcar todos los días de la semana pasada como failed (para registro)
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(lastWeekStart + 'T12:00:00');
+            d.setDate(d.getDate() + i);
+            const dateKey = d.toISOString().split('T')[0];
+            if (!newHistory[dateKey]) newHistory[dateKey] = {};
+            if (!newHistory[dateKey][habit.id]) {
+              newHistory[dateKey][habit.id] = 'failed';
+              hasChanges = true;
+            }
+          }
+
+          // Actualizar el hábito
+          const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+          if (habitIndex !== -1) {
+            updatedHabits[habitIndex] = {
+              ...updatedHabits[habitIndex],
+              multiplier: newMult,
+              streak: 0
+            };
+          }
+        }
+      });
+
+      if (hasChanges || weeklyHabits.some(h => {
+        const completions = getWeekCompletions(h.id, state.history, yesterday);
+        return completions < h.weeklyTimesTarget;
+      })) {
         set({
           habits: updatedHabits,
-          history: newHistory
+          history: newHistory,
+          lastWeeklyProcessDate: today
         });
-
+        // Persistir en BD (fire & forget)
         const uid = get()._userId;
         if (uid) {
-          saveHabits(uid, updatedHabits).catch(() => {});
-          if (failedEntries.length > 0) saveHabitEntries(uid, failedEntries).catch(() => {});
+          saveHabits(uid, updatedHabits).catch(() => { });
+          // Persistir todas las entradas 'failed' añadidas
+          const entries = [];
+          for (const [date, dayMap] of Object.entries(newHistory)) {
+            for (const [habitId, status] of Object.entries(dayMap)) {
+              if (status === 'failed') entries.push({ habitId, date, status });
+            }
+          }
+          if (entries.length) saveHabitEntries(uid, entries).catch(() => { });
+          saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => { });
         }
-
-        const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
-        const message = uniqueFailedHabits.length === 1 
-          ? `Hábito marcado como fallido automáticamente`
-          : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
-        
-        get()._pushNotification('auto_fail', message);
         get()._recalcGlobalStreak();
-      },
-
-      _processWeeklyHabits() {
-        const state = get();
-        const today = getTodayKey();
-        const todayDate = new Date(today + 'T12:00:00');
-        
-        // Solo procesar los lunes
-        if (todayDate.getDay() !== 1) return;
-        
-        // Ya procesamos esta semana
-        if (state.lastWeeklyProcessDate === today) return;
-        
-        // Obtener hábitos weekly_times
-        const weeklyHabits = state.habits.filter(h => h.periodicity === 'weekly_times' && h.weeklyTimesTarget);
-        if (weeklyHabits.length === 0) return;
-        
-        const yesterday = getYesterdayKey();
-        const lastWeekStart = getWeekStart(yesterday);
-        const activeEffects = state._getActiveEffects();
-        
-        const newHistory = { ...state.history };
-        const updatedHabits = [...state.habits];
-        let hasChanges = false;
-        
-        weeklyHabits.forEach(habit => {
-          const completions = getWeekCompletions(habit.id, state.history, yesterday);
-          const target = habit.weeklyTimesTarget;
-          
-          if (completions < target) {
-            const missedCount = target - completions;
-            const penaltyPerMiss = 0.4;
-            const totalPenalty = penaltyPerMiss * missedCount;
-            
-            // Calcular nuevo multiplicador con penalización y escudos
-            let newMult = habit.multiplier;
-            if (activeEffects.some(e => e.key === 'streak_shield')) {
-              // Shield protects - no penalty
-            } else if (activeEffects.some(e => e.key === 'golden_shield')) {
-              newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
-            } else {
-              const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
-              const actualPenalty = penaltyEffect ? penaltyEffect.value : totalPenalty;
-              newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
-            }
-            
-            // Marcar todos los días de la semana pasada como failed (para registro)
-            for (let i = 0; i < 7; i++) {
-              const d = new Date(lastWeekStart + 'T12:00:00');
-              d.setDate(d.getDate() + i);
-              const dateKey = d.toISOString().split('T')[0];
-              if (!newHistory[dateKey]) newHistory[dateKey] = {};
-              if (!newHistory[dateKey][habit.id]) {
-                newHistory[dateKey][habit.id] = 'failed';
-                hasChanges = true;
-              }
-            }
-            
-            // Actualizar el hábito
-            const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
-            if (habitIndex !== -1) {
-              updatedHabits[habitIndex] = {
-                ...updatedHabits[habitIndex],
-                multiplier: newMult,
-                streak: 0
-              };
-            }
-          }
-        });
-        
-        if (hasChanges || weeklyHabits.some(h => {
-          const completions = getWeekCompletions(h.id, state.history, yesterday);
-          return completions < h.weeklyTimesTarget;
-        })) {
-          set({
-            habits: updatedHabits,
-            history: newHistory,
-            lastWeeklyProcessDate: today
-          });
-          // Persistir en BD (fire & forget)
-          const uid = get()._userId;
-          if (uid) {
-            saveHabits(uid, updatedHabits).catch(() => {});
-            // Persistir todas las entradas 'failed' añadidas
-            const entries = [];
-            for (const [date, dayMap] of Object.entries(newHistory)) {
-              for (const [habitId, status] of Object.entries(dayMap)) {
-                if (status === 'failed') entries.push({ habitId, date, status });
-              }
-            }
-            if (entries.length) saveHabitEntries(uid, entries).catch(() => {});
-            saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => {});
-          }
-          get()._recalcGlobalStreak();
-          get()._pushNotification('weekly_review', 'Resumen semanal de hábitos procesado');
-        } else {
-          set({ lastWeeklyProcessDate: today });
-          const uid = get()._userId;
-          if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => {});
-        }
-      },
-
-      _recalcGlobalStreak() {
-        const { habits, history } = get();
-        set({ globalStreak: calcGlobalStreak(habits, history) });
+        get()._pushNotification('weekly_review', 'Resumen semanal de hábitos procesado');
+      } else {
+        set({ lastWeeklyProcessDate: today });
         const uid = get()._userId;
-        if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => {});
-      },
+        if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => { });
+      }
+    },
 
-      // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===
-      _getItemsByRarity(rarity) {
-        return Object.values(ITEMS).filter(item => item.rarity === rarity).map(item => item.id);
-      },
+    _recalcGlobalStreak() {
+      const { habits, history } = get();
+      set({ globalStreak: calcGlobalStreak(habits, history) });
+      const uid = get()._userId;
+      if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+    },
 
-      _selectRandomReward(rarity) {
-        const POOL_CONFIG = {
-          random_common:    { primary: 'common',    secondary: 'uncommon',  primaryChance: 0.7 },
-          random_uncommon: { primary: 'uncommon',   secondary: 'rare',      primaryChance: 0.7 },
-          random_rare:      { primary: 'rare',       secondary: 'epic',      primaryChance: 0.7 },
-          random_epic:      { primary: 'epic',       secondary: 'legendary', primaryChance: 0.7 },
-          random_legendary: { primary: 'legendary', secondary: null,        primaryChance: 1.0 },
-        };
+    // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===
+    _getItemsByRarity(rarity) {
+      return Object.values(ITEMS).filter(item => item.rarity === rarity).map(item => item.id);
+    },
 
-        const config = POOL_CONFIG[rarity];
-        if (!config) return null;
+    _selectRandomReward(rarity) {
+      const POOL_CONFIG = {
+        random_common: { primary: 'common', secondary: 'uncommon', primaryChance: 0.7 },
+        random_uncommon: { primary: 'uncommon', secondary: 'rare', primaryChance: 0.7 },
+        random_rare: { primary: 'rare', secondary: 'epic', primaryChance: 0.7 },
+        random_epic: { primary: 'epic', secondary: 'legendary', primaryChance: 0.7 },
+        random_legendary: { primary: 'legendary', secondary: null, primaryChance: 1.0 },
+      };
 
-        const pool = config.secondary 
-          ? (Math.random() < config.primaryChance 
-              ? this._getItemsByRarity(config.primary) 
-              : this._getItemsByRarity(config.secondary))
-          : this._getItemsByRarity(config.primary);
+      const config = POOL_CONFIG[rarity];
+      if (!config) return null;
 
-        if (pool.length === 0) return null;
-        return pool[Math.floor(Math.random() * pool.length)];
-      },
+      const pool = config.secondary
+        ? (Math.random() < config.primaryChance
+          ? this._getItemsByRarity(config.primary)
+          : this._getItemsByRarity(config.secondary))
+        : this._getItemsByRarity(config.primary);
 
-      _checkAchievements() {
-        const state = get();
-        const newlyUnlocked = [];
+      if (pool.length === 0) return null;
+      return pool[Math.floor(Math.random() * pool.length)];
+    },
 
-        ACHIEVEMENTS.forEach(ach => {
-          if (state.unlockedAchievements.includes(ach.id)) return;
-          try {
-            if (ach.check(state)) {
-              newlyUnlocked.push(ach);
-            }
-          } catch {}
-        });
+    _checkAchievements() {
+      const state = get();
+      const newlyUnlocked = [];
 
-        if (newlyUnlocked.length > 0) {
-          set(state2 => ({
-            unlockedAchievements: [
-              ...state2.unlockedAchievements,
-              ...newlyUnlocked.map(a => a.id),
-            ],
-          }));
-          // Persistir logros nuevos en BD
-          const uid = get()._userId;
-          if (uid) saveAchievements(uid, newlyUnlocked.map(a => a.id)).catch(() => {});
+      ACHIEVEMENTS.forEach(ach => {
+        if (state.unlockedAchievements.includes(ach.id)) return;
+        try {
+          if (ach.check(state)) {
+            newlyUnlocked.push(ach);
+          }
+        } catch { }
+      });
 
-          newlyUnlocked.forEach(ach => {
-            get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
-            
-            // Desbloquear historia específica si tiene storyId
-            if (ach.storyId) {
-              const newStory = { journeyId: 0, storyId: ach.storyId, unlockedAt: new Date().toISOString() };
-              
-              // Verificar si ya está desbloqueada (por seguridad)
-              const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
-              
-              if (!alreadyUnlocked) {
-                set(state3 => ({
-                  unlockedStories: [...state3.unlockedStories, newStory],
-                }));
-                if (uid) saveStory(uid, 0, ach.storyId).catch(() => {});
-                get()._pushNotification('story', `📜 Historia desbloqueada`);
-              }
-            }
-
-            // Otorgar recompensa de item
-            if (ach.reward) {
-              const rewardId = ach.reward.startsWith('random_') 
-                ? get()._selectRandomReward(ach.reward)
-                : ach.reward;
-              if (rewardId) get().grantItem(rewardId);
-            }
-          });
-        }
-      },
-
-      _pushNotification(type, msg) {
-        const id = Date.now() + Math.random();
-        set(state => ({
-          notifications: [...state.notifications, { id, type, msg }],
+      if (newlyUnlocked.length > 0) {
+        set(state2 => ({
+          unlockedAchievements: [
+            ...state2.unlockedAchievements,
+            ...newlyUnlocked.map(a => a.id),
+          ],
         }));
-        setTimeout(() => {
-          set(state => ({
-            notifications: state.notifications.filter(n => n.id !== id),
-          }));
-        }, 10000);
-      },
+        // Persistir logros nuevos en BD
+        const uid = get()._userId;
+        if (uid) saveAchievements(uid, newlyUnlocked.map(a => a.id)).catch(() => { });
 
-      dismissNotification(id) {
+        newlyUnlocked.forEach(ach => {
+          get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
+
+          // Desbloquear historia específica si tiene storyId
+          if (ach.storyId) {
+            const newStory = { journeyId: 0, storyId: ach.storyId, unlockedAt: new Date().toISOString() };
+
+            // Verificar si ya está desbloqueada (por seguridad)
+            const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
+
+            if (!alreadyUnlocked) {
+              set(state3 => ({
+                unlockedStories: [...state3.unlockedStories, newStory],
+              }));
+              if (uid) saveStory(uid, 0, ach.storyId).catch(() => { });
+              get()._pushNotification('story', `📜 Historia desbloqueada`);
+            }
+          }
+
+          // Otorgar recompensa de item
+          if (ach.reward) {
+            const rewardId = ach.reward.startsWith('random_')
+              ? get()._selectRandomReward(ach.reward)
+              : ach.reward;
+            if (rewardId) get().grantItem(rewardId);
+          }
+        });
+      }
+    },
+
+    _pushNotification(type, msg) {
+      const id = Date.now() + Math.random();
+      set(state => ({
+        notifications: [...state.notifications, { id, type, msg }],
+      }));
+      setTimeout(() => {
         set(state => ({
           notifications: state.notifications.filter(n => n.id !== id),
         }));
-      },
+      }, 10000);
+    },
 
-      // ── DAILIES ───────────────────────────────────────────────────
-      async _checkAndGenerateDaily() {
-        const state = get();
+    dismissNotification(id) {
+      set(state => ({
+        notifications: state.notifications.filter(n => n.id !== id),
+      }));
+    },
+
+    // ── DAILIES ───────────────────────────────────────────────────
+    async _checkAndGenerateDaily() {
+      const state = get();
+
+      if (state._dailyCheckPromise) {
+        await state._dailyCheckPromise;
+        return;
+      }
+
+      const dailyCheckPromise = (async () => {
         const today = getTodayKey();
-        const userId = state._userId;
-        
+        const userId = get()._userId;
+
         if (!userId) {
           console.warn('[store] No userId available for daily check');
           return;
@@ -1250,25 +1291,25 @@ const useGameStore = create(
         try {
           // Verificar en la base de datos si existe una misión para hoy
           const dailyData = await checkDailyForToday(userId, today);
-          
+
           if (dailyData) {
             // Existe una misión seleccionada para hoy, cargarla
             const { currentDaily } = dailyData;
-            
+
             // Restaurar la función condition desde DAILY_CHALLENGES
             const dailyTemplate = DAILY_CHALLENGES.find(d => d.id === currentDaily.id);
             if (dailyTemplate) {
               currentDaily.condition = dailyTemplate.condition;
               currentDaily.check = dailyTemplate.check;
             }
-            
+
             set({
               currentDaily,
               dailySelectionMade: true,
               dailyOptions: null,
               lastDailyDate: today,
             });
-            
+
             // Actualizar progreso de la misión actual
             get()._updateDailyProgress();
           } else {
@@ -1279,7 +1320,7 @@ const useGameStore = create(
               progress: { current: 0, target: 1, completed: false },
               completed: false,
             }));
-            
+
             set({
               dailyOptions: options,
               currentDaily: null,
@@ -1287,8 +1328,8 @@ const useGameStore = create(
               lastDailyDate: today,
             });
 
-            // Guardar las opciones en la BD para que persistan si el usuario recarga la página
-            await supabase.from('user_daily_progress').upsert({
+            // Crear fila inicial solo si no existe (sin sobrescribir selección existente).
+            const { error: insertError } = await supabase.from('user_daily_progress').upsert({
               user_id: userId,
               date: today,
               daily_id: null,
@@ -1297,331 +1338,344 @@ const useGameStore = create(
               completed: false,
               progress_current: 0,
               progress_target: 1,
-            }, { onConflict: 'user_id,date' });
+            }, { onConflict: 'user_id,date', ignoreDuplicates: true });
+
+            if (insertError) {
+              console.error('[store] Error inserting daily options:', insertError.message);
+            }
           }
         } catch (error) {
           console.error('[store] Error checking daily for today:', error);
           // En caso de error, continuar con el comportamiento anterior
           // para no bloquear la app
         }
-      },
+      })();
 
-      selectDaily(dailyId) {
-        const state = get();
-        const selectedOption = state.dailyOptions?.find(o => o.id === dailyId);
-        if (!selectedOption) {
-          return;
+      set({ _dailyCheckPromise: dailyCheckPromise });
+
+      try {
+        await dailyCheckPromise;
+      } finally {
+        set({ _dailyCheckPromise: null });
+      }
+    },
+
+    selectDaily(dailyId) {
+      const state = get();
+      const selectedOption = state.dailyOptions?.find(o => o.id === dailyId);
+      if (!selectedOption) {
+        return;
+      }
+
+      const today = getTodayKey();
+
+      set({
+        currentDaily: selectedOption,
+        dailySelectionMade: true,
+        dailyOptions: null, // Clear options after selection
+      });
+
+      // Persistir selección en BD
+      const uid = get()._userId;
+      if (uid) {
+        // eslint-disable-next-line no-unused-vars
+        const { condition, check, ...serializableDaily } = selectedOption;
+
+        supabase.from('user_daily_progress').upsert({
+          user_id: uid,
+          date: today,
+          daily_id: dailyId,
+          daily_data: serializableDaily, // Only save the selected daily, not the options
+          daily_selection_made: true,
+          completed: false,
+          progress_current: 0,
+          progress_target: 1,
+        }, { onConflict: 'user_id,date' });
+      }
+
+      // Iniciar seguimiento de progreso
+      get()._updateDailyProgress();
+    },
+
+    _updateDailyProgress() {
+      const state = get();
+      if (!state.currentDaily) return;
+
+      const progress = checkDailyProgress(state.currentDaily, state);
+      const wasCompleted = state.currentDaily.completed;
+
+      set(state2 => ({
+        currentDaily: {
+          ...state2.currentDaily,
+          progress,
+          completed: progress.completed,
         }
+      }));
 
-        const today = getTodayKey();
-        
-        set({
-          currentDaily: selectedOption,
-          dailySelectionMade: true,
-          dailyOptions: null, // Clear options after selection
-        });
+      // Persistir progreso del daily en BD
+      const uid = get()._userId;
+      if (uid) saveDaily(uid, get().currentDaily, get().lastDailyDate).catch(() => { });
 
-        // Persistir selección en BD
-        const uid = get()._userId;
-        if (uid) {
-          // eslint-disable-next-line no-unused-vars
-          const { condition, check, ...serializableDaily } = selectedOption;
-          
-          supabase.from('user_daily_progress').upsert({
-            user_id: uid,
-            date: today,
-            daily_id: dailyId,
-            daily_data: serializableDaily, // Only save the selected daily, not the options
-            daily_selection_made: true,
-            completed: false,
-            progress_current: 0,
-            progress_target: 1,
-          }, { onConflict: 'user_id,date' });
-        }
+      // If just completed, give rewards
+      if (progress.completed && !wasCompleted) {
+        get()._completeDailyChallenge();
+      }
+    },
 
-        // Iniciar seguimiento de progreso
-        get()._updateDailyProgress();
-      },
+    _completeDailyChallenge() {
+      const state = get();
+      if (!state.currentDaily || !state.currentDaily.rewards) return;
 
-      _updateDailyProgress() {
-        const state = get();
-        if (!state.currentDaily) return;
-        
-        const progress = checkDailyProgress(state.currentDaily, state);
-        const wasCompleted = state.currentDaily.completed;
-        
-        set(state2 => ({
-          currentDaily: {
-            ...state2.currentDaily,
-            progress,
-            completed: progress.completed,
-          }
-        }));
+      const { points, items } = state.currentDaily.rewards;
 
-        // Persistir progreso del daily en BD
-        const uid = get()._userId;
-        if (uid) saveDaily(uid, get().currentDaily, get().lastDailyDate).catch(() => {});
-        
-        // If just completed, give rewards
-        if (progress.completed && !wasCompleted) {
-          get()._completeDailyChallenge();
-        }
-      },
-
-      _completeDailyChallenge() {
-        const state = get();
-        if (!state.currentDaily || !state.currentDaily.rewards) return;
-        
-        const { points, items } = state.currentDaily.rewards;
-
-        // Award points
-        if (points) {
-          set(state2 => {
-            const newPoints = state2.points + points;
-            const newLifetime = state2.lifetimePoints + points;
-            const uid = get()._userId;
-            if (uid) {
-              saveProfile(uid, { 
-                level: state2.level, 
-                points: newPoints, 
-                lifetimePoints: newLifetime, 
-                globalStreak: get().globalStreak, 
-                lastWeeklyProcessDate: get().lastWeeklyProcessDate 
-              }).catch(() => {});
-            }
-            return { points: newPoints, lifetimePoints: newLifetime };
-          });
-        }
-        
-        const itemChoices = get()._pickDailyItemChoices(state.currentDaily);
-
-        if (itemChoices.length === 0) {
-          if (items && items.length > 0) {
-            items.forEach(itemId => get().grantItem(itemId));
-          }
-          get()._pushNotification('daily', `🏆 Daily completado! +${points} pts`);
-        } else {
-          set({
-            pendingDailyReward: {
-              dailyId: state.currentDaily.id,
-              dailyName: state.currentDaily.name,
-              points: points ?? 0,
-              itemChoices,
-            },
-          });
-        }
-      },
-
-      claimDailyItem(chosenItemId) {
-        const reward = get().pendingDailyReward;
-        if (!reward) return;
-
-        if (chosenItemId) {
-          get().grantItem(chosenItemId);
-        }
-
-        const itemName = chosenItemId ? ITEMS[chosenItemId]?.name : 'un objeto';
-        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
-
-        set({ pendingDailyReward: null });
-      },
-
-      // ── PLANES ─────────────────────────────────────────────────────────
-      /**
-       * Crea un nuevo plan para una fecha específica.
-       */
-      createPlan(planData) {
-        const state = get();
-        const userId = state._userId;
-        if (!userId) return;
-
-        const newPlan = {
-          date: planData.date,
-          name: planData.name || 'Mi Plan',
-          tasks: planData.tasks.map(t => ({
-            id: createUuid(),
-            name: t.name,
-            durationMinutes: t.durationMinutes,
-            completed: false,
-            completedAt: null,
-            deleted: false,
-          })),
-          tripleApplied: false,
-        };
-
-        savePlan(userId, newPlan)
-          .then(saved => {
-            if (saved) {
-              set(state2 => ({
-                plans: {
-                  ...state2.plans,
-                  [saved.date]: { id: saved.id, ...newPlan },
-      },
-              }));
-            }
-          })
-          .catch(() => {});
-      },
-
-      /**
-       * Actualiza un plan existente.
-       */
-      updatePlan(date, updates) {
-        const state = get();
-        const userId = state._userId;
-        const existingPlan = state.plans[date];
-        if (!userId || !existingPlan) return;
-
-        const updatedPlan = {
-          ...existingPlan,
-          ...updates,
-          tasks: updates.tasks || existingPlan.tasks,
-        };
-
-        set(state2 => ({
-          plans: {
-            ...state2.plans,
-            [date]: updatedPlan,
-          },
-        }));
-
-        savePlan(userId, updatedPlan, existingPlan.id).catch(() => {});
-      },
-
-      /**
-       * Elimina un plan.
-       */
-      removePlan(date) {
-        const state = get();
-        const userId = state._userId;
-        const existingPlan = state.plans[date];
-        if (!userId || !existingPlan) return;
-
+      // Award points
+      if (points) {
         set(state2 => {
-          const newPlans = { ...state2.plans };
-          delete newPlans[date];
-          return { plans: newPlans };
-        });
-
-        dbDeletePlan(existingPlan.id).catch(() => {});
-      },
-
-      /**
-       * Completa una tarea del plan y otorga puntos.
-       */
-      completePlanTask(date, taskId, actualMinutes) {
-        const state = get();
-        const userId = state._userId;
-        const plan = state.plans[date];
-        if (!userId || !plan) return;
-
-        const task = plan.tasks.find(t => t.id === taskId);
-        if (!task || task.completed) return;
-
-        const activeEffects = state._getActiveEffects();
-        
-        const duration = actualMinutes || task.durationMinutes;
-        let basePoints = duration;
-        
-        let bonusMult = 1;
-        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
-        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple');
-        if (nextTripleEffect) bonusMult *= 3;
-        
-        const earned = Math.round(basePoints * bonusMult);
-        const newPoints = state.points + earned;
-        const newLifetime = state.lifetimePoints + earned;
-
-        const updatedTasks = plan.tasks.map(t =>
-          t.id === taskId
-            ? { ...t, completed: true, completedAt: new Date().toISOString(), durationMinutes: duration }
-            : t
-        );
-
-        const activeTasks = updatedTasks.filter(t => !t.deleted);
-        const allCompleted = activeTasks.every(t => t.completed);
-        
-        let finalPoints = newPoints;
-        let finalLifetime = newLifetime;
-        let tripleApplied = plan.tripleApplied;
-
-        if (allCompleted && !plan.tripleApplied) {
-          const planPoints = updatedTasks.reduce((sum, t) => sum + (t.durationMinutes || 0), 0);
-          const tripleBonus = planPoints * 2;
-          finalPoints += tripleBonus;
-          finalLifetime += tripleBonus;
-          tripleApplied = true;
-
-          if (plan.id) {
-            applyTripleBonus(plan.id).catch(() => {});
+          const newPoints = state2.points + points;
+          const newLifetime = state2.lifetimePoints + points;
+          const uid = get()._userId;
+          if (uid) {
+            saveProfile(uid, {
+              level: state2.level,
+              points: newPoints,
+              lifetimePoints: newLifetime,
+              globalStreak: get().globalStreak,
+              lastWeeklyProcessDate: get().lastWeeklyProcessDate
+            }).catch(() => { });
           }
-          
-          get()._pushNotification('complete', `¡PLAN COMPLETO! ×3 → +${tripleBonus} pts`);
+          return { points: newPoints, lifetimePoints: newLifetime };
+        });
+      }
+
+      const itemChoices = get()._pickDailyItemChoices(state.currentDaily);
+
+      if (itemChoices.length === 0) {
+        if (items && items.length > 0) {
+          items.forEach(itemId => get().grantItem(itemId));
+        }
+        get()._pushNotification('daily', `🏆 Daily completado! +${points} pts`);
+      } else {
+        set({
+          pendingDailyReward: {
+            dailyId: state.currentDaily.id,
+            dailyName: state.currentDaily.name,
+            points: points ?? 0,
+            itemChoices,
+          },
+        });
+      }
+    },
+
+    claimDailyItem(chosenItemId) {
+      const reward = get().pendingDailyReward;
+      if (!reward) return;
+
+      if (chosenItemId) {
+        get().grantItem(chosenItemId);
+      }
+
+      const itemName = chosenItemId ? ITEMS[chosenItemId]?.name : 'un objeto';
+      get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
+
+      set({ pendingDailyReward: null });
+    },
+
+    // ── PLANES ─────────────────────────────────────────────────────────
+    /**
+     * Crea un nuevo plan para una fecha específica.
+     */
+    createPlan(planData) {
+      const state = get();
+      const userId = state._userId;
+      if (!userId) return;
+
+      const newPlan = {
+        date: planData.date,
+        name: planData.name || 'Mi Plan',
+        tasks: planData.tasks.map(t => ({
+          id: createUuid(),
+          name: t.name,
+          durationMinutes: t.durationMinutes,
+          completed: false,
+          completedAt: null,
+          deleted: false,
+        })),
+        tripleApplied: false,
+      };
+
+      savePlan(userId, newPlan)
+        .then(saved => {
+          if (saved) {
+            set(state2 => ({
+              plans: {
+                ...state2.plans,
+                [saved.date]: { id: saved.id, ...newPlan },
+              },
+            }));
+          }
+        })
+        .catch(() => { });
+    },
+
+    /**
+     * Actualiza un plan existente.
+     */
+    updatePlan(date, updates) {
+      const state = get();
+      const userId = state._userId;
+      const existingPlan = state.plans[date];
+      if (!userId || !existingPlan) return;
+
+      const updatedPlan = {
+        ...existingPlan,
+        ...updates,
+        tasks: updates.tasks || existingPlan.tasks,
+      };
+
+      set(state2 => ({
+        plans: {
+          ...state2.plans,
+          [date]: updatedPlan,
+        },
+      }));
+
+      savePlan(userId, updatedPlan, existingPlan.id).catch(() => { });
+    },
+
+    /**
+     * Elimina un plan.
+     */
+    removePlan(date) {
+      const state = get();
+      const userId = state._userId;
+      const existingPlan = state.plans[date];
+      if (!userId || !existingPlan) return;
+
+      set(state2 => {
+        const newPlans = { ...state2.plans };
+        delete newPlans[date];
+        return { plans: newPlans };
+      });
+
+      dbDeletePlan(existingPlan.id).catch(() => { });
+    },
+
+    /**
+     * Completa una tarea del plan y otorga puntos.
+     */
+    completePlanTask(date, taskId, actualMinutes) {
+      const state = get();
+      const userId = state._userId;
+      const plan = state.plans[date];
+      if (!userId || !plan) return;
+
+      const task = plan.tasks.find(t => t.id === taskId);
+      if (!task || task.completed) return;
+
+      const activeEffects = state._getActiveEffects();
+
+      const duration = actualMinutes || task.durationMinutes;
+      let basePoints = duration;
+
+      let bonusMult = 1;
+      if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple');
+      if (nextTripleEffect) bonusMult *= 3;
+
+      const earned = Math.round(basePoints * bonusMult);
+      const newPoints = state.points + earned;
+      const newLifetime = state.lifetimePoints + earned;
+
+      const updatedTasks = plan.tasks.map(t =>
+        t.id === taskId
+          ? { ...t, completed: true, completedAt: new Date().toISOString(), durationMinutes: duration }
+          : t
+      );
+
+      const activeTasks = updatedTasks.filter(t => !t.deleted);
+      const allCompleted = activeTasks.every(t => t.completed);
+
+      let finalPoints = newPoints;
+      let finalLifetime = newLifetime;
+      let tripleApplied = plan.tripleApplied;
+
+      if (allCompleted && !plan.tripleApplied) {
+        const planPoints = updatedTasks.reduce((sum, t) => sum + (t.durationMinutes || 0), 0);
+        const tripleBonus = planPoints * 2;
+        finalPoints += tripleBonus;
+        finalLifetime += tripleBonus;
+        tripleApplied = true;
+
+        if (plan.id) {
+          applyTripleBonus(plan.id).catch(() => { });
         }
 
-        const updatedPlan = {
-          ...plan,
-          tasks: updatedTasks,
-          tripleApplied,
-        };
+        get()._pushNotification('complete', `¡PLAN COMPLETO! ×3 → +${tripleBonus} pts`);
+      }
 
-        set(state2 => ({
-          plans: {
-            ...state2.plans,
-            [date]: updatedPlan,
-          },
+      const updatedPlan = {
+        ...plan,
+        tasks: updatedTasks,
+        tripleApplied,
+      };
+
+      set(state2 => ({
+        plans: {
+          ...state2.plans,
+          [date]: updatedPlan,
+        },
+        points: finalPoints,
+        lifetimePoints: finalLifetime,
+      }));
+
+      updatePlanTask(taskId, { completed: true, completedAt: new Date().toISOString() }).catch(() => { });
+
+      const uid = get()._userId;
+      if (uid) {
+        saveProfile(uid, {
+          level: get().level,
           points: finalPoints,
           lifetimePoints: finalLifetime,
-        }));
+          globalStreak: get().globalStreak,
+          lastWeeklyProcessDate: get().lastWeeklyProcessDate
+        }).catch(() => { });
+      }
 
-        updatePlanTask(taskId, { completed: true, completedAt: new Date().toISOString() }).catch(() => {});
-        
-        const uid = get()._userId;
-        if (uid) {
-          saveProfile(uid, { 
-            level: get().level, 
-            points: finalPoints, 
-            lifetimePoints: finalLifetime, 
-            globalStreak: get().globalStreak, 
-            lastWeeklyProcessDate: get().lastWeeklyProcessDate 
-          }).catch(() => {});
-        }
+      if (!plan.tripleApplied) {
+        get()._pushNotification('complete', `+${earned} pts`);
+      }
 
-        if (!plan.tripleApplied) {
-          get()._pushNotification('complete', `+${earned} pts`);
-        }
-        
-        get()._checkAchievements();
-      },
+      get()._checkAchievements();
+    },
 
-      /**
-       * Elimina una tarea del plan (marca como eliminada).
-       */
-      deletePlanTask(date, taskId) {
-        const state = get();
-        const userId = state._userId;
-        const plan = state.plans[date];
-        if (!userId || !plan) return;
+    /**
+     * Elimina una tarea del plan (marca como eliminada).
+     */
+    deletePlanTask(date, taskId) {
+      const state = get();
+      const userId = state._userId;
+      const plan = state.plans[date];
+      if (!userId || !plan) return;
 
-        const updatedTasks = plan.tasks.map(t =>
-          t.id === taskId ? { ...t, deleted: true } : t
-        );
+      const updatedTasks = plan.tasks.map(t =>
+        t.id === taskId ? { ...t, deleted: true } : t
+      );
 
-        const updatedPlan = {
-          ...plan,
-          tasks: updatedTasks,
-        };
+      const updatedPlan = {
+        ...plan,
+        tasks: updatedTasks,
+      };
 
-        set(state2 => ({
-          plans: {
-            ...state2.plans,
-            [date]: updatedPlan,
-          },
-        }));
+      set(state2 => ({
+        plans: {
+          ...state2.plans,
+          [date]: updatedPlan,
+        },
+      }));
 
-        updatePlanTask(taskId, { deleted: true }).catch(() => {});
-      },
-    })
+      updatePlanTask(taskId, { deleted: true }).catch(() => { });
+    },
+  })
 );
 
 export default useGameStore;

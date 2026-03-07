@@ -525,6 +525,7 @@ export async function saveDaily(userId, currentDaily, lastDailyDate) {
     date: lastDailyDate,
     daily_id: currentDaily.id ?? 'unknown',
     daily_data: serializableDaily,
+    daily_selection_made: true,
     completed: currentDaily.completed ?? false,
     progress_current: currentDaily.progress?.current ?? 0,
     progress_target: currentDaily.progress?.target ?? 1,
@@ -546,13 +547,9 @@ export async function checkDailyForToday(userId, today) {
     .select('*')
     .eq('user_id', userId)
     .eq('date', today)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No se encontró registro para hoy -> no hay misión seleccionada
-      return null;
-    }
     console.error('[db] checkDailyForToday:', error.message);
     return null;
   }
