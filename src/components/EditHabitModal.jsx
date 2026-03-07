@@ -21,7 +21,7 @@ export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
   // Obtiene el tema del hábito o el tema por defecto
   const defaultTheme = HABIT_THEME_BY_ID[habit.themeId] ?? HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME];
-  
+
   // Inicializa el formulario con los datos existentes del hábito
   const [form, setForm] = useState({
     name: habit.name,
@@ -42,12 +42,12 @@ export default function EditHabitModal({ habit, onClose }) {
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
     // Validar duración mínima
     if (form.minutes < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
-    
+
     const habitPayload = {
       ...form,
       weeklyTimesTarget: null,
     };
-    
+
     // Manejar periodicidad semanal personalizada
     if (form.periodicity === 'custom' && form.customWeeklyTimes) {
       const target = Number(form.customWeeklyTimes);
@@ -59,7 +59,7 @@ export default function EditHabitModal({ habit, onClose }) {
       habitPayload.customDays = '';
       habitPayload.customInterval = '';
     }
-    
+
     updateHabit(habit.id, habitPayload);
     onClose();
   }
@@ -70,9 +70,9 @@ export default function EditHabitModal({ habit, onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">✎</span> Editar Misión
-          </div>
+          </h2>
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 

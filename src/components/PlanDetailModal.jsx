@@ -5,7 +5,7 @@ import useGameStore from '../store/gameStore.js';
 export default function PlanDetailModal({ date, onClose }) {
   const { plans, completePlanTask, deletePlanTask, removePlan } = useGameStore();
   const plan = plans[date];
-  
+
   const [selectedTask, setSelectedTask] = useState(null);
   const [actualMinutes, setActualMinutes] = useState(30);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -55,9 +55,9 @@ export default function PlanDetailModal({ date, onClose }) {
         {/* Header */}
         <div className="flex justify-between items-start border-b border-quest-border pb-3">
           <div>
-            <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+            <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
               📋 {plan.name || 'Mi Plan'}
-            </div>
+            </h2>
             <div className="text-[10px] text-quest-textMuted mt-1 font-pixel">
               📅 {formattedDate}
             </div>
@@ -94,8 +94,8 @@ export default function PlanDetailModal({ date, onClose }) {
                 key={task.id}
                 className={`
                   flex items-center gap-3 p-3 rounded border transition-all cursor-pointer
-                  ${task.completed 
-                    ? 'bg-quest-green/10 border-quest-green/30 opacity-60' 
+                  ${task.completed
+                    ? 'bg-quest-green/10 border-quest-green/30 opacity-60'
                     : 'bg-quest-bg border-quest-border hover:border-quest-cyan'
                   }
                 `}
@@ -103,8 +103,8 @@ export default function PlanDetailModal({ date, onClose }) {
               >
                 <div className={`
                   w-5 h-5 rounded border-2 flex items-center justify-center text-xs
-                  ${task.completed 
-                    ? 'bg-quest-green border-quest-green text-black' 
+                  ${task.completed
+                    ? 'bg-quest-green border-quest-green text-black'
                     : 'border-quest-textMuted'
                   }
                 `}>
@@ -154,11 +154,11 @@ export default function PlanDetailModal({ date, onClose }) {
         {/* Confirm Delete Modal */}
         {showConfirmDelete && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[11000] p-4"
-               onClick={(e) => e.target === e.currentTarget && setShowConfirmDelete(false)}>
+            onClick={(e) => e.target === e.currentTarget && setShowConfirmDelete(false)}>
             <div className="bg-quest-panel border border-quest-red p-4 rounded max-w-sm">
-              <div className="text-sm text-quest-red font-pixel mb-4 text-center">
+              <h2 className="text-sm text-quest-red font-pixel mb-4 text-center">
                 ¿Estás seguro de que quieres eliminar este plan?
-              </div>
+              </h2>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowConfirmDelete(false)}
@@ -180,12 +180,12 @@ export default function PlanDetailModal({ date, onClose }) {
         {/* Complete Task Modal */}
         {selectedTask && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[11000] p-4"
-               onClick={(e) => e.target === e.currentTarget && setSelectedTask(null)}>
+            onClick={(e) => e.target === e.currentTarget && setSelectedTask(null)}>
             <div className="bg-quest-panel border border-quest-cyan p-4 rounded max-w-sm w-full">
-              <div className="text-sm text-quest-cyan font-pixel mb-4 text-center">
+              <h2 className="text-sm text-quest-cyan font-pixel mb-4 text-center">
                 ✓ Completar: {selectedTask.name}
-              </div>
-              
+              </h2>
+
               <div className="mb-4">
                 <label className="text-xs text-quest-textDim block mb-2 font-pixel">
                   DURACIÓN REAL (MIN)

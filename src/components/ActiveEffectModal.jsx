@@ -46,7 +46,7 @@ function getEffectDescription(effect) {
 
   switch (effect.key) {
     case 'double_points': return 'Duplica todos los puntos ganados.';
-    case 'next_triple': return effect.targetHabitId 
+    case 'next_triple': return effect.targetHabitId
       ? `Triplica los puntos del hábito objetivo en su próxima completación.`
       : 'Triplica los puntos del próximo hábito completado.';
     case 'global_mult_boost': return 'Aumenta todos los multiplicadores.';
@@ -95,9 +95,9 @@ export default function ActiveEffectModal({ effect, onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[380px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-4 !p-5 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-sm text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">◆</span> Efecto Activo
-          </div>
+          </h2>
           <button onClick={onClose} className="btn-pixel-gray !py-2 !px-3 !text-sm">✕</button>
         </div>
 

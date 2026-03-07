@@ -50,9 +50,9 @@ export default function DailyChallengeModal({ daily, onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
             <span className="animate-pulse">📜</span> Misión Diaria
-          </div>
+          </h2>
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
@@ -82,16 +82,16 @@ export default function DailyChallengeModal({ daily, onClose }) {
               {progress.current} / {progress.target} ({progressPercentage}%)
             </span>
           </div>
-        <div className="progress-bar">
-          <div
-            className="progress-bar-fill"
-            style={{
-              width: `${progressPercentage}%`,
-              color: getProgressColor(completed ? 100 : progressPercentage),
-            }}
-          />
+          <div className="progress-bar">
+            <div
+              className="progress-bar-fill"
+              style={{
+                width: `${progressPercentage}%`,
+                color: getProgressColor(completed ? 100 : progressPercentage),
+              }}
+            />
+          </div>
         </div>
-      </div>
 
         {/* Status */}
         {completed && (

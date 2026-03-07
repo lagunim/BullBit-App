@@ -25,9 +25,9 @@ export default function DailyChoiceModal({ options, onSelect }) {
       <div className="card-pixel w-full max-w-[480px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
         <div className="text-center border-b border-quest-border pb-4">
-          <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
+          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
             <span className="animate-pulse">🎯</span> Elige tu Misión
-          </div>
+          </h2>
           <p className="text-gray-400 text-[10px] sm:text-xs">
             Selecciona una misión diaria para hoy. ¡Elige la que mejor se adapte a tu rutina!
           </p>

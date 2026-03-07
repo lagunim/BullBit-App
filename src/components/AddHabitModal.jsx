@@ -24,7 +24,7 @@ export default function AddHabitModal({ onClose }) {
   const addHabit = useGameStore(s => s.addHabit);
   // Obtiene el tema por defecto para el emoji inicial
   const defaultTheme = HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME] ?? HABIT_THEMES[0];
-  
+
   // Estado del formulario con valores iniciales
   const [form, setForm] = useState({
     name: '',
@@ -46,7 +46,7 @@ export default function AddHabitModal({ onClose }) {
     // Validar duración mínima
     const mins = form.minutes === '' ? 20 : Number(form.minutes);
     if (mins < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
-    
+
     const habitPayload = {
       ...form,
       minutes: mins,
@@ -75,9 +75,9 @@ export default function AddHabitModal({ onClose }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-sm sm:text-xs text-quest-cyan font-pixel uppercase tracking-widest">
+          <h2 className="text-sm sm:text-xs text-quest-cyan font-pixel uppercase tracking-widest">
             ✚ Nuevo Hábito
-          </div>
+          </h2>
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 

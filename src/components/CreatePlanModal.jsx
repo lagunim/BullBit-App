@@ -15,12 +15,12 @@ function createUuid() {
 
 export default function CreatePlanModal({ onClose, editDate = null }) {
   const { createPlan, updatePlan, plans } = useGameStore();
-  
+
   const existingPlan = editDate ? plans[editDate] : null;
-  
+
   const today = new Date();
   const getDateString = (date) => date.toISOString().split('T')[0];
-  
+
   const [planName, setPlanName] = useState(existingPlan?.name || '');
   const [planDate, setPlanDate] = useState(existingPlan?.date || getDateString(today));
   const [tasks, setTasks] = useState(
@@ -72,7 +72,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
 
   function handleSubmit() {
     const validTasks = tasks.filter(t => t.name.trim() && t.durationMinutes > 0);
-    
+
     if (validTasks.length === 0) {
       setError('¡AL MENOS UNA TAREA CON NOMBRE Y DURACIÓN!');
       return;
@@ -89,7 +89,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
     } else {
       createPlan(planData);
     }
-    
+
     onClose();
   }
 
@@ -140,9 +140,9 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-4 !p-5">
         {/* Title */}
         <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <div className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest">
+          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest">
             {existingPlan ? '✏️ Editar Plan' : '📋 Nuevo Plan'}
-          </div>
+          </h2>
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
@@ -168,7 +168,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
             <span>{new Date(planDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             <span>📅</span>
           </button>
-          
+
           {showCalendar && (
             <div className="mt-2 p-3 bg-quest-panel border border-quest-border rounded">
               <div className="flex justify-between items-center mb-3">
@@ -201,7 +201,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
           <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">
             TAREAS — <span className="text-quest-gold">⏱️ {totalMinutes} min total</span>
           </label>
-          
+
           <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto">
             {tasks.map((task, index) => (
               <div key={task.id} className="flex gap-2 items-center">
@@ -231,7 +231,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
               </div>
             ))}
           </div>
-          
+
           <button
             onClick={handleAddTask}
             className="mt-3 btn-pixel-gray w-full uppercase text-xs py-2"

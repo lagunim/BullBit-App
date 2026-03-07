@@ -80,7 +80,7 @@ export default function StoriesPanel({ onClose }) {
           >
             <div className="flex items-center gap-2">
               <span className="text-base">📜</span>
-              <span className="font-pixel text-[10px] text-quest-gold tracking-wider">HISTORIAS DEL VIAJERO</span>
+              <span className="font-pixel text-sm text-quest-gold tracking-wider"><h2>HISTORIAS DEL VIAJERO</h2></span>
             </div>
             <button
               onClick={handleClose}

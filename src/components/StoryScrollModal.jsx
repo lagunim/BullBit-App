@@ -189,12 +189,12 @@ export default function StoryScrollModal({ story, onClose, journeyNumber }) {
 
               {/* Title */}
               <div className="text-center">
-                <div
+                <h2
                   className="ink-title font-pixel text-[11px] tracking-wide leading-snug"
                   style={{ fontVariant: 'small-caps' }}
                 >
                   {story.title}
-                </div>
+                </h2>
                 {/* Decorative divider */}
                 <div className="flex items-center gap-2 mt-3 justify-center opacity-60">
                   <div className="h-px flex-1" style={{ background: 'linear-gradient(90deg, transparent, #a07830)' }} />
