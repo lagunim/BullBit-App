@@ -190,7 +190,7 @@ export default function StoryScrollModal({ story, onClose, journeyNumber }) {
               {/* Title */}
               <div className="text-center">
                 <h2
-                  className="ink-title font-pixel text-[11px] tracking-wide leading-snug"
+                  className="ink-title font-pixel text-sm tracking-wide leading-snug"
                   style={{ fontVariant: 'small-caps' }}
                 >
                   {story.title}
@@ -211,8 +211,8 @@ export default function StoryScrollModal({ story, onClose, journeyNumber }) {
                 {story.content.split('\n\n').map((para, i) => (
                   <p
                     key={i}
-                    className="ink-text font-pixel text-[7.5px] mb-3 last:mb-0"
-                    style={{ textAlign: 'justify', textIndent: '1.2em' }}
+                    className="ink-text font-pixel text-xs mb-3 last:mb-0"
+                    style={{ textIndent: '1.2em' }}
                   >
                     {para.trim()}
                   </p>
@@ -231,7 +231,7 @@ export default function StoryScrollModal({ story, onClose, journeyNumber }) {
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="font-pixel text-[8px] px-6 py-2 transition-all duration-150 hover:brightness-125 active:scale-95"
+                  className="font-pixel text-xs px-6 py-2 transition-all duration-150 hover:brightness-125 active:scale-95"
                   style={{
                     background: 'linear-gradient(180deg, rgba(80,50,0,0.9), rgba(40,25,0,0.9))',
                     border: '2px solid #a07830',
