@@ -130,7 +130,7 @@ export default function StoryScrollModal({ story, onClose, journeyNumber }) {
       {/* Backdrop */}
       <div
         ref={overlayRef}
-        className="fixed inset-0 z-[600] backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-[10003] backdrop-blur-sm flex items-center justify-center p-4"
         style={{
           background: 'rgba(0,0,0,0.50)',
           opacity: visible ? 1 : 0,

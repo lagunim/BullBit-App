@@ -52,7 +52,7 @@ export default function StoriesPanel({ onClose }) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[500] backdrop-blur-sm transition-opacity duration-200"
+        className="fixed inset-0 z-[10001] backdrop-blur-sm transition-opacity duration-200"
         style={{
           background: 'rgba(0,0,0,0.50)',
           opacity: visible ? 1 : 0,
@@ -61,7 +61,7 @@ export default function StoriesPanel({ onClose }) {
       />
 
       {/* Panel */}
-      <div className="fixed inset-0 z-[501] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
+      <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
         <div
           className="relative w-full max-w-md max-h-[85vh] flex flex-col pointer-events-auto transition-all duration-200"
           style={{

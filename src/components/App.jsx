@@ -402,7 +402,9 @@ export default function App() {
       </div>
 
       {/* Barra de navegación inferior */}
-      <nav className="flex justify-around bg-quest-panel border-t-2 border-quest-border pb-[env(safe-area-inset-bottom)] shrink-0 z-[1000] shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
+      <nav
+        className={`flex justify-around bg-quest-panel border-t-2 border-quest-border pb-[env(safe-area-inset-bottom)] shrink-0 z-[1000] shadow-[0_-4px_10px_rgba(0,0,0,0.5)] ${storiesPanelOpen ? 'pointer-events-none' : ''}`}
+      >
         {TABS.map(t => (
           <button
             key={t.id}
