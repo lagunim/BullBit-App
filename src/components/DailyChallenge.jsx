@@ -14,8 +14,23 @@ import DailyChallengeModal from './DailyChallengeModal.jsx';
 import { getProgressColor } from '../utils/gameLogic.js';
 
 export default function DailyChallenge() {
-  const { currentDaily } = useGameStore();
+  const { currentDaily, dailyOptions, dailySelectionMade } = useGameStore();
   const [showModal, setShowModal] = useState(false);
+
+  // Si hay opciones pero no ha seleccionado, mostrar estado de "eligiendo"
+  if (dailyOptions && dailyOptions.length > 0 && !dailySelectionMade) {
+    return (
+      <div className="mb-2">
+        <h2 className="text-[10px] sm:text-xs font-pixel text-quest-gold uppercase tracking-wider">🏆 Misión Diaria</h2>
+        <div className="mb-6 p-3 sm:p-4 border bg-gradient-to-r from-quest-gold/10 to-quest-panel/50 backdrop-blur-sm card-pixel">
+          <div className="flex items-center justify-center gap-2 py-4">
+            <span className="text-xl animate-pulse">🎯</span>
+            <span className="text-gray-300 text-xs font-pixel">Elige tu misión diaria</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // No renderiza nada si no hay misión diaria activa
   if (!currentDaily) return null;

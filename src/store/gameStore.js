@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
-import { getRandomDaily, checkDailyProgress } from '../data/dailies.js';
+import { DAILY_CHALLENGES, getRandomDaily, checkDailyProgress } from '../data/dailies.js';
 import {
   LEVEL_THRESHOLDS,
   getTodayKey,
@@ -34,7 +34,13 @@ import {
   saveAchievements,
   saveDaily,
   saveStory,
+  savePlan,
+  deletePlan as dbDeletePlan,
+  updatePlanTask,
+  applyTripleBonus,
+  checkDailyForToday,
 } from '../lib/db.js';
+import { supabase } from '../lib/supabase.js';
 import { loadState, clearState } from '../lib/storage.js';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -130,6 +136,8 @@ const useGameStore = create(
 
       // Dailies
       currentDaily: null,   // { id, name, description, icon, difficulty, condition, rewards, progress, completed }
+      dailyOptions: null,   // Array de 3 opciones para elegir
+      dailySelectionMade: false, // Si el usuario ya eligió su daily
       lastDailyDate: null,  // 'YYYY-MM-DD'
 
       // Gamification
@@ -141,6 +149,9 @@ const useGameStore = create(
       unlockedStories: [],  // [{ journeyId, storyId, unlockedAt }]
       pendingJourneyReward: null, // { journeyNumber, story, itemChoices } — flujo post-viaje
       pendingDailyReward: null, // { dailyId, dailyName, points, itemChoices }
+
+      // Planes
+      plans: {}, // { 'YYYY-MM-DD': { id, date, name, tasks: [...], tripleApplied } }
 
       // UI notifications queue
       notifications: [],
@@ -179,7 +190,7 @@ const useGameStore = create(
         }
 
         get()._checkAchievements();
-        get()._checkAndGenerateDaily();
+        get()._checkAndGenerateDaily().catch(err => console.error('[store] Error in addHabit daily check:', err));
       },
 
       removeHabit(id) {
@@ -226,8 +237,11 @@ const useGameStore = create(
               inventory: remoteData.inventory,
               activeEffects: remoteData.activeEffects,
               currentDaily: remoteData.currentDaily,
+              dailyOptions: remoteData.dailyOptions ?? null,
+              dailySelectionMade: remoteData.dailySelectionMade ?? false,
               lastDailyDate: remoteData.lastDailyDate,
               lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
+              plans: remoteData.plans ?? {},
             });
           } else {
             // ── BD vacía → intentar migrar estado local (si existe) ──
@@ -297,6 +311,7 @@ const useGameStore = create(
                 currentDaily: null,
                 lastDailyDate: null,
                 lastWeeklyProcessDate: null,
+                plans: {},
               });
               saveProfile(userId, {
                 level: 0,
@@ -315,7 +330,7 @@ const useGameStore = create(
         // Procesos de inicio (siempre, independientemente del origen de datos)
         get()._processExpiredHabits();
         get()._processWeeklyHabits();
-        get()._checkAndGenerateDaily();
+        await get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
       },
 
@@ -1222,30 +1237,109 @@ const useGameStore = create(
       },
 
       // ── DAILIES ───────────────────────────────────────────────────
-      _checkAndGenerateDaily() {
+      async _checkAndGenerateDaily() {
         const state = get();
         const today = getTodayKey();
+        const userId = state._userId;
         
-        // Generate new daily if it's a new day or no daily exists
-        if (!state.currentDaily || state.lastDailyDate !== today) {
-          const excludeIds = state.lastDailyDate === today ? [state.currentDaily?.id] : [];
-          const newDaily = getRandomDaily(excludeIds);
+        if (!userId) {
+          console.warn('[store] No userId available for daily check');
+          return;
+        }
+
+        try {
+          // Verificar en la base de datos si existe una misión para hoy
+          const dailyData = await checkDailyForToday(userId, today);
           
-          set({
-            currentDaily: {
-              ...newDaily,
+          if (dailyData) {
+            // Existe una misión seleccionada para hoy, cargarla
+            const { currentDaily } = dailyData;
+            
+            // Restaurar la función condition desde DAILY_CHALLENGES
+            const dailyTemplate = DAILY_CHALLENGES.find(d => d.id === currentDaily.id);
+            if (dailyTemplate) {
+              currentDaily.condition = dailyTemplate.condition;
+              currentDaily.check = dailyTemplate.check;
+            }
+            
+            set({
+              currentDaily,
+              dailySelectionMade: true,
+              dailyOptions: null,
+              lastDailyDate: today,
+            });
+            
+            // Actualizar progreso de la misión actual
+            get()._updateDailyProgress();
+          } else {
+            // No existe misión para hoy, generar opciones para el modal
+            const shuffled = [...DAILY_CHALLENGES].sort(() => Math.random() - 0.5);
+            const options = shuffled.slice(0, 3).map(daily => ({
+              ...daily,
               progress: { current: 0, target: 1, completed: false },
               completed: false,
-            },
-            lastDailyDate: today,
-          });
+            }));
+            
+            set({
+              dailyOptions: options,
+              currentDaily: null,
+              dailySelectionMade: false,
+              lastDailyDate: today,
+            });
 
-          // Persistir nuevo daily en BD
-          const uid = get()._userId;
-          if (uid) saveDaily(uid, get().currentDaily, today).catch(() => {});
+            // Guardar las opciones en la BD para que persistan si el usuario recarga la página
+            await supabase.from('user_daily_progress').upsert({
+              user_id: userId,
+              date: today,
+              daily_id: null,
+              daily_data: { options },
+              daily_selection_made: false,
+              completed: false,
+              progress_current: 0,
+              progress_target: 1,
+            }, { onConflict: 'user_id,date' });
+          }
+        } catch (error) {
+          console.error('[store] Error checking daily for today:', error);
+          // En caso de error, continuar con el comportamiento anterior
+          // para no bloquear la app
         }
+      },
+
+      selectDaily(dailyId) {
+        const state = get();
+        const selectedOption = state.dailyOptions?.find(o => o.id === dailyId);
+        if (!selectedOption) {
+          return;
+        }
+
+        const today = getTodayKey();
         
-        // Update progress of current daily
+        set({
+          currentDaily: selectedOption,
+          dailySelectionMade: true,
+          dailyOptions: null, // Clear options after selection
+        });
+
+        // Persistir selección en BD
+        const uid = get()._userId;
+        if (uid) {
+          // eslint-disable-next-line no-unused-vars
+          const { condition, check, ...serializableDaily } = selectedOption;
+          
+          supabase.from('user_daily_progress').upsert({
+            user_id: uid,
+            date: today,
+            daily_id: dailyId,
+            daily_data: serializableDaily, // Only save the selected daily, not the options
+            daily_selection_made: true,
+            completed: false,
+            progress_current: 0,
+            progress_target: 1,
+          }, { onConflict: 'user_id,date' });
+        }
+
+        // Iniciar seguimiento de progreso
         get()._updateDailyProgress();
       },
 
@@ -1330,6 +1424,202 @@ const useGameStore = create(
         get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
 
         set({ pendingDailyReward: null });
+      },
+
+      // ── PLANES ─────────────────────────────────────────────────────────
+      /**
+       * Crea un nuevo plan para una fecha específica.
+       */
+      createPlan(planData) {
+        const state = get();
+        const userId = state._userId;
+        if (!userId) return;
+
+        const newPlan = {
+          date: planData.date,
+          name: planData.name || 'Mi Plan',
+          tasks: planData.tasks.map(t => ({
+            id: createUuid(),
+            name: t.name,
+            durationMinutes: t.durationMinutes,
+            completed: false,
+            completedAt: null,
+            deleted: false,
+          })),
+          tripleApplied: false,
+        };
+
+        savePlan(userId, newPlan)
+          .then(saved => {
+            if (saved) {
+              set(state2 => ({
+                plans: {
+                  ...state2.plans,
+                  [saved.date]: { id: saved.id, ...newPlan },
+      },
+              }));
+            }
+          })
+          .catch(() => {});
+      },
+
+      /**
+       * Actualiza un plan existente.
+       */
+      updatePlan(date, updates) {
+        const state = get();
+        const userId = state._userId;
+        const existingPlan = state.plans[date];
+        if (!userId || !existingPlan) return;
+
+        const updatedPlan = {
+          ...existingPlan,
+          ...updates,
+          tasks: updates.tasks || existingPlan.tasks,
+        };
+
+        set(state2 => ({
+          plans: {
+            ...state2.plans,
+            [date]: updatedPlan,
+          },
+        }));
+
+        savePlan(userId, updatedPlan, existingPlan.id).catch(() => {});
+      },
+
+      /**
+       * Elimina un plan.
+       */
+      removePlan(date) {
+        const state = get();
+        const userId = state._userId;
+        const existingPlan = state.plans[date];
+        if (!userId || !existingPlan) return;
+
+        set(state2 => {
+          const newPlans = { ...state2.plans };
+          delete newPlans[date];
+          return { plans: newPlans };
+        });
+
+        dbDeletePlan(existingPlan.id).catch(() => {});
+      },
+
+      /**
+       * Completa una tarea del plan y otorga puntos.
+       */
+      completePlanTask(date, taskId, actualMinutes) {
+        const state = get();
+        const userId = state._userId;
+        const plan = state.plans[date];
+        if (!userId || !plan) return;
+
+        const task = plan.tasks.find(t => t.id === taskId);
+        if (!task || task.completed) return;
+
+        const activeEffects = state._getActiveEffects();
+        
+        const duration = actualMinutes || task.durationMinutes;
+        let basePoints = duration;
+        
+        let bonusMult = 1;
+        if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+        const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple');
+        if (nextTripleEffect) bonusMult *= 3;
+        
+        const earned = Math.round(basePoints * bonusMult);
+        const newPoints = state.points + earned;
+        const newLifetime = state.lifetimePoints + earned;
+
+        const updatedTasks = plan.tasks.map(t =>
+          t.id === taskId
+            ? { ...t, completed: true, completedAt: new Date().toISOString(), durationMinutes: duration }
+            : t
+        );
+
+        const activeTasks = updatedTasks.filter(t => !t.deleted);
+        const allCompleted = activeTasks.every(t => t.completed);
+        
+        let finalPoints = newPoints;
+        let finalLifetime = newLifetime;
+        let tripleApplied = plan.tripleApplied;
+
+        if (allCompleted && !plan.tripleApplied) {
+          const planPoints = updatedTasks.reduce((sum, t) => sum + (t.durationMinutes || 0), 0);
+          const tripleBonus = planPoints * 2;
+          finalPoints += tripleBonus;
+          finalLifetime += tripleBonus;
+          tripleApplied = true;
+
+          if (plan.id) {
+            applyTripleBonus(plan.id).catch(() => {});
+          }
+          
+          get()._pushNotification('complete', `¡PLAN COMPLETO! ×3 → +${tripleBonus} pts`);
+        }
+
+        const updatedPlan = {
+          ...plan,
+          tasks: updatedTasks,
+          tripleApplied,
+        };
+
+        set(state2 => ({
+          plans: {
+            ...state2.plans,
+            [date]: updatedPlan,
+          },
+          points: finalPoints,
+          lifetimePoints: finalLifetime,
+        }));
+
+        updatePlanTask(taskId, { completed: true, completedAt: new Date().toISOString() }).catch(() => {});
+        
+        const uid = get()._userId;
+        if (uid) {
+          saveProfile(uid, { 
+            level: get().level, 
+            points: finalPoints, 
+            lifetimePoints: finalLifetime, 
+            globalStreak: get().globalStreak, 
+            lastWeeklyProcessDate: get().lastWeeklyProcessDate 
+          }).catch(() => {});
+        }
+
+        if (!plan.tripleApplied) {
+          get()._pushNotification('complete', `+${earned} pts`);
+        }
+        
+        get()._checkAchievements();
+      },
+
+      /**
+       * Elimina una tarea del plan (marca como eliminada).
+       */
+      deletePlanTask(date, taskId) {
+        const state = get();
+        const userId = state._userId;
+        const plan = state.plans[date];
+        if (!userId || !plan) return;
+
+        const updatedTasks = plan.tasks.map(t =>
+          t.id === taskId ? { ...t, deleted: true } : t
+        );
+
+        const updatedPlan = {
+          ...plan,
+          tasks: updatedTasks,
+        };
+
+        set(state2 => ({
+          plans: {
+            ...state2.plans,
+            [date]: updatedPlan,
+          },
+        }));
+
+        updatePlanTask(taskId, { deleted: true }).catch(() => {});
       },
     })
 );

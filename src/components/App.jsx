@@ -32,11 +32,13 @@ import HabitHistory from './HabitHistory.jsx';
 import AchievementsPanel from './AchievementsPanel.jsx';
 import InventoryPanel from './InventoryPanel.jsx';
 import DailyChallenge from './DailyChallenge.jsx';
+import PlanCard from './PlanCard.jsx';
 import Notifications from './Notifications.jsx';
 import Auth from './Auth.jsx';
 import StoriesPanel from './StoriesPanel.jsx';
 import JourneyRewardFlow from './JourneyRewardFlow.jsx';
 import DailyRewardFlow from './DailyRewardFlow.jsx';
+import DailyChoiceModal from './DailyChoiceModal.jsx';
 
 // Utilidades
 import { supabase } from '../lib/supabase.js';
@@ -82,7 +84,7 @@ export default function App() {
   const [storiesPanelOpen, setStoriesPanelOpen] = useState(false);
   
   /** Función para inicializar el store del juego */
-  const { init } = useGameStore();
+  const { init, dailyOptions, dailySelectionMade, currentDaily, selectDaily } = useGameStore();
   
   /** Efecto visual de rebote al cambiar pestañas (en móvil) */
   const [bounceOffset, setBounceOffset] = useState(0);
@@ -344,6 +346,7 @@ export default function App() {
                   </div>
                   <LevelProgress onOpenStories={() => setStoriesPanelOpen(true)} />
                   <DailyChallenge />
+                  <PlanCard />
                   <HabitList />
                 </div>
               </main>
@@ -414,6 +417,21 @@ export default function App() {
       
       {/* Flujo de recompensas diarias (aparece al completar daily) */}
       <DailyRewardFlow />
+
+      {/* Modal de elección de misión diaria (aparece al abrir app por primera vez en el día) */}
+      {(() => {
+        const shouldShowModal = dailyOptions && 
+                               dailyOptions.length > 0 && 
+                               !dailySelectionMade && 
+                               !currentDaily;
+        
+        return shouldShowModal && (
+          <DailyChoiceModal
+            options={dailyOptions}
+            onSelect={(dailyId) => selectDaily(dailyId)}
+          />
+        );
+      })()}
 
       {/* Panel de historias (se abre al hacer clic en LevelProgress) */}
       {storiesPanelOpen && (

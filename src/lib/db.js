@@ -144,8 +144,8 @@ export async function loadUserData(userId) {
     inventoryRes,
     effectsRes,
     achievementsRes,
-    dailyRes,
     storiesRes,
+    plansRes,
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('habits').select('*').eq('user_id', userId),
@@ -153,8 +153,8 @@ export async function loadUserData(userId) {
     supabase.from('user_inventory').select('*').eq('user_id', userId),
     supabase.from('active_effects').select('*').eq('user_id', userId),
     supabase.from('user_achievements').select('achievement_id, unlocked_at').eq('user_id', userId),
-    supabase.from('user_daily_progress').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(1),
     supabase.from('user_stories').select('journey_id, story_id, unlocked_at').eq('user_id', userId).order('journey_id', { ascending: true }),
+    supabase.from('user_plans').select('*').eq('user_id', userId),
   ]);
 
   // Si el perfil no existe → usuario nuevo, sin datos en BD
@@ -184,21 +184,48 @@ export async function loadUserData(userId) {
     unlockedAt: row.unlocked_at,
   }));
 
-  // Daily challenge
-  let currentDaily = null;
-  let lastDailyDate = null;
-  const dailyRow = dailyRes.data?.[0];
-  if (dailyRow) {
-    lastDailyDate = dailyRow.date;
-    currentDaily = {
-      ...(dailyRow.daily_data ?? {}),
-      progress: {
-        current: dailyRow.progress_current,
-        target: dailyRow.progress_target,
-        completed: dailyRow.completed,
-      },
-      completed: dailyRow.completed,
-    };
+  // Daily challenge - ahora se maneja completamente en _checkAndGenerateDaily
+  // Solo retornamos valores null para mantener la compatibilidad
+  const currentDaily = null;
+  const dailyOptions = null;
+  const dailySelectionMade = false;
+  const lastDailyDate = null;
+
+  // Plans - load tasks for each plan
+  const plans = {};
+  if (plansRes.data && plansRes.data.length > 0) {
+    const planIds = plansRes.data.map(p => p.id);
+    const { data: tasksData } = await supabase
+      .from('plan_tasks')
+      .select('*')
+      .in('plan_id', planIds);
+
+    const tasksByPlanId = {};
+    if (tasksData) {
+      for (const task of tasksData) {
+        if (!tasksByPlanId[task.plan_id]) {
+          tasksByPlanId[task.plan_id] = [];
+        }
+        tasksByPlanId[task.plan_id].push({
+          id: task.id,
+          name: task.name,
+          durationMinutes: task.duration_minutes,
+          completed: task.completed,
+          completedAt: task.completed_at,
+          deleted: task.deleted ?? false,
+        });
+      }
+    }
+
+    for (const plan of plansRes.data) {
+      plans[plan.date] = {
+        id: plan.id,
+        date: plan.date,
+        name: plan.name,
+        tripleApplied: plan.triple_bonus_applied ?? false,
+        tasks: tasksByPlanId[plan.id] ?? [],
+      };
+    }
   }
 
   return {
@@ -214,7 +241,10 @@ export async function loadUserData(userId) {
     unlockedAchievements,
     unlockedStories,
     currentDaily,
+    dailyOptions,
+    dailySelectionMade,
     lastDailyDate,
+    plans,
   };
 }
 
@@ -502,6 +532,53 @@ export async function saveDaily(userId, currentDaily, lastDailyDate) {
   if (error) console.error('[db] saveDaily:', error.message);
 }
 
+/**
+ * Verifica si existe una misión diaria para hoy y la retorna.
+ * Si no existe, retorna null para indicar que se debe mostrar el modal de selección.
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {string} today - Fecha de hoy en formato 'YYYY-MM-DD'
+ * @returns {Object|null} - Objeto con datos de la misión diaria o null
+ */
+export async function checkDailyForToday(userId, today) {
+  const { data, error } = await supabase
+    .from('user_daily_progress')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No se encontró registro para hoy -> no hay misión seleccionada
+      return null;
+    }
+    console.error('[db] checkDailyForToday:', error.message);
+    return null;
+  }
+
+  if (!data || !data.daily_selection_made || !data.daily_id) {
+    // Existe registro pero no se ha hecho selección o no hay daily_id
+    return null;
+  }
+
+  // Hay una misión seleccionada para hoy, reconstruir el objeto
+  return {
+    currentDaily: {
+      ...(data.daily_data ?? {}),
+      id: data.daily_id,
+      progress: {
+        current: data.progress_current,
+        target: data.progress_target,
+        completed: data.completed,
+      },
+      completed: data.completed,
+    },
+    dailySelectionMade: true,
+    lastDailyDate: data.date,
+  };
+}
+
 // ════════════════════════════════════════════════════════════════════════
 // HISTORIAS DE VIAJE (STORIES)
 // ════════════════════════════════════════════════════════════════════════
@@ -556,6 +633,229 @@ export async function loadUserStories(userId) {
     storyId: row.story_id,
     unlockedAt: row.unlocked_at,
   }));
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// PLANES (PLANS)
+// ════════════════════════════════════════════════════════════════════════
+
+/**
+ * Carga todos los planes del usuario.
+ * Devuelve un objeto indexado por fecha: { 'YYYY-MM-DD': { id, date, name, tasks, tripleApplied } }
+ * 
+ * @param {string} userId - ID del usuario
+ * @returns {Object} Planes indexados por fecha
+ */
+export async function loadUserPlans(userId) {
+  const { data: plansData, error: plansError } = await supabase
+    .from('user_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false });
+
+  if (plansError) {
+    console.error('[db] loadUserPlans:', plansError.message);
+    return {};
+  }
+
+  if (!plansData || plansData.length === 0) {
+    return {};
+  }
+
+  // Cargar tareas para cada plan
+  const planIds = plansData.map(p => p.id);
+  const { data: tasksData, error: tasksError } = await supabase
+    .from('plan_tasks')
+    .select('*')
+    .in('plan_id', planIds)
+    .order('created_at', { ascending: true });
+
+  if (tasksError) {
+    console.error('[db] loadUserPlans tasks:', tasksError.message);
+  }
+
+  const tasksByPlanId = {};
+  if (tasksData) {
+    for (const task of tasksData) {
+      if (!tasksByPlanId[task.plan_id]) {
+        tasksByPlanId[task.plan_id] = [];
+      }
+      tasksByPlanId[task.plan_id].push({
+        id: task.id,
+        name: task.name,
+        durationMinutes: task.duration_minutes,
+        completed: task.completed,
+        completedAt: task.completed_at,
+        deleted: task.deleted ?? false,
+      });
+    }
+  }
+
+  const plans = {};
+  for (const plan of plansData) {
+    plans[plan.date] = {
+      id: plan.id,
+      date: plan.date,
+      name: plan.name,
+      tripleApplied: plan.triple_bonus_applied ?? false,
+      tasks: tasksByPlanId[plan.id] ?? [],
+    };
+  }
+
+  return plans;
+}
+
+/**
+ * Carga un plan específico para una fecha.
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {string} date - Fecha en formato YYYY-MM-DD
+ * @returns {Object|null} Plan o null si no existe
+ */
+export async function loadPlanByDate(userId, date) {
+  const { data, error } = await supabase
+    .from('user_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // No found
+    console.error('[db] loadPlanByDate:', error.message);
+    return null;
+  }
+
+  // Cargar tareas
+  const { data: tasksData } = await supabase
+    .from('plan_tasks')
+    .select('*')
+    .eq('plan_id', data.id)
+    .order('created_at', { ascending: true });
+
+  return {
+    id: data.id,
+    date: data.date,
+    name: data.name,
+    tripleApplied: data.triple_bonus_applied ?? false,
+    tasks: (tasksData ?? []).map(task => ({
+      id: task.id,
+      name: task.name,
+      durationMinutes: task.duration_minutes,
+      completed: task.completed,
+      completedAt: task.completed_at,
+      deleted: task.deleted ?? false,
+    })),
+  };
+}
+
+/**
+ * Guarda o actualiza un plan completo (plan + tareas).
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Object} plan - Objeto plan con name, date, tasks
+ * @param {string} existingPlanId - ID del plan existente si es update (opcional)
+ * @returns {Object} Plan guardado con ID
+ */
+export async function savePlan(userId, plan, existingPlanId = null) {
+  // 1. Crear o actualizar el plan
+  const planData = {
+    user_id: userId,
+    date: plan.date,
+    name: plan.name,
+    triple_bonus_applied: plan.tripleApplied ?? false,
+  };
+
+  let planId = existingPlanId;
+
+  if (existingPlanId) {
+    const { error } = await supabase
+      .from('user_plans')
+      .update(planData)
+      .eq('id', existingPlanId);
+    if (error) console.error('[db] savePlan update:', error.message);
+  } else {
+    const { data, error } = await supabase
+      .from('user_plans')
+      .insert(planData)
+      .select('id')
+      .single();
+    if (error) {
+      console.error('[db] savePlan insert:', error.message);
+      return null;
+    }
+    planId = data.id;
+  }
+
+  // 2. Si hay ID existente, eliminar tareas anteriores y recrear
+  if (existingPlanId) {
+    await supabase.from('plan_tasks').delete().eq('plan_id', existingPlanId);
+  }
+
+  // 3. Insertar tareas
+  if (plan.tasks && plan.tasks.length > 0) {
+    const taskRows = plan.tasks.map(task => ({
+      plan_id: planId,
+      name: task.name,
+      duration_minutes: task.durationMinutes,
+      completed: task.completed ?? false,
+      completed_at: task.completedAt ?? null,
+      deleted: task.deleted ?? false,
+    }));
+
+    const { error } = await supabase.from('plan_tasks').insert(taskRows);
+    if (error) console.error('[db] savePlan tasks:', error.message);
+  }
+
+  return { id: planId, ...plan };
+}
+
+/**
+ * Actualiza una tarea específica del plan.
+ * 
+ * @param {string} taskId - ID de la tarea
+ * @param {Object} updates - Campos a actualizar
+ */
+export async function updatePlanTask(taskId, updates) {
+  const updateData = {};
+  if (updates.completed !== undefined) updateData.completed = updates.completed;
+  if (updates.completedAt !== undefined) updateData.completed_at = updates.completedAt;
+  if (updates.deleted !== undefined) updateData.deleted = updates.deleted;
+
+  const { error } = await supabase
+    .from('plan_tasks')
+    .update(updateData)
+    .eq('id', taskId);
+
+  if (error) console.error('[db] updatePlanTask:', error.message);
+}
+
+/**
+ * Marca el bonus triple como aplicado en un plan.
+ * 
+ * @param {string} planId - ID del plan
+ */
+export async function applyTripleBonus(planId) {
+  const { error } = await supabase
+    .from('user_plans')
+    .update({ triple_bonus_applied: true })
+    .eq('id', planId);
+
+  if (error) console.error('[db] applyTripleBonus:', error.message);
+}
+
+/**
+ * Elimina un plan y todas sus tareas.
+ * 
+ * @param {string} planId - ID del plan a eliminar
+ */
+export async function deletePlan(planId) {
+  const { error } = await supabase
+    .from('user_plans')
+    .delete()
+    .eq('id', planId);
+
+  if (error) console.error('[db] deletePlan:', error.message);
 }
 
 // ── FIN DEL ARCHIVO ────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
+import CreatePlanModal from './CreatePlanModal.jsx';
 import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor } from '../utils/gameLogic.js';
 
 export default function HabitList() {
@@ -29,6 +30,7 @@ export default function HabitList() {
   const completeHabitOvertime = useGameStore(s => s.completeHabitOvertime);
 
   const [showModal, setShowModal] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingHabit, setEditingHabit] = useState(null);
   const [selectedHabit, setSelectedHabit] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -108,10 +110,15 @@ export default function HabitList() {
 
   return (
     <div>
-      {/* New Habit button */}
-      <button onClick={() => setShowModal(true)} className="block mx-auto mt-2 mb-5 btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-3 sm:py-2 text-xs sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
-        ✚ NUEVO HÁBITO
-      </button>
+      {/* New buttons row */}
+      <div className="flex justify-center gap-2 mt-2 mb-5">
+        <button onClick={() => setShowModal(true)} className="btn-pixel-cyan text-white border-quest-cyan bg-quest-bg/20 hover:bg-quest-cyan px-4 py-3 sm:py-2 text-xs sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
+          ✚ HÁBITO
+        </button>
+        <button onClick={() => setShowPlanModal(true)} className="btn-pixel-gold text-white border-quest-gold bg-quest-bg/20 hover:bg-quest-gold px-4 py-3 sm:py-2 text-xs sm:text-[8px] font-pixel border-2 shadow-pixel active:translate-y-0.5 transition-all">
+          📋 PLAN
+        </button>
+      </div>
       {/* Today header */}
       <div className="mb-4">
         <h2 className="text-[10px] sm:text-xs font-pixel text-quest-cyan uppercase tracking-wider mb-2">📋 Hábitos de Hoy</h2>
@@ -180,6 +187,8 @@ export default function HabitList() {
 
 
       {showModal && <AddHabitModal onClose={() => setShowModal(false)} />}
+
+      {showPlanModal && <CreatePlanModal onClose={() => setShowPlanModal(false)} />}
 
       {selectedHabit && createPortal(
         <div
