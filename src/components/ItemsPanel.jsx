@@ -1,8 +1,30 @@
+/**
+ * ItemsPanel - Panel de visualización de objetos (legacy)
+ * 
+ * Este es un componente más simple de visualización de inventario
+ * comparado con InventoryPanel. Muestra:
+ * - Efectos activos actualmente
+ * - Objetos poseídos con cantidad
+ * - Catálogo completo de objetos
+ * 
+ * NOTA: Este componente parece ser una versión anterior.
+ * Se recomienda usar InventoryPanel para funcionalidad completa.
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.inventory - Objeto con cantidades por itemId
+ * @param {Array} props.activeEffects - Array de efectos activos
+ * @param {Function} props.onUseItem - Función para usar un objeto
+ * @returns {JSX.Element} Panel de objetos
+ */
 import { ITEMS, RARITY_COLORS, RARITY_BORDERS, RARITY_LABELS } from '../lib/items.js';
 
 export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
+  // Filtra solo los objetos con cantidad > 0
   const owned = Object.entries(inventory).filter(([,q]) => q > 0).map(([id,qty]) => ({ ...ITEMS[id], qty })).filter(Boolean);
 
+  // Calcula el tiempo restante de un efecto
+  // Convierte milisegundos a horas o días
   const timeLeft = (expiresAt) => {
     const ms = new Date(expiresAt) - new Date();
     const h = Math.floor(ms / 3600000);

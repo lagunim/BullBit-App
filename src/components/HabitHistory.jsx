@@ -1,9 +1,29 @@
+/**
+ * HabitHistory - Componente que muestra el historial de hábitos
+ * 
+ * Proporciona una vista tabular de los últimos 7 días de hábitos,
+ * permitiendo al usuario ver:
+ * - Estado de cada hábito (completado, parcial, fallado, none)
+ * - Tasa de éxito y mejor racha
+ * - Opciones para editar o borrar hábitos desde el historial
+ * 
+ * @component
+ * @returns {JSX.Element} Panel de historial con tabla y estadísticas
+ */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { getDateKey } from '../utils/gameLogic.js';
 import EditHabitModal from './EditHabitModal.jsx';
 
+/**
+ * Definición de estilos para cada tipo de estado de hábito
+ * - completed: Verde - Hábito completado completamente
+ * - over: Dorado - Completado con tiempo extra
+ * - partial: Azul - Completado parcialmente
+ * - failed: Rojo - Hábito fallado
+ * - none: Gris - Sin datos (vacío)
+ */
 const STATUS_STYLE = {
   completed: { bg: 'bg-[#003322]', border: 'border-quest-green', symbol: '✔', text: 'text-quest-green' },
   // Más tiempo: dorado (tick “especial”)
@@ -31,6 +51,8 @@ export default function HabitHistory() {
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
+  // Calcula la racha máxima de un hábito específico
+  // Recorre todo el historial y cuenta las rachas consecutivas
   function getMaxStreak(habitId) {
     const sortedDates = Object.keys(history).sort();
     let maxStreak = 0;
@@ -50,6 +72,8 @@ export default function HabitHistory() {
     return maxStreak;
   }
 
+  // Obtiene la fecha de creación del hábito
+  // Si no existe el campo createdAt, infiere la primera fecha del historial
   function getCreatedKey(habit) {
     const direct = (habit.createdAt || '').slice(0, 10);
     if (direct) return direct;
@@ -68,6 +92,8 @@ export default function HabitHistory() {
     return firstKey;
   }
 
+  // Deriva el estado de un hábito en una fecha específica
+  // Maneja casos especiales: antes de creación, futuro, hábitos semanales
   const deriveStatus = (date, habit) => {
     const habitId = habit.id;
     const rawStatus = history[date]?.[habitId] ?? 'none';

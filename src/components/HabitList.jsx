@@ -1,3 +1,16 @@
+/**
+ * HabitList - Componente principal que gestiona la lista de hábitos del día
+ * 
+ * Este componente es el núcleo de la vista de hábitos. Se encarga de:
+ * - Mostrar los hábitos programados para el día actual
+ * - Permitir crear nuevos hábitos mediante AddHabitModal
+ * - Permitir editar/borrar hábitos existentes
+ * - Completar hábitos de forma parcial o total
+ * - Mostrar el progreso diario con una barra de progreso
+ * 
+ * @component
+ * @returns {JSX.Element} Lista de hábitos diarios con opciones de gestión
+ */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
@@ -23,13 +36,17 @@ export default function HabitList() {
   const [customError, setCustomError] = useState('');
 
   const today = getTodayKey();
+  // Obtiene los datos del historial para el día de hoy
   const todayData = history[today] ?? {};
+  // Función auxiliar para verificar si un estado representa completado
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
   // Filtrar solo hábitos que corresponden al día actual
+  // Utiliza la lógica de periodicidad para determinar si el hábito debe mostrarse hoy
   const todayHabits = habits.filter(habit => isHabitDueOnDate(habit, today, history));
 
+  // Calcula si se ha alcanzado el objetivo semanal para hábitos de tipo "weekly_times"
   const isWeeklyTargetMet = (habit) => {
     if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
       const completions = getWeekCompletions(habit.id, history, today);
@@ -38,6 +55,7 @@ export default function HabitList() {
     return false;
   };
 
+  // Cuenta hábitos completados y pendientes para el día de hoy
   const completedToday = todayHabits.filter(h => isCompletedStatus(todayData[h.id]) || isWeeklyTargetMet(h)).length;
   const pendingToday = todayHabits.filter(h => !todayData[h.id] && !isWeeklyTargetMet(h)).length;
 
@@ -51,19 +69,24 @@ export default function HabitList() {
     setCustomError('');
   }
 
+  // Función para completar el hábito seleccionado
+  // Maneja tres casos: completado simple, parcial, o con tiempo extra
   function handleComplete() {
     if (!selectedHabit) return;
     const trimmed = String(customMinutes).trim();
+    // Si no hay tiempo personalizado, completar normalmente
     if (!trimmed) {
       completeHabit(selectedHabit.id);
       closeSelected();
       return;
     }
     const minutes = Number(trimmed);
+    // Validar que sea un número válido y positivo
     if (!Number.isFinite(minutes) || minutes <= 0) {
       setCustomError('Introduce un número válido.');
       return;
     }
+    // Determinar si es parcial (menos tiempo) o con extra (más tiempo)
     if (minutes < selectedHabit.minutes) {
       completeHabitPartial(selectedHabit.id, minutes);
     } else {

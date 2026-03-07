@@ -1,3 +1,18 @@
+/**
+ * AddHabitModal - Modal para crear nuevos hábitos
+ * 
+ * Formulario modal que permite al usuario crear un nuevo hábito
+ * con las siguientes opciones:
+ * - Icono/temática del hábito (seleccionable de una lista predefinida)
+ * - Nombre del hábito (obligatorio)
+ * - Duración en minutos (para calcular puntos base)
+ * - Periodicidad: diaria, semanal, personalizada
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @returns {JSX.Element} Modal con formulario de creación de hábito
+ */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
@@ -7,7 +22,10 @@ import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 
 export default function AddHabitModal({ onClose }) {
   const addHabit = useGameStore(s => s.addHabit);
+  // Obtiene el tema por defecto para el emoji inicial
   const defaultTheme = HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME] ?? HABIT_THEMES[0];
+  
+  // Estado del formulario con valores iniciales
   const [form, setForm] = useState({
     name: '',
     minutes: '',
@@ -21,16 +39,21 @@ export default function AddHabitModal({ onClose }) {
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
+  // Valida y crea el nuevo hábito
   function handleSubmit() {
+    // Validar nombre obligatorio
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
+    // Validar duración mínima
     const mins = form.minutes === '' ? 20 : Number(form.minutes);
     if (mins < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
+    
     const habitPayload = {
       ...form,
       minutes: mins,
       weeklyTimesTarget: null,
     };
 
+    // Manejar periodicidad personalizada semanal
     if (form.periodicity === 'custom' && form.customWeeklyTimes) {
       const target = Number(form.customWeeklyTimes);
       if (!Number.isFinite(target) || target < 1) {
@@ -117,6 +140,7 @@ export default function AddHabitModal({ onClose }) {
         </div>
 
         {/* Periodicity */}
+        {/* Selector de periodicidad: diaria, semanal, o personalizada */}
         <div>
           <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">PERIODICIDAD</label>
           <div className="flex gap-2">
@@ -134,6 +158,7 @@ export default function AddHabitModal({ onClose }) {
                 <option key={val} value={val}>{label}</option>
               ))}
             </select>
+            {/* Botón para abrir modal de periodicidad personalizada */}
             {form.periodicity === 'custom' && (
               <button
                 onClick={() => setShowCustomModal(true)}

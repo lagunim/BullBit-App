@@ -1,4 +1,30 @@
+/**
+ * ============================================
+ * COMPONENTE PRINCIPAL - APP.JSX
+ * ============================================
+ * Este es el componente raíz de toda la aplicación.
+ * Gestiona:
+ * - Autenticación de usuarios
+ * - Navegación entre pestañas
+ * - Carga inicial de datos
+ * - Diseño responsivo (móvil vs escritorio)
+ * - Sistema de notificaciones globales
+ * - Flujos de recompensas (journey/daily)
+ * 
+ * ESTRUCTURA DE PESTAÑAS:
+ * 1. INICIO: Hábitos del día, nivel, retos diarios
+ * 2. HISTORIAL: Registro de hábitos completados
+ * 3. ITEMS: Inventario del jugador
+ * 4. LOGROS: Logros desbloqueados
+ */
+
+// ════════════════════════════════════════════════════════════════════════
+// IMPORTS
+// ════════════════════════════════════════════════════════════════════════
+
 import { useState, useEffect, useRef } from 'react';
+
+// Componentes hijos
 import Header from './Header.jsx';
 import LevelProgress from './LevelProgress.jsx';
 import HabitList from './HabitList.jsx';
@@ -11,9 +37,22 @@ import Auth from './Auth.jsx';
 import StoriesPanel from './StoriesPanel.jsx';
 import JourneyRewardFlow from './JourneyRewardFlow.jsx';
 import DailyRewardFlow from './DailyRewardFlow.jsx';
+
+// Utilidades
 import { supabase } from '../lib/supabase.js';
 import useGameStore from '../store/gameStore.js';
 
+// ════════════════════════════════════════════════════════════════════════
+// DEFINICIÓN DE PESTAÑAS
+// ════════════════════════════════════════════════════════════════════════
+
+/**
+ * Definición de las pestañas de navegación.
+ * Cada pestaña tiene:
+ * - id: Identificador único
+ * - label: Texto a mostrar
+ * - icon: Emoji representativo
+ */
 const TABS = [
   { id: 'home', label: 'INICIO', icon: '🏠' },
   { id: 'history', label: 'HISTORIAL', icon: '📅' },
@@ -21,17 +60,51 @@ const TABS = [
   { id: 'achieve', label: 'LOGROS', icon: '🏆' },
 ];
 
+/**
+ * Componente principal de la aplicación.
+ * Maneja el ciclo de vida completo: carga, autenticación, navegación.
+ */
 export default function App() {
+  // ════════════════════════════════════════════════════════════════════════
+  // ESTADO DE LA APLICACIÓN
+  // ════════════════════════════════════════════════════════════════════════
+
+  /** Sesión actual del usuario (null si no está autenticado) */
   const [session, setSession] = useState(null);
+  
+  /** Estado de carga inicial */
   const [loading, setLoading] = useState(true);
+  
+  /** Pestaña activa actualmente */
   const [tab, setTab] = useState('home');
+  
+  /** Control del panel de historias */
   const [storiesPanelOpen, setStoriesPanelOpen] = useState(false);
+  
+  /** Función para inicializar el store del juego */
   const { init } = useGameStore();
+  
+  /** Efecto visual de rebote al cambiar pestañas (en móvil) */
   const [bounceOffset, setBounceOffset] = useState(0);
+  
+  /** Detecta si estamos en vista móvil (< 768px) */
   const [isMobileView, setIsMobileView] = useState(false);
+  
+  /** Referencias para manejar gestos táctiles */
   const touchStartRef = useRef({ x: 0, y: 0 });
+  
+  /** Timer para el efecto de rebote */
   const bounceTimer = useRef(null);
 
+  // ════════════════════════════════════════════════════════════════════════
+  // EFECTOS (LIFECYCLE)
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Efecto: Detectar tamaño de pantalla
+   * Se ejecuta al montar y cuando cambia el tamaño de la ventana.
+   * Usa matchMedia para detectar viewports móviles.
+   */
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const matcher = window.matchMedia('(max-width: 768px)');
@@ -41,6 +114,12 @@ export default function App() {
     return () => matcher.removeEventListener('change', handler);
   }, []);
 
+  /**
+   * Effect: Verificar autenticación al iniciar
+   * 1. Intenta obtener la sesión actual de Supabase
+   * 2. Establece un timeout de 5 segundos por seguridad
+   * 3. Se suscribe a cambios de estado de autenticación
+   */
   useEffect(() => {
     const checkSession = async () => {
       const timeout = setTimeout(() => setLoading(false), 5000);
@@ -57,21 +136,31 @@ export default function App() {
 
     checkSession();
 
+    // Suscribirse a cambios de autenticación (login/logout)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => setSession(session));
 
+    // Limpiar suscripción al desmontar
     return () => {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
 
+  /**
+   * Effect: Inicializar store cuando hay sesión
+   * Cuando el usuario inicia sesión, cargamos sus datos.
+   */
   useEffect(() => {
     if (session) {
       init(session.user.id);
     }
   }, [session, init]);
 
+  /**
+   * Effect: Limpiar timer de rebote al desmontar
+   * Evita memory leaks con timeouts pendientes.
+   */
   useEffect(() => {
     return () => {
       if (bounceTimer.current) {
@@ -80,8 +169,23 @@ export default function App() {
     };
   }, []);
 
+  // ════════════════════════════════════════════════════════════════════════
+  // FUNCIONES DE NAVEGACIÓN
+  // ════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Índice de la pestaña actual en el array TABS.
+   * Se usa para calcular el desplazamiento horizontal.
+   */
   const currentIndex = Math.max(0, TABS.findIndex(t => t.id === tab));
 
+  /**
+   * Aplica un efecto de rebote visual.
+   * Se usa cuando el usuario intenta navegar más allá de los límites
+   * o cuando cambia de pestaña.
+   * 
+   * @param {number} direction - Dirección del rebote (-1 o 1)
+   */
   const applyBounce = (direction) => {
     if (bounceTimer.current) clearTimeout(bounceTimer.current);
     setBounceOffset(direction * 14);
@@ -91,18 +195,34 @@ export default function App() {
     }, 220);
   };
 
+  /**
+   * Maneja el inicio de un gesto táctil.
+   * Guarda las coordenadas iniciales del toque.
+   */
   const handleTouchStart = (event) => {
     const touch = event.touches?.[0];
     if (!touch) return;
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
+  /**
+   * Maneja el final de un gesto táctil.
+   * Determina si fue un swipe horizontal o vertical.
+   * 
+   * LÓGICA:
+   * 1. Si el movimiento es más vertical que horizontal → ignorar
+   * 2. Si el movimiento es menor a 60px → considerar como tap
+   * 3. Si es un swipe válido → cambiar de pestaña
+   * 4. Si estamos en el borde → aplicar rebote
+   */
   const handleTouchEnd = (event) => {
     const touch = event.changedTouches?.[0];
     if (!touch) return;
     const { x: startX, y: startY } = touchStartRef.current;
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
+    
+    // Movimiento más vertical que horizontal o muy pequeño
     if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 60) {
       if (Math.abs(dx) > 10) {
         applyBounce(dx < 0 ? -1 : 1);
@@ -110,12 +230,17 @@ export default function App() {
       return;
     }
 
+    // Determinar dirección del swipe
     const direction = dx < 0 ? 1 : -1;
     const targetIndex = Math.max(0, Math.min(TABS.length - 1, currentIndex + direction));
+    
+    // Si no hay cambio de pestaña, aplicar rebote
     if (targetIndex === currentIndex) {
       applyBounce(direction * -1);
       return;
     }
+    
+    // Limpiar timer y cambiar de pestaña
     if (bounceTimer.current) {
       clearTimeout(bounceTimer.current);
       bounceTimer.current = null;
@@ -124,6 +249,10 @@ export default function App() {
     setTab(TABS[targetIndex].id);
   };
 
+  /**
+   * Maneja el cambio de pestaña mediante botones.
+   * Limpia cualquier animación de rebote pendiente.
+   */
   const handleTabChange = (newTab) => {
     if (bounceTimer.current) {
       clearTimeout(bounceTimer.current);
@@ -133,8 +262,14 @@ export default function App() {
     setTab(newTab);
   };
 
+  // ════════════════════════════════════════════════════════════════════════
+  // RENDERIZADO CONDICIONAL
+  // ════════════════════════════════════════════════════════════════════════
+
+  /** Verifica si las variables de entorno de Supabase están configuradas */
   const isEnvMissing = !import.meta.env.PUBLIC_SUPABASE_URL || !import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+  // Pantalla de error si falta configuración
   if (isEnvMissing) {
     return (
       <div className="min-h-screen bg-quest-bg flex flex-col items-center justify-center font-pixel text-quest-red p-10 text-center gap-6">
@@ -155,6 +290,7 @@ export default function App() {
     );
   }
 
+  // Pantalla de carga inicial
   if (loading) {
     return (
       <div className="min-h-screen bg-quest-bg flex flex-col items-center justify-center font-pixel text-quest-gold gap-4">
@@ -172,24 +308,33 @@ export default function App() {
     );
   }
 
+  // Si no hay sesión, mostrar componente de autenticación
   if (!session) {
     return <Auth />;
   }
 
+  // Configurar handlers táctiles solo en vista móvil
   const touchHandlers = isMobileView
     ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd }
     : {};
 
+  // ════════════════════════════════════════════════════════════════════════
+  // RENDERIZADO PRINCIPAL
+  // ════════════════════════════════════════════════════════════════════════
+
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
+      {/* Header fijo en la parte superior */}
       <Header />
 
+      {/* Área de contenido principal con navegación horizontal */}
       <div className="flex-1 overflow-hidden relative">
         <div
           className="flex h-full transition-transform duration-300 ease-out"
           style={{ transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))` }}
           {...touchHandlers}
         >
+          {/* PESTAÑA 1: INICIO */}
           <section className="w-full flex-shrink-0">
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
@@ -205,6 +350,7 @@ export default function App() {
             </div>
           </section>
 
+          {/* PESTAÑA 2: HISTORIAL */}
           <section className="w-full flex-shrink-0">
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
@@ -215,6 +361,7 @@ export default function App() {
             </div>
           </section>
 
+          {/* PESTAÑA 3: ITEMS */}
           <section className="w-full flex-shrink-0">
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
@@ -225,6 +372,7 @@ export default function App() {
             </div>
           </section>
 
+          {/* PESTAÑA 4: LOGROS */}
           <section className="w-full flex-shrink-0">
             <div className="h-full overflow-y-auto">
               <main className="max-w-[900px] w-full mx-auto p-3 sm:px-4">
@@ -237,6 +385,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* Barra de navegación inferior */}
       <nav className="flex justify-around bg-quest-panel border-t-2 border-quest-border pb-[env(safe-area-inset-bottom)] shrink-0 z-[1000] shadow-[0_-4px_10px_rgba(0,0,0,0.5)]">
         {TABS.map(t => (
           <button
@@ -257,13 +406,16 @@ export default function App() {
         ))}
       </nav>
 
+      {/* Componentes overlays */}
       <Notifications />
 
-      {/* Global journey reward flow — mounts story scroll then item choice */}
+      {/* Flujo de recompensas de viaje (aparece al subir de nivel) */}
       <JourneyRewardFlow />
+      
+      {/* Flujo de recompensas diarias (aparece al completar daily) */}
       <DailyRewardFlow />
 
-      {/* Stories panel — opened by clicking the LevelProgress card */}
+      {/* Panel de historias (se abre al hacer clic en LevelProgress) */}
       {storiesPanelOpen && (
         <StoriesPanel onClose={() => setStoriesPanelOpen(false)} />
       )}

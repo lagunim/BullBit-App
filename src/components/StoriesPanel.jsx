@@ -1,3 +1,18 @@
+/**
+ * StoriesPanel - Panel de historias desbloqueadas
+ * 
+ * Muestra todas las historias que el jugador ha desbloqueado,
+ * organizadas por tipo (viajes o logros). Al seleccionar una,
+ * se abre el modal de lectura de historia.
+ * 
+ * Las historias se desbloquean al completar viajes (niveles)
+ * o al obtener ciertos logros especiales.
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Function} props.onClose - Función para cerrar el panel
+ * @returns {JSX.Element} Panel lateral con lista de historias
+ */
 import { useState, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { getStoryById } from '../data/stories.js';

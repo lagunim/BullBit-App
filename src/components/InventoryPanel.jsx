@@ -1,3 +1,17 @@
+/**
+ * InventoryPanel - Panel de inventario y objetos del jugador
+ * 
+ * Gestiona el inventario del jugador mostrando:
+ * - Efectos activos actualmente aplicados
+ * - Objetos poseídos con su cantidad
+ * - Catálogo completo de todos los objetos disponibles
+ * 
+ * Permite usar objetos que requieren seleccionar un hábito objetivo
+ * (como potenciadores de multiplicador específicos).
+ * 
+ * @component
+ * @returns {JSX.Element} Panel de inventario con objetos y efectos
+ */
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
@@ -21,18 +35,24 @@ export default function InventoryPanel() {
     const invB = inventory.find(i => i.itemId === b.id);
     const qtyA = invA?.qty ?? 0;
     const qtyB = invB?.qty ?? 0;
+    // Ordena: primero los que tienen cantidad > 0
     if (qtyA > 0 && qtyB === 0) return -1;
     if (qtyA === 0 && qtyB > 0) return 1;
     return 0;
   });
 
-  // Items that need a target habit (instant effects on habits)
+  // Items que requieren seleccionar un hábito como objetivo
+  // Son efectos instantáneos que se aplican a un hábito específico
   const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target'];
 
+  // Maneja el uso de un objeto del inventario
+  // Algunos objetos requieren seleccionar un hábito objetivo primero
   function handleUse(itemId) {
     const item = ITEMS[itemId];
+    // Si el efecto requiere un objetivo (hábito específico)
     if (habitTargetEffects.includes(item?.effectKey)) {
-      // For Piedra de Poder, any habit is eligible
+      // Para Piedra de Poder, cualquier hábito es elegible
+      // Para otros, solo hábitos con multiplicador < 3
       const eligible = item.effectKey === 'next_triple_target'
         ? habits
         : habits.filter(h => (h?.multiplier ?? 1) < 3);
@@ -44,6 +64,7 @@ export default function InventoryPanel() {
         pushNotification?.('item', message);
         return;
       }
+      // Abre el modal de selección de hábito
       setPendingTargetItem({
         itemId,
         name: item?.name ?? 'Objeto',
@@ -53,6 +74,7 @@ export default function InventoryPanel() {
       });
       return;
     }
+    // Uso directo del objeto
     useItem(itemId);
   }
 

@@ -1,3 +1,21 @@
+/**
+ * Navbar - Barra de navegación inferior de la aplicación
+ * 
+ * Navegación principal de la aplicación con 4 pestañas:
+ * - INICIO: Vista principal de hábitos del día
+ * - HISTORIAL: Registro de últimos 7 días
+ * - ITEMS: Inventario de objetos
+ * - LOGROS: Panel de logros
+ * 
+ * Estilo: Barra inferior fija con iconos y etiquetas,
+ * compatible con dispositivos móviles (safe-area-inset-bottom)
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string} props.activeTab - ID de la pestaña activa
+ * @param {Function} props.onTabChange - Función llamada al cambiar de pestaña
+ * @returns {JSX.Element} Barra de navegación inferior
+ */
 export default function Navbar({ activeTab, onTabChange }) {
   const tabs = [
     { id: 'home',      label: 'INICIO',    icon: '🏠' },

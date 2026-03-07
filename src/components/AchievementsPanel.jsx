@@ -1,3 +1,16 @@
+/**
+ * AchievementsPanel - Panel de logros y desbloqueos
+ * 
+ * Muestra todos los logros disponibles en el juego, indicando cuáles
+ * están desbloqueados y cuáles faltan por completar. Al hacer click
+ * en un logro desbloqueado con historia, se abre un modal para leerla.
+ * 
+ * Props:
+ * No recibe props directamente, obtiene los datos del store
+ * 
+ * @component
+ * @returns {JSX.Element} Panel grid con todos los logros
+ */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';

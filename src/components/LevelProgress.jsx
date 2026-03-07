@@ -1,3 +1,21 @@
+/**
+ * LevelProgress - Componente de progreso de nivel/viaje
+ * 
+ * Muestra información sobre el viaje actual del jugador:
+ * - Número de viaje (nivel) actual
+ * - Porcentaje de progreso hacia el siguiente viaje
+ * - Puntos restantes para el siguiente nivel
+ * - Puntos totales acumulados en la cuenta
+ * - Racha global actual
+ * - Cantidad de historias desbloqueadas
+ * 
+ * Es un botón interactivo que abre el panel de historias al hacer click.
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Function} props.onOpenStories - Función para abrir el panel de historias
+ * @returns {JSX.Element} Tarjeta de progreso de nivel
+ */
 import useGameStore from '../store/gameStore.js';
 import { getLevelInfo, getProgressColor } from '../utils/gameLogic.js';
 

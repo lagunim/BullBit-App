@@ -1,3 +1,22 @@
+/**
+ * StoryScrollModal - Modal estilo pergamino para leer historias
+ * 
+ * Modal decorativo que simula un pergamino antiguo para la lectura
+ * de historias desbloqueadas. Incluye animaciones de despliegue
+ * y estilos visuales temáticos (tinta, bordes dorados, textura).
+ * 
+ * Props:
+ * - story: Objeto con {id, title, content} de la historia
+ * - onClose: Función llamada al cerrar el modal
+ * - journeyNumber: (opcional) número de viaje a mostrar en el encabezado
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.story - Objeto de la historia a mostrar
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @param {number} props.journeyNumber - (opcional) Número del viaje
+ * @returns {JSX.Element|null} Modal de pergamino o null si no hay historia
+ */
 import { useEffect, useRef, useState } from 'react';
 
 /**

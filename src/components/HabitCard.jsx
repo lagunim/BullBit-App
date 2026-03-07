@@ -1,3 +1,18 @@
+/**
+ * HabitCard - Tarjeta individual que representa un hábito en la lista
+ * 
+ * Muestra la información de un hábito específico incluyendo:
+ * - Nombre y emoji del hábito
+ * - Multiplicador actual y efectos activos
+ * - Estado de completado/fallado/expirado
+ * - Progreso semanal para hábitos de tipo "weekly_times"
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.habit - Objeto con los datos del hábito
+ * @param {Function} props.onEdit - Función llamada al hacer click en la tarjeta
+ * @returns {JSX.Element} Tarjeta visual del hábito
+ */
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey, isHabitExpired, getWeekCompletions } from '../utils/gameLogic.js';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
@@ -7,14 +22,22 @@ export default function HabitCard({ habit, onEdit }) {
   const hasActiveEffect = useHasActiveMultiplierEffect();
 
   const today = getTodayKey();
+  // Obtiene el estado del hábito para el día de hoy desde el historial
   const todayStatus = history[today]?.[habit.id];
+  // Determina si el hábito está marcado como hecho (completo, parcial o extra)
   const isDone = todayStatus === 'completed' || todayStatus === 'partial' || todayStatus === 'over';
+  // Determina si el hábito está fallado
   const isFailed = todayStatus === 'failed';
+  // El hábito está "determinado" si tiene cualquier estado (hecho o fallado)
   const isDetermined = isDone || isFailed;
+  // Verifica si el hábito ha expirado (pasó la hora límite)
   const isExpired = isHabitExpired(habit, today, history);
 
+  // Verifica si es un hábito de tipo "veces por semana"
   const isWeeklyTimes = habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget;
+  // Obtiene las completaciones de la semana actual
   const weeklyCompletions = isWeeklyTimes ? getWeekCompletions(habit.id, history, today) : 0;
+  // Determina si se alcanzó el objetivo semanal
   const weeklyTargetMet = isWeeklyTimes && weeklyCompletions >= habit.weeklyTimesTarget;
   const isWeeklyDone = isWeeklyTimes && weeklyTargetMet;
 
@@ -25,11 +48,13 @@ export default function HabitCard({ habit, onEdit }) {
     : habit.multiplier >= 1.5 ? 'text-quest-green'
     : 'text-quest-text';
 
+  // Selecciona el color del borde según el estado del hábito
   const borderColorClass = isDone ? 'border-quest-green' 
     : isFailed ? 'border-quest-red' 
     : isExpired ? 'border-orange-500' 
     : 'border-quest-border';
   
+  // Selecciona el color de la sombra según el estado
   const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' 
     : isFailed ? 'shadow-[2px_2px_0_#440011]' 
     : isExpired ? 'shadow-[2px_2px_0_#ff8800]' 

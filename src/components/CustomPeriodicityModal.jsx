@@ -1,3 +1,20 @@
+/**
+ * CustomPeriodicityModal - Modal para configurar periodicidad personalizada
+ * 
+ * Permite configurar tres tipos de periodicidad personalizada:
+ * - Días específicos: ej. "1,3,5" para lunes, miércoles, viernes
+ * - Intervalo: cada cuántos días se repite (ej. cada 2 días)
+ * - Veces por semana: número de veces a completar por semana
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string} props.initialDays - Días seleccionados inicialmente
+ * @param {string} props.initialInterval - Intervalo inicial
+ * @param {string} props.initialWeeklyTimes - Veces por semana inicial
+ * @param {Function} props.onSave - Función llamada con los datos guardados
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @returns {JSX.Element} Modal de configuración de periodicidad
+ */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 

@@ -1,3 +1,18 @@
+/**
+ * Auth - Componente de autenticación de usuarios
+ * 
+ * Maneja el inicio de sesión y registro de usuarios mediante Supabase.
+ * Proporciona un formulario convalidado para email y contraseña.
+ * 
+ * Funcionalidades:
+ * - Inicio de sesión con email/contraseña
+ * - Registro de nuevos usuarios
+ * - Validación de errores de autenticación
+ * - Interfaz con temática de juego retro
+ * 
+ * @component
+ * @returns {JSX.Element} Formulario de login/register
+ */
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 
@@ -8,16 +23,20 @@ export default function Auth() {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [error, setError] = useState(null);
 
+  // Maneja el envío del formulario de autenticación
+  // Soporta tanto login como registro según el modo actual
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      // Modo inicio de sesión
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       } else {
+        // Modo registro de nuevo usuario
         const { error } = await supabase.auth.signUp({
           email,
           password,

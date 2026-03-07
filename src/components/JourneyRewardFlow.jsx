@@ -1,3 +1,18 @@
+/**
+ * JourneyRewardFlow - Orquestador de recompensas de viaje/nivel
+ * 
+ * Este componente globale gestiona la secuencia de recompensas
+ * al completar un viaje (subir de nivel):
+ * 
+ * Paso 1: Muestra el modal de historia (si hay una nueva historia)
+ * Paso 2: Al cerrar la historia, otorga automáticamente los objetos
+ * 
+ * Lee `pendingJourneyReward` del store y llama a `claimJourneyItems()`
+ * cuando el usuario cierra el modal de historia.
+ * 
+ * @component
+ * @returns {JSX.Element|null} Modal de historia o null si no hay recompensa pendiente
+ */
 import { useState, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
 import StoryScrollModal from './StoryScrollModal.jsx';

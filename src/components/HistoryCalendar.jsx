@@ -1,5 +1,26 @@
+/**
+ * HistoryCalendar - Visualización de historial en formato calendario
+ * 
+ * Muestra un calendario de contribución (similar a GitHub) con los
+ * últimos 90 días de actividad de cada hábito. Incluye:
+ * - Gráfico de matriz (13 semanas x 7 días)
+ * - Estadísticas: tasa de éxito, racha actual, total completado
+ * - Indicadores visuales: completado (verde), fallado (gris), hoy (dorado)
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Array} props.habits - Array de hábitos
+ * @param {Object} props.completions - Objeto con completaciones por fecha
+ * @returns {JSX.Element|null} Calendario de historial o mensaje si no hay hábitos
+ */
 import { formatDate } from '../lib/gameEngine.js';
 
+/**
+ * Genera un array con los últimos 90 días formateados
+ * Utilizado para el calendario de contribuciones
+ * 
+ * @returns {Array} Array de 90 fechas formateadas (más antigua a más reciente)
+ */
 function getLast90() {
   return Array.from({ length: 90 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (89 - i));

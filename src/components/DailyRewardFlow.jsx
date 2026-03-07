@@ -1,22 +1,51 @@
+/**
+ * DailyRewardFlow - Flujo de recompensas de misión diaria
+ * 
+ * Gestiona la entrega de recompensas al completar una misión diaria.
+ * Muestra un modal de selección si hay múltiples opciones de objetos,
+ * o entrega automáticamente si solo hay una opción.
+ * 
+ * Componentes hijos:
+ * - DailyItemChoiceModal: Modal de selección de objeto (si hay choices)
+ * 
+ * @component
+ * @returns {JSX.Element|null} Modal de recompensa diaria o null si no hay recompensa pendiente
+ */
 import { useEffect, useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS } from '../data/items.js';
 
+/**
+ * DailyItemChoiceModal - Modal de selección de objeto para recompensas diarias
+ * 
+ * Cuando una misión diaria tiene múltiples opciones de objetos,
+ * este modal permite al jugador elegir cuál obtener.
+ * 
+ * @component
+ * @param {Object} props
+ * @param {string} props.dailyName - Nombre de la misión diaria
+ * @param {Array} props.itemChoices - Array de IDs de objetos entre los que elegir
+ * @param {Function} props.onClaim - Función llamada con el objeto seleccionado
+ * @returns {JSX.Element} Modal de selección de objeto
+ */
 function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
   const [visible, setVisible] = useState(false);
   const [chosen, setChosen] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
+  // Animación de entrada al montar el componente
   useEffect(() => {
     const frame = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  // Selecciona un objeto
   function handlePick(itemId) {
     if (confirming) return;
     setChosen(itemId);
   }
 
+  // Confirma la selección y cierra el modal
   function handleConfirm() {
     if (!chosen || confirming) return;
     setConfirming(true);
@@ -26,6 +55,7 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
     }, 260);
   }
 
+  // Obtiene los objetos del catálogo
   const items = itemChoices.map(id => ITEMS[id]).filter(Boolean);
 
   return (

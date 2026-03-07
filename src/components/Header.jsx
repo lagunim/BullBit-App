@@ -1,14 +1,25 @@
+/**
+ * Header - Componente de encabezado principal de la aplicación
+ * 
+ * Muestra el logo, puntos actuales, nivel de viaje y efectos activos.
+ * Se mantiene fijo en la parte superior de la pantalla (sticky).
+ * 
+ * @component
+ * @returns {JSX.Element} Barra de navegación superior con información del jugador
+ */
 import { useState } from "react";
 import useGameStore from "../store/gameStore.js";
 import { supabase } from "../lib/supabase.js";
 import ActiveEffectModal from "./ActiveEffectModal.jsx";
 
 export default function Header() {
+  // Obtiene datos del store global del juego
   const level = useGameStore((s) => s.level ?? 0);
   const points = useGameStore((s) => s.points ?? 0);
   const rawEffects = useGameStore((s) => s.activeEffects ?? []);
   const [selectedEffect, setSelectedEffect] = useState(null);
 
+  // Filtra los efectos activos (no expirados)
   const now = new Date();
   const activeEffects = rawEffects.filter(
     (e) => !e.expiresAt || new Date(e.expiresAt) > now,

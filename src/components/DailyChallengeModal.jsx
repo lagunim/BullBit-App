@@ -1,3 +1,19 @@
+/**
+ * DailyChallengeModal - Modal detallado de misión diaria
+ * 
+ * Muestra información completa sobre la misión diaria seleccionada:
+ * - Nombre, icono y descripción
+ * - Dificultad (easy/medium/hard)
+ * - Progreso actual vs objetivo
+ * - Estado de completitud
+ * - Recompensas disponibles (puntos y objetos)
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.daily - Objeto con los datos de la misión diaria
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @returns {JSX.Element|null} Modal de misión diaria o null si no hay misión
+ */
 import { createPortal } from 'react-dom';
 import { ITEMS } from '../data/items.js';
 import { getProgressColor } from '../utils/gameLogic.js';

@@ -1,12 +1,40 @@
+/**
+ * Notifications - Componente de notificaciones emergentes
+ * 
+ * Muestra notificaciones en tiempo real sobre eventos del juego:
+ * - Completar hábitos (complete)
+ * - Fallar hábitos (fail)
+ * - Desbloquear logros (achievement)
+ * - Subir de nivel (level)
+ * - Obtener objetos (item)
+ * - Completar diarias (daily)
+ * 
+ * Las notificaciones aparecen en la parte inferior derecha
+ * y se pueden descartar haciendo click en ellas.
+ * 
+ * @component
+ * @returns {JSX.Element} Contenedor de notificaciones flotantes
+ */
 import useGameStore from '../store/gameStore.js';
 
+/**
+ * Definición de estilos para cada tipo de notificación
+ * Cada tipo tiene un color de borde, color de texto e icono distintivo
+ */
 const TYPE_STYLES = {
+  // Hábito completado exitosamente
   complete:    { border: 'border-quest-green', text: 'text-quest-green', icon: '✔' },
+  // Hábito fallado
   fail:        { border: 'border-quest-red', text: 'text-quest-red', icon: '✖' },
+  // Fallo automático (por no completar a tiempo)
   auto_fail:   { border: 'border-orange-500', text: 'text-orange-500', icon: '⚠️' },
+  // Logro desbloqueado
   achievement: { border: 'border-quest-gold', text: 'text-quest-gold', icon: '★' },
+  // Subida de nivel
   level:       { border: 'border-quest-purple', text: 'text-quest-purple', icon: '▲' },
+  // Objeto obtenido o usado
   item:        { border: 'border-quest-cyan', text: 'text-quest-cyan', icon: '◆' },
+  // Misión diaria completada
   daily:       { border: 'border-quest-gold', text: 'text-quest-gold', icon: '🏆' },
 };
 

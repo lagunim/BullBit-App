@@ -1,3 +1,15 @@
+/**
+ * EditHabitModal - Modal para editar hábitos existentes
+ * 
+ * Similar a AddHabitModal pero prellenado con los datos del hábito
+ * seleccionado. Permite modificar todos los atributos del hábito.
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.habit - Objeto del hábito a editar
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @returns {JSX.Element} Modal con formulario de edición de hábito
+ */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
@@ -7,7 +19,10 @@ import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/ha
 
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
+  // Obtiene el tema del hábito o el tema por defecto
   const defaultTheme = HABIT_THEME_BY_ID[habit.themeId] ?? HABIT_THEME_BY_ID[DEFAULT_HABIT_THEME];
+  
+  // Inicializa el formulario con los datos existentes del hábito
   const [form, setForm] = useState({
     name: habit.name,
     minutes: habit.minutes,
@@ -21,13 +36,19 @@ export default function EditHabitModal({ habit, onClose }) {
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
 
+  // Valida y guarda los cambios del hábito
   function handleSubmit() {
+    // Validar nombre obligatorio
     if (!form.name.trim()) { setError('¡EL NOMBRE ES OBLIGATORIO!'); return; }
+    // Validar duración mínima
     if (form.minutes < 1) { setError('¡MÍNIMO 1 MINUTO!'); return; }
+    
     const habitPayload = {
       ...form,
       weeklyTimesTarget: null,
     };
+    
+    // Manejar periodicidad semanal personalizada
     if (form.periodicity === 'custom' && form.customWeeklyTimes) {
       const target = Number(form.customWeeklyTimes);
       if (!Number.isFinite(target) || target < 1) {
@@ -38,6 +59,7 @@ export default function EditHabitModal({ habit, onClose }) {
       habitPayload.customDays = '';
       habitPayload.customInterval = '';
     }
+    
     updateHabit(habit.id, habitPayload);
     onClose();
   }

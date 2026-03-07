@@ -1,6 +1,30 @@
+/**
+ * ActiveEffectModal - Modal de detalles de efecto activo
+ * 
+ * Muestra información detallada sobre un efecto activo:
+ * - Nombre y icono del objeto/efecto
+ * - Rareza del efecto
+ * - Descripción del efecto
+ * - Valor numérico si aplica
+ * - Tiempo restante (para efectos temporales)
+ * - Fecha de expiración
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Object} props.effect - Objeto del efecto activo
+ * @param {Function} props.onClose - Función para cerrar el modal
+ * @returns {JSX.Element|null} Modal de efecto activo o null si no hay efecto
+ */
 import { createPortal } from 'react-dom';
 import { ITEMS, RARITY_COLORS } from '../data/items.js';
 
+/**
+ * Obtiene el objeto ITEMS correspondiente a un efecto activo
+ * Busca por itemId o por effectKey en el catálogo de objetos
+ * 
+ * @param {Object} effect - Objeto del efecto activo
+ * @returns {Object|null} Objeto del catálogo o null si no se encuentra
+ */
 function getItemFromEffect(effect) {
   if (effect.itemId && ITEMS[effect.itemId]) {
     return ITEMS[effect.itemId];
@@ -9,6 +33,13 @@ function getItemFromEffect(effect) {
   return itemByKey || null;
 }
 
+/**
+ * Genera una descripción legible para un efecto activo
+ * Utiliza la descripción del objeto o genera una según el tipo de efecto
+ * 
+ * @param {Object} effect - Objeto del efecto activo
+ * @returns {string} Descripción del efecto
+ */
 function getEffectDescription(effect) {
   const item = getItemFromEffect(effect);
   if (item) return item.desc;
@@ -26,6 +57,12 @@ function getEffectDescription(effect) {
   }
 }
 
+/**
+ * Obtiene la etiqueta del tipo de efecto
+ * 
+ * @param {string} effectType - Tipo de efecto (timed, passive, instant)
+ * @returns {string} Etiqueta formateada del tipo de efecto
+ */
 function getEffectTypeLabel(effectType) {
   switch (effectType) {
     case 'timed': return 'TEMPORAL';
@@ -38,10 +75,12 @@ function getEffectTypeLabel(effectType) {
 export default function ActiveEffectModal({ effect, onClose }) {
   if (!effect) return null;
 
+  // Obtiene el objeto del catálogo y la rareza
   const item = getItemFromEffect(effect);
   const rarity = item ? RARITY_COLORS[item.rarity] : { color: '#888', label: 'UNKNOWN' };
   const effectType = item?.effectType || 'unknown';
 
+  // Calcula el tiempo restante del efecto
   const expiresAt = effect.expiresAt ? new Date(effect.expiresAt) : null;
   const now = new Date();
   const timeLeft = expiresAt

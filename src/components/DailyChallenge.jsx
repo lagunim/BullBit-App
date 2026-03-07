@@ -1,3 +1,13 @@
+/**
+ * DailyChallenge - Componente que muestra la misión diaria del juego
+ * 
+ * Las misiones diarias son desafíos opcionales que cambian cada día.
+ * Pueden ser de diferente dificultad (easy, medium, hard) y ofrecen
+ * recompensas adicionales en puntos y objetos.
+ * 
+ * @component
+ * @returns {JSX.Element|null} Tarjeta de misión diaria o null si no hay misión
+ */
 import { useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import DailyChallengeModal from './DailyChallengeModal.jsx';
@@ -7,11 +17,14 @@ export default function DailyChallenge() {
   const { currentDaily } = useGameStore();
   const [showModal, setShowModal] = useState(false);
 
+  // No renderiza nada si no hay misión diaria activa
   if (!currentDaily) return null;
 
   const { name, description, icon, progress, completed, difficulty, rewards } = currentDaily;
+  // Calcula el porcentaje de progreso
   const progressPercentage = Math.min(100, Math.round((progress.current / progress.target) * 100));
 
+  // Obtiene el color según la dificultad
   const getDifficultyColor = (diff) => {
     switch (diff) {
       case 'easy': return 'text-green-400';
@@ -21,6 +34,7 @@ export default function DailyChallenge() {
     }
   };
 
+  // Obtiene el fondo/borde según la dificultad
   const getDifficultyBg = (diff) => {
     switch (diff) {
       case 'easy': return 'from-green-500/20 to-green-600/20 border-green-500/30';

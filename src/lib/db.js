@@ -1,20 +1,52 @@
 /**
- * db.js — Capa de persistencia contra Supabase.
- *
- * Todas las funciones son fire-and-forget seguras: capturan errores
- * internamente para no interrumpir la UI en caso de fallo de red.
- * La fuente de verdad es Supabase. El estado local solo actúa como
- * memoria de UI y no persiste en localStorage.
+ * ============================================
+ * CAPA DE PERSISTENCIA - SUPABASE
+ * ============================================
+ * Este módulo maneja toda la comunicación con la base de datos Supabase.
+ * Proporciona funciones para CRUD (Create, Read, Update, Delete) de cada entidad.
+ * 
+ * CARACTERÍSTICAS PRINCIPALES:
+ * - Todas las funciones son "fire-and-forget": capturan errores internamente
+ *   para no interrumpir la UI en caso de fallo de red.
+ * - La fuente de verdad es Supabase.
+ * - El estado local (Zustand) solo actúa como memoria de UI.
+ * - Formato de datos: camelCase en el store, snake_case en la BD.
+ * 
+ * ESTRUCTURA DE TABLAS:
+ * - profiles: Datos del usuario (nivel, puntos, racha global)
+ * - habits: Hábitos del usuario
+ * - habit_history: Historial de completaciones/fallos por fecha
+ * - user_inventory: Inventario de objetos
+ * - active_effects: Efectos activos temporales
+ * - user_achievements: Logros desbloqueados
+ * - user_daily_progress: Progreso del reto diario
+ * - user_stories: Historias desbloqueadas
  */
 
 import { supabase } from './supabase.js';
 import { attachThemeToHabit } from '../data/habitThemes.js';
 
+/**
+ * ID de placeholder usado cuando no se tiene un ID válido de servidor.
+ * Se usa para identificar hábitos que aún no se han persistido.
+ */
 const SERVER_ID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
 
-// ── HELPERS ────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// FUNCIONES AUXILIARES (HELPERS)
+// ════════════════════════════════════════════════════════════════════════
 
-/** Convierte un hábito del store (camelCase) al formato de la tabla (snake_case). */
+/**
+ * Convierte un hábito del formato del store (camelCase) al formato de la tabla de Supabase (snake_case).
+ * 
+ * Esta conversión es necesaria porque JavaScript usa camelCase pero
+ * PostgreSQL (y por extensión Supabase) típicamente usa snake_case.
+ * 
+ * @param {string} userId - ID del usuario propietario
+ * @param {Object} habit - Objeto hábito en formato store
+ * @param {boolean} includeId - Si true, incluye el ID en el resultado
+ * @returns {Object} Hábito en formato de fila de base de datos
+ */
 function habitToRow(userId, habit, includeId = true) {
   const row = {
     user_id: userId,
@@ -39,7 +71,14 @@ function habitToRow(userId, habit, includeId = true) {
   return row;
 }
 
-/** Convierte una fila de la tabla habits al formato del store. */
+/**
+ * Convierte una fila de la tabla habits al formato del store (camelCase).
+ * Aplica el tema del hábito usando attachThemeToHabit para enriquecer
+ * los datos con información visual (icono, color, etc.)
+ * 
+ * @param {Object} row - Fila de la tabla habits de Supabase
+ * @returns {Object} Hábito en formato del store
+ */
 function rowToHabit(row) {
   return attachThemeToHabit({
     id: row.id,
@@ -58,7 +97,14 @@ function rowToHabit(row) {
   });
 }
 
-/** Convierte una fila de active_effects al formato del store. */
+/**
+ * Convierte una fila de active_effects al formato del store.
+ * Los efectos activos son modificadores temporales que afectan
+ * el gameplay (multiplicadores, escudos, bonificaciones).
+ * 
+ * @param {Object} row - Fila de la tabla active_effects
+ * @returns {Object} Efecto en formato del store
+ */
 function rowToEffect(row) {
   return {
     key: row.effect_key,
@@ -69,11 +115,26 @@ function rowToEffect(row) {
   };
 }
 
-// ── CARGA INICIAL ──────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// CARGA INICIAL DE DATOS
+// ════════════════════════════════════════════════════════════════════════
 
 /**
- * Carga todo el estado del usuario desde Supabase.
- * Devuelve null si no hay datos (usuario nuevo) o lanza un error en caso de fallo.
+ * Carga TODO el estado del usuario desde Supabase en una sola operación.
+ * Utiliza Promise.all para paralelizar las consultas y mejorar rendimiento.
+ * 
+ * PROCESO:
+ * 1. Carga el perfil del usuario (nivel, puntos, rachas)
+ * 2. Carga todos los hábitos del usuario
+ * 3. Carga el historial de completaciones por fecha
+ * 4. Carga el inventario de objetos
+ * 5. Carga los efectos activos
+ * 6. Carga los logros desbloqueados
+ * 7. Carga el progreso del daily challenge
+ * 8. Carga las historias desbloqueadas
+ * 
+ * @param {string} userId - ID del usuario en Supabase
+ * @returns {Object|null} Objeto con todos los datos o null si es usuario nuevo
  */
 export async function loadUserData(userId) {
   const [
@@ -157,8 +218,22 @@ export async function loadUserData(userId) {
   };
 }
 
-// ── PERFIL ─────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// PERFIL DEL USUARIO
+// ════════════════════════════════════════════════════════════════════════
 
+/**
+ * Guarda o actualiza el perfil del usuario.
+ * El perfil contiene estadísticas globales:
+ * - level: Nivel actual del jugador
+ * - points: Puntos de la sesión actual
+ * - lifetimePoints: Puntos acumulados en total
+ * - globalStreak: Días consecutivos completando todos los hábitos
+ * - lastWeeklyProcessDate: Fecha del último procesamiento de hábitos semanales
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Object} data - Datos del perfil a guardar
+ */
 export async function saveProfile(userId, { level, points, lifetimePoints, globalStreak, lastWeeklyProcessDate }) {
   const { error } = await supabase.from('profiles').upsert({
     id: userId,
@@ -172,8 +247,21 @@ export async function saveProfile(userId, { level, points, lifetimePoints, globa
   if (error) console.error('[db] saveProfile:', error.message);
 }
 
-// ── HÁBITOS ────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// HÁBITOS
+// ════════════════════════════════════════════════════════════════════════
 
+/**
+ * Guarda un solo hábito en la base de datos.
+ * 
+ * FUNCIONAMIENTO:
+ * - Si el hábito ya tiene ID válido: hace upsert (actualiza o inserta)
+ * - Si no tiene ID: inserta y retorna el hábito con el nuevo ID asignado por Supabase
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Object} habit - Objeto hábito a guardar
+ * @returns {Object|null} Hábito guardado con ID de Supabase, o null si falló
+ */
 export async function saveHabit(userId, habit) {
   if (!habit) return null;
   const hasValidId = Boolean(habit.id && habit.id !== SERVER_ID_PLACEHOLDER);
@@ -197,6 +285,18 @@ export async function saveHabit(userId, habit) {
   return row ? rowToHabit(row) : null;
 }
 
+/**
+ * Guarda múltiples hábitos a la vez.
+ * 
+ * FUNCIONAMIENTO:
+ * - Separa hábitos con ID de los sin ID
+ * - Actualiza los que ya tienen ID mediante upsert
+ * - Inserta los nuevos y obtiene sus IDs de Supabase
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Array} habits - Array de hábitos
+ * @returns {Array} Hábitos actualizados
+ */
 export async function saveHabits(userId, habits) {
   if (!habits.length) return [];
   const withId = habits.filter(h => h?.id && h.id !== SERVER_ID_PLACEHOLDER);
@@ -221,15 +321,33 @@ export async function saveHabits(userId, habits) {
   return updated;
 }
 
+/**
+ * Elimina un hábito y todo su historial asociado.
+ * 
+ * NOTA: Se borra primero el historial manualmente porque
+ * ON DELETE CASCADE no siempre está activo en Supabase.
+ * 
+ * @param {string} habitId - ID del hábito a eliminar
+ */
 export async function deleteHabit(habitId) {
-  // Borrar el historial asociado primero (ON DELETE CASCADE no siempre está activo)
   await supabase.from('habit_history').delete().eq('habit_id', habitId);
   const { error } = await supabase.from('habits').delete().eq('id', habitId);
   if (error) console.error('[db] deleteHabit:', error.message);
 }
 
-// ── HISTORIAL ──────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// HISTORIAL DE HÁBITOS
+// ════════════════════════════════════════════════════════════════════════
 
+/**
+ * Guarda una sola entrada de historial (completado/fallado) para un hábito.
+ * Usa upsert para actualizar si ya existe registro para esa fecha.
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {string} habitId - ID del hábito
+ * @param {string} date - Fecha en formato YYYY-MM-DD
+ * @param {string} status - Estado: 'completed', 'failed', 'partial', 'over'
+ */
 export async function saveHabitEntry(userId, habitId, date, status) {
   const { error } = await supabase.from('habit_history').upsert(
     { user_id: userId, habit_id: habitId, date, status },
@@ -239,8 +357,11 @@ export async function saveHabitEntry(userId, habitId, date, status) {
 }
 
 /**
- * Guarda múltiples entradas de historial a la vez.
- * entries = [{ habitId, date, status }]
+ * Guarda múltiples entradas de historial a la vez (optimizado para operaciones batch).
+ * Útil cuando se procesan muchos hábitos a la vez (ej: al migrar datos).
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Array} entries - Array de objetos { habitId, date, status }
  */
 export async function saveHabitEntries(userId, entries) {
   if (!entries.length) return;
@@ -254,11 +375,19 @@ export async function saveHabitEntries(userId, entries) {
   if (error) console.error('[db] saveHabitEntries:', error.message);
 }
 
-// ── INVENTARIO ─────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// INVENTARIO
+// ════════════════════════════════════════════════════════════════════════
 
 /**
- * Reemplaza todo el inventario del usuario con el array actual del store.
- * inventory = [{ itemId, qty }]
+ * Reemplaza TODO el inventario del usuario.
+ * 
+ * ESTRATEGIA: Delete + Insert en lugar de update.
+ * Se usa esta estrategia porque el inventario es pequeño (< 20 items)
+ * y es más simple que gestionar actualizaciones individuales.
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Array} inventory - Array de objetos { itemId, qty }
  */
 export async function saveInventory(userId, inventory) {
   // Borrar todo e insertar de nuevo (inventario suele ser pequeño, < 20 items)
@@ -274,11 +403,23 @@ export async function saveInventory(userId, inventory) {
   if (error) console.error('[db] saveInventory:', error.message);
 }
 
-// ── EFECTOS ACTIVOS ────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// EFECTOS ACTIVOS
+// ════════════════════════════════════════════════════════════════════════
 
 /**
  * Guarda la lista de efectos activos del usuario.
- * effects = [{ key, value, expiresAt?, itemName?, targetHabitId? }]
+ * Los efectos activos son modificadores temporales del juego.
+ * 
+ * ESTRUCTURA DEL EFECTO:
+ * - key: Identificador del efecto (ej: 'streak_shield', 'double_points')
+ * - value: Valor numérico del efecto
+ * - expiresAt: Fecha de expiración (opcional, para efectos temporales)
+ * - itemName: Nombre del objeto que creó el efecto
+ * - targetHabitId: ID del hábito objetivo (para efectos dirigidos)
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Array} effects - Array de efectos activos
  */
 export async function saveActiveEffects(userId, effects) {
   await supabase.from('active_effects').delete().eq('user_id', userId);
@@ -295,11 +436,20 @@ export async function saveActiveEffects(userId, effects) {
   if (error) console.error('[db] saveActiveEffects:', error.message);
 }
 
-// ── LOGROS ─────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// LOGROS (ACHIEVEMENTS)
+// ════════════════════════════════════════════════════════════════════════
 
 /**
  * Inserta solo los logros nuevos (ignora duplicados).
- * newIds = string[]
+ * 
+ * FUNCIONAMIENTO:
+ * Usa upsert con ignoreDuplicates para evitar errores cuando
+ * un logro ya está registrado. Solo se insertan los que
+ * realmente son nuevos.
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Array} newIds - Array de IDs de logros a guardar
  */
 export async function saveAchievements(userId, newIds) {
   if (!newIds.length) return;
@@ -312,8 +462,27 @@ export async function saveAchievements(userId, newIds) {
   if (error) console.error('[db] saveAchievements:', error.message);
 }
 
-// ── RETO DIARIO ────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// RETO DIARIO (DAILY CHALLENGE)
+// ════════════════════════════════════════════════════════════════════════
 
+/**
+ * Guarda el progreso del reto diario del usuario.
+ * 
+ * DATOS GUARDADOS:
+ * - daily_id: Identificador del daily
+ * - daily_data: Objeto con configuración del daily (serializado)
+ * - progress_current: Progreso actual (ej: número de hábitos completados)
+ * - progress_target: Meta de progreso
+ * - completed: Si se ha completado el daily
+ * 
+ * NOTA: Se elimina la función 'condition' del objeto porque
+ * no es serializable (no se puede convertir a JSON).
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {Object} currentDaily - Objeto del daily actual
+ * @param {string} lastDailyDate - Fecha del daily
+ */
 export async function saveDaily(userId, currentDaily, lastDailyDate) {
   if (!currentDaily || !lastDailyDate) return;
 
@@ -333,14 +502,22 @@ export async function saveDaily(userId, currentDaily, lastDailyDate) {
   if (error) console.error('[db] saveDaily:', error.message);
 }
 
-// ── HISTORIAS DE VIAJE ─────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+// HISTORIAS DE VIAJE (STORIES)
+// ════════════════════════════════════════════════════════════════════════
 
 /**
  * Guarda una historia desbloqueada al completar un viaje.
- * @param {string} userId
- * @param {number} journeyId - Número del viaje completado
- * @param {string} storyId   - ID de la historia asignada
- * @param {number} [journeyId] - ID del viaje (0 o negativo para logros épicos/legendarios)
+ * Las historias son narrativas que se desbloquean al subir de nivel
+ * o al obtener logros especiales.
+ * 
+ * TIPOS DE HISTORIAS:
+ * - Journey stories: Se desbloquean al completar viajes (subir de nivel)
+ * - Achievement stories: Se desbloquean al obtener logros épicos/legendarios
+ * 
+ * @param {string} userId - ID del usuario
+ * @param {number} journeyId - Número del viaje completado (0 para logros)
+ * @param {string} storyId - ID de la historia asignada
  */
 export async function saveStory(userId, journeyId, storyId) {
   const { error } = await supabase.from('user_stories').upsert(
@@ -357,6 +534,9 @@ export async function saveStory(userId, journeyId, storyId) {
 
 /**
  * Carga todas las historias desbloqueadas de un usuario.
+ * Las devuelve ordenadas por journeyId ascendente.
+ * 
+ * @param {string} userId - ID del usuario
  * @returns {Array<{ journeyId: number, storyId: string, unlockedAt: string }>}
  */
 export async function loadUserStories(userId) {

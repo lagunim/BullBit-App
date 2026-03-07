@@ -1,5 +1,27 @@
+/**
+ * MultiplierIcons - Componente para mostrar iconos de efectos activos
+ * 
+ * Muestra iconos visuales de los efectos que afectan al multiplicador
+ * de puntos. Incluye:
+ * - Escudos de racha (protegen de penalizaciones)
+ * - Potenciadores globales (aumentan multiplicadores)
+ * - Efectos de doble/triple puntos
+ * - Efectos específicos por hábito
+ * 
+ * Proporciona tres exports:
+ * - default: Muestra iconos de efectos globales
+ * - useHasActiveMultiplierEffect: Hook para verificar efectos activos
+ * - HabitTargetedIcons: Iconos específicos de un hábito
+ * 
+ * @component
+ * @returns {JSX.Element|null} Iconos de efectos o null si no hay efectos
+ */
 import useGameStore from '../store/gameStore.js';
 
+/**
+ * Mapeo de iconos y colores para cada tipo de efecto de multiplicador
+ * Cada efecto tiene un icono representativo, título descriptivo y color
+ */
 const EFFECT_ICONS = {
   streak_shield: { icon: '🛡️', title: 'Escudo de Racha activo - Protege de penalizaciones', color: 'text-quest-cyan' },
   golden_shield: { icon: '⭐', title: 'Racha Dorada activa - El próximo fallo no te penaliza y suma +0.2', color: 'text-quest-gold' },
@@ -12,6 +34,13 @@ const EFFECT_ICONS = {
   habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
 };
 
+/**
+ * Verifica si hay efectos de multiplicador activos globalmente
+ * Filtra los efectos por fecha de expiración y verifica las claves relevantes
+ * 
+ * @param {Array} rawEffects - Array de efectos crudos del store
+ * @returns {boolean} True si hay algún efecto de multiplicador activo
+ */
 function hasActiveMultiplierEffect(rawEffects) {
   const now = new Date();
   const activeEffects = rawEffects.filter(e =>
@@ -20,6 +49,7 @@ function hasActiveMultiplierEffect(rawEffects) {
   
   if (activeEffects.length === 0) return false;
   
+  // Efectos que afectan al multiplicador globalmente
   return activeEffects.some(e => 
     e.key === 'streak_shield' || 
     e.key === 'golden_shield' || 
@@ -29,6 +59,12 @@ function hasActiveMultiplierEffect(rawEffects) {
   );
 }
 
+/**
+ * Hook personalizado para verificar efectos de multiplicador activos
+ * Se suscribe al store para obtener efectos en tiempo real
+ * 
+ * @returns {boolean} True si hay efectos de multiplicador activos
+ */
 export function useHasActiveMultiplierEffect() {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   return hasActiveMultiplierEffect(rawEffects);
