@@ -23,11 +23,13 @@
 // Nivel thresholds (puntos necesarios para SUBIR DE NIVEL)
 // Ejemplo: LEVEL_THRESHOLDS[0] = 627 significa 627 puntos para pasar del nivel 0 al 1
 // La progresión es exponencial, creando mayor dificultad en niveles altos
-export const LEVEL_THRESHOLDS = [627, 2268, 4872, 9072, 15552, 25194, 39366, 59049];
+export const LEVEL_THRESHOLDS = [1020, 1320];
 
 export function getLevelThreshold(level) {
-  return LEVEL_THRESHOLDS[level]
-    ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] * (level - LEVEL_THRESHOLDS.length + 2);
+  if (level < LEVEL_THRESHOLDS.length) {
+    return LEVEL_THRESHOLDS[level];
+  }
+  return 1500;
 }
 
 /**

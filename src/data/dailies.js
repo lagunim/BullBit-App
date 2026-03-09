@@ -41,7 +41,7 @@ export const DAILY_CHALLENGES = [
       return { current: count, target: 2, completed: count >= 2 };
     },
     rewards: {
-      points: 250,
+      points: 220,
       items: ['boost_potion']
     }
   },
@@ -105,7 +105,7 @@ export const DAILY_CHALLENGES = [
       };
     },
     rewards: {
-      points: 300,
+      points: 230,
       items: ['double_elixir']
     }
   },
@@ -291,7 +291,7 @@ export const DAILY_CHALLENGES = [
       return { current: count, target: 2, completed: count >= 2 };
     },
     rewards: {
-      points: 280,
+      points: 240,
       items: ['xp_scroll']
     }
   },
@@ -319,7 +319,7 @@ export const DAILY_CHALLENGES = [
       return { current: success ? 1 : 0, target: 1, completed: success };
     },
     rewards: {
-      points: 330,
+      points: 235,
       items: ['double_elixir', 'mastery_token']
     }
   },
@@ -347,7 +347,7 @@ export const DAILY_CHALLENGES = [
       return { current: totalMinutes, target: 120, completed: totalMinutes >= 120 };
     },
     rewards: {
-      points: 420,
+      points: 340,
       items: ['xp_scroll', 'double_elixir', 'multiplier_gem']
     }
   },
@@ -374,7 +374,7 @@ export const DAILY_CHALLENGES = [
       return { current: count, target: 4, completed: count >= 4 };
     },
     rewards: {
-      points: 380,
+      points: 320,
       items: ['xp_scroll', 'mastery_token']
     }
   },
@@ -396,7 +396,7 @@ export const DAILY_CHALLENGES = [
       return { current: success ? 6 : completed, target: 6, completed: success };
     },
     rewards: {
-      points: 390,
+      points: 330,
       items: ['double_elixir', 'mastery_token']
     }
   },
@@ -423,7 +423,7 @@ export const DAILY_CHALLENGES = [
       return { current: count, target: 3, completed: count >= 3 };
     },
     rewards: {
-      points: 410,
+      points: 350,
       items: ['xp_scroll', 'multiplier_gem']
     }
   },
@@ -454,7 +454,7 @@ export const DAILY_CHALLENGES = [
       return { current: success ? 150 : totalMinutes, target: 150, completed: success };
     },
     rewards: {
-      points: 660,
+      points: 360,
       items: ['double_elixir', 'xp_scroll', 'phoenix']
     }
   },
@@ -483,7 +483,7 @@ export const DAILY_CHALLENGES = [
       return { current: success ? 3 : highMultiplierDone, target: 3, completed: success };
     },
     rewards: {
-      points: 310,
+      points: 220,
       items: ['xp_scroll', 'multiplier_gem']
     }
   }
