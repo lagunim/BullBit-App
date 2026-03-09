@@ -7,7 +7,7 @@
  * - Puntos restantes para el siguiente nivel
  * - Puntos totales acumulados en la cuenta
  * - Racha global actual
- * - Cantidad de historias desbloqueadas
+ * - Puntos del viaje actual
  * 
  * Es un botón interactivo que abre el panel de historias al hacer click.
  * 
@@ -58,6 +58,11 @@ export default function LevelProgress({ onOpenStories }) {
 
       <div className="flex justify-between border-t border-quest-border pt-2 mt-1">
         <div className="text-center flex-1">
+          <div className="text-xs text-quest-textDim mb-0.5">PUNTOS</div>
+          <div className="text-xs text-quest-cyan font-pixel">{points.toLocaleString()}</div>
+        </div>
+        <div className="w-[1px] h-4 bg-quest-border self-center" />
+        <div className="text-center flex-1">
           <div className="text-xs text-quest-textDim mb-0.5">TOTAL</div>
           <div className="text-xs text-quest-purple font-pixel">{lifetimePoints.toLocaleString()}</div>
         </div>
@@ -65,11 +70,6 @@ export default function LevelProgress({ onOpenStories }) {
         <div className="text-center flex-1">
           <div className="text-xs text-quest-textDim mb-0.5">RACHA</div>
           <div className="text-xs text-quest-red font-pixel">{globalStreak > 0 ? `🔥${globalStreak}d` : '---'}</div>
-        </div>
-        <div className="w-[1px] h-4 bg-quest-border self-center" />
-        <div className="text-center flex-1">
-          <div className="text-xs text-quest-textDim mb-0.5">HISTORIAS</div>
-          <div className="text-xs text-quest-gold font-pixel">{journeyStories.length > 0 ? `📜 ${journeyStories.length}` : '---'}</div>
         </div>
       </div>
     </button>
