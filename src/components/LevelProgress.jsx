@@ -42,9 +42,6 @@ export default function LevelProgress({ onOpenStories }) {
           <span className="text-[10px] text-quest-textDim">{pct}%</span>
         </div>
         <div className="flex items-center gap-2">
-          {storiesCount > 0 && (
-            <span className="text-[10px] text-quest-purple font-pixel">📜 {storiesCount}</span>
-          )}
           <div className="text-xs text-quest-green font-pixel">-{remaining.toLocaleString()} PTS</div>
         </div>
       </div>
