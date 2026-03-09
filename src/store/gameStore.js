@@ -410,6 +410,7 @@ const useGameStore = create(
       const today = getTodayKey();
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
+      if (!isHabitDueOnDate(habit, today, state.history)) return;
       if (state.history[today]?.[habitId] === 'completed') return; // already done
 
       const activeEffects = state._getActiveEffects();
@@ -485,6 +486,7 @@ const useGameStore = create(
       const today = getTodayKey();
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
+      if (!isHabitDueOnDate(habit, today, state.history)) return;
       if (state.history[today]?.[habitId]) return; // already resolved today
 
       const activeEffects = state._getActiveEffects();
@@ -567,6 +569,7 @@ const useGameStore = create(
       const today = getTodayKey();
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
+      if (!isHabitDueOnDate(habit, today, state.history)) return;
       if (state.history[today]?.[habitId]) return; // already resolved today
 
       const activeEffects = state._getActiveEffects();
@@ -643,6 +646,7 @@ const useGameStore = create(
       const today = getTodayKey();
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
+      if (!isHabitDueOnDate(habit, today, state.history)) return;
       if (state.history[today]?.[habitId]) return;
 
       const activeEffects = state._getActiveEffects();

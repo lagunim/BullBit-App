@@ -79,9 +79,13 @@ export default function HabitList() {
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
-  // Filtrar solo hábitos que corresponden al día actual
-  // Utiliza la lógica de periodicidad para determinar si el hábito debe mostrarse hoy
+  // Hábitos disponibles hoy según periodicidad
   const todayHabits = habits.filter(habit => isHabitDueOnDate(habit, today, history));
+  // Hábitos de días concretos de semana que NO tocan hoy, pero se muestran en gris al final
+  const notAvailableTodayHabits = habits.filter((habit) => {
+    const hasCustomDays = habit.periodicity === 'custom' && parseCustomDays(habit.customDays).length > 0;
+    return hasCustomDays && !isHabitDueOnDate(habit, today, history);
+  });
 
   // Calcula si se ha alcanzado el objetivo semanal para hábitos de tipo "weekly_times"
   const isWeeklyTargetMet = (habit) => {
@@ -95,6 +99,7 @@ export default function HabitList() {
   // Cuenta hábitos completados y pendientes para el día de hoy
   const completedToday = todayHabits.filter(h => isCompletedStatus(todayData[h.id]) || isWeeklyTargetMet(h)).length;
   const pendingToday = todayHabits.filter(h => !todayData[h.id] && !isWeeklyTargetMet(h)).length;
+  const hasAnyVisibleHabits = todayHabits.length > 0 || notAvailableTodayHabits.length > 0;
 
   const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const todayName = dayNames[new Date().getDay()];
@@ -105,6 +110,10 @@ export default function HabitList() {
     setCustomMinutes('');
     setCustomError('');
   }
+
+  const isSelectedHabitAvailableToday = selectedHabit
+    ? isHabitDueOnDate(selectedHabit, today, history)
+    : false;
 
   // Función para completar el hábito seleccionado
   // Maneja tres casos: completado simple, parcial, o con tiempo extra
@@ -193,7 +202,7 @@ export default function HabitList() {
           <div className="text-[8px] leading-6">NO TIENES HÁBITOS AÚN</div>
           <div className="text-xs mt-2 opacity-60">CREA TU PRIMER HÁBITO PARA COMENZAR</div>
         </div>
-      ) : todayHabits.length === 0 ? (
+      ) : !hasAnyVisibleHabits ? (
         <div className="text-center py-10 px-5 border-2 border-dashed border-quest-border text-quest-borderLight font-pixel bg-quest-bg/10">
           <div className="text-3xl mb-4 grayscale opacity-40">📅</div>
           <div className="text-[8px] leading-6">NO HAY HÁBITOS PROGRAMADOS PARA HOY</div>
@@ -206,10 +215,13 @@ export default function HabitList() {
             ...todayHabits.filter(h => !todayData[h.id] && !isWeeklyTargetMet(h)),
             // Después los que ya tienen estado hoy (completados / parciales / extra / fallados / weekly target met)
             ...todayHabits.filter(h => todayData[h.id] || isWeeklyTargetMet(h)),
+            // Al final, hábitos visibles pero no disponibles hoy (solo customDays)
+            ...notAvailableTodayHabits,
           ].map(habit => (
             <HabitCard
               key={habit.id}
               habit={habit}
+              isAvailableToday={isHabitDueOnDate(habit, today, history)}
               onEdit={() => {
                 setSelectedHabit(habit);
                 setDeleteConfirm(false);
@@ -293,6 +305,13 @@ export default function HabitList() {
             {/* Sección completar hábito - si no está completado hoy y objetivo semanal no alcanzado */}
             {(() => {
               const weeklyTargetMet = isWeeklyTargetMet(selectedHabit);
+              if (!isSelectedHabitAvailableToday) {
+                return (
+                  <div className="mt-2 text-center px-3 py-3 border border-slate-500/70 bg-slate-700/20 text-slate-300 text-[11px] font-pixel uppercase ">
+                    No disponible hoy
+                  </div>
+                );
+              }
               if (weeklyTargetMet) {
                 return (
                   <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[11px] font-pixel uppercase ">

@@ -52,7 +52,7 @@ function getPeriodicityLabel(habit) {
   return PERIODICITY_LABELS[habit.periodicity] || null;
 }
 
-export default function HabitCard({ habit, onEdit }) {
+export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const history = useGameStore(s => s.history ?? {});
   const hasActiveEffect = useHasActiveMultiplierEffect();
 
@@ -66,7 +66,7 @@ export default function HabitCard({ habit, onEdit }) {
   // El hábito está "determinado" si tiene cualquier estado (hecho o fallado)
   const isDetermined = isDone || isFailed;
   // Verifica si el hábito ha expirado (pasó la hora límite)
-  const isExpired = isHabitExpired(habit, today, history);
+  const isExpired = isAvailableToday && isHabitExpired(habit, today, history);
 
   // Verifica si es un hábito de tipo "veces por semana"
   const isWeeklyTimes = Boolean(habit.weeklyTimesTarget);
@@ -76,7 +76,9 @@ export default function HabitCard({ habit, onEdit }) {
   const weeklyTargetMet = isWeeklyTimes && weeklyCompletions >= habit.weeklyTimesTarget;
   const isWeeklyDone = isWeeklyTimes && weeklyTargetMet;
 
-  const multColorClass = hasActiveEffect
+  const multColorClass = !isAvailableToday
+    ? 'text-quest-textMuted'
+    : hasActiveEffect
     ? 'text-yellow-400'
     : habit.multiplier >= 3 ? 'text-quest-gold'
       : habit.multiplier >= 2 ? 'text-quest-cyan'
@@ -87,12 +89,14 @@ export default function HabitCard({ habit, onEdit }) {
   const borderColorClass = isDone ? 'border-quest-green'
     : isFailed ? 'border-quest-red'
       : isExpired ? 'border-orange-500'
+        : !isAvailableToday ? 'border-slate-500/70'
         : 'border-quest-border';
 
   // Selecciona el color de la sombra según el estado
   const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]'
     : isFailed ? 'shadow-[2px_2px_0_#440011]'
       : isExpired ? 'shadow-[2px_2px_0_#ff8800]'
+        : !isAvailableToday ? 'shadow-[2px_2px_0_#334155]'
         : 'shadow-pixel-sm';
 
   return (
@@ -105,11 +109,11 @@ export default function HabitCard({ habit, onEdit }) {
           {habit.emoji}
         </div>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="text-[10px] text-quest-text truncate uppercase tracking-tight">
+          <div className={`text-[10px] truncate uppercase tracking-tight ${isAvailableToday ? 'text-quest-text' : 'text-quest-textMuted'}`}>
             {habit.name}
           </div>
           {getPeriodicityLabel(habit) && (
-            <span className="text-[8px] text-quest-cyan/70 shrink-0">
+            <span className={`text-[8px] shrink-0 ${isAvailableToday ? 'text-quest-cyan/70' : 'text-quest-textMuted/80'}`}>
               · {getPeriodicityLabel(habit)}
             </span>
           )}
@@ -145,6 +149,12 @@ export default function HabitCard({ habit, onEdit }) {
                 {weeklyCompletions}/{habit.weeklyTimesTarget} ESTA SEMANA
               </div>
             )}
+          </div>
+        ) : !isAvailableToday && !isDetermined ? (
+          <div className="w-full flex justify-center">
+            <div className="px-3 py-2 text-[8px] font-pixel border border-slate-500/60 text-slate-300 bg-slate-700/20">
+              No disponible hoy
+            </div>
           </div>
         ) : isDetermined ? (
           <div className="w-full flex justify-center">
