@@ -368,6 +368,7 @@ const useGameStore = create(
         // Procesos de inicio (siempre, independientemente del origen de datos)
         get()._processExpiredHabits();
         get()._processWeeklyHabits();
+        get()._recalcGlobalStreak();
         await get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
         set({ _initializedUserId: userId });

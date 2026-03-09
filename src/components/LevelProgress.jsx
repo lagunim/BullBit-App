@@ -26,8 +26,8 @@ export default function LevelProgress({ onOpenStories }) {
   const globalStreak = useGameStore(s => s.globalStreak ?? 0);
   const unlockedStories = useGameStore(s => s.unlockedStories ?? []);
 
-  const { threshold, pct, remaining } = getLevelInfo(level, points);
-  const storiesCount = unlockedStories.length;
+  const { pct, remaining } = getLevelInfo(level, points);
+  const journeyStories = unlockedStories.filter(story => story.journeyId > 0);
 
   return (
     <button
@@ -69,7 +69,7 @@ export default function LevelProgress({ onOpenStories }) {
         <div className="w-[1px] h-4 bg-quest-border self-center" />
         <div className="text-center flex-1">
           <div className="text-xs text-quest-textDim mb-0.5">HISTORIAS</div>
-          <div className="text-xs text-quest-gold font-pixel">{storiesCount > 0 ? `📜 ${storiesCount}` : '---'}</div>
+          <div className="text-xs text-quest-gold font-pixel">{journeyStories.length > 0 ? `📜 ${journeyStories.length}` : '---'}</div>
         </div>
       </div>
     </button>

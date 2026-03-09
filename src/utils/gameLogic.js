@@ -139,22 +139,22 @@ export function isHabitDueOnDate(habit, dateStr, history = {}) {
   // Los hábitos weekly_times siempre se muestran (la lógica de objetivo está en otro lugar)
   if (habit.weeklyTimesTarget) return true;
   const date = new Date(dateStr + 'T12:00:00');
-  
+
   switch (habit.periodicity) {
     case 'daily':
       return true;
-      
+
     case 'weekly':
       // Solo está debido si NO se ha completado en la semana actual
       return !isHabitCompletedThisPeriod(habit, dateStr, history);
-      
+
     case 'monthly':
       // Solo está debido si NO se ha completado en el mes actual
       return !isHabitCompletedThisPeriod(habit, dateStr, history);
-      
+
     case 'custom':
       return _checkCustomPeriodicity(habit, date);
-      
+
     default:
       return true; // Fallback para retrocompatibilidad
   }
@@ -176,12 +176,12 @@ function _checkCustomPeriodicity(habit, date) {
   if (habit.customDays && habit.customDays.trim()) {
     return _isCustomDaysDue(habit.customDays, date);
   }
-  
+
   // Manejo de customInterval (ej: "3" = cada 3 días desde creación)
   if (habit.customInterval && habit.customInterval.trim()) {
     return _isCustomIntervalDue(habit.customInterval, habit.createdAt, date);
   }
-  
+
   return false; // Sin configuración válida
 }
 
@@ -232,16 +232,16 @@ function _isCustomIntervalDue(customInterval, createdAt, date) {
     if (!Number.isInteger(interval) || interval <= 0) {
       throw new Error('Invalid interval');
     }
-    
+
     const creationDate = new Date(createdAt);
     const creationDateKey = creationDate.toISOString().split('T')[0];
     const creationDateNormalized = new Date(creationDateKey + 'T12:00:00');
-    
+
     // Calcular días desde la creación
     const daysSinceCreation = Math.floor(
       (date.getTime() - creationDateNormalized.getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     // El hábito es debido si han pasado múltiplos exactos del intervalo
     return daysSinceCreation >= 0 && daysSinceCreation % interval === 0;
   } catch (error) {
@@ -265,7 +265,7 @@ function _isCustomIntervalDue(customInterval, createdAt, date) {
 function _parseCustomDays(customDays) {
   const parts = customDays.split(',').map(s => s.trim());
   const validDays = [];
-  
+
   for (const part of parts) {
     const day = parseInt(part, 10);
     if (Number.isInteger(day) && day >= 1 && day <= 7) {
@@ -274,11 +274,11 @@ function _parseCustomDays(customDays) {
       throw new Error(`Invalid day: ${part}`);
     }
   }
-  
+
   if (validDays.length === 0) {
     throw new Error('No valid days found');
   }
-  
+
   return [...new Set(validDays)]; // Elimina duplicados
 }
 
@@ -298,43 +298,43 @@ function _parseCustomDays(customDays) {
  */
 export function isHabitExpired(habit, today, history) {
   if (habit.weeklyTimesTarget) return false;
-  
+
   // For weekly and monthly, check if the period has ended
   if (habit.periodicity === 'weekly') {
     const weekEnd = getWeekEnd(today);
     const todayDate = new Date(today + 'T12:00:00');
     const weekEndDate = new Date(weekEnd + 'T12:00:00');
     const now = new Date();
-    
+
     // Only expired if we're past the week end AND not completed in this period
     if (now > weekEndDate && !isHabitCompletedThisPeriod(habit, today, history)) {
       return true;
     }
     return false;
   }
-  
+
   if (habit.periodicity === 'monthly') {
     const monthEnd = getMonthEnd(today);
     const todayDate = new Date(today + 'T12:00:00');
     const monthEndDate = new Date(monthEnd + 'T12:00:00');
     const now = new Date();
-    
+
     // Only expired if we're past the month end AND not completed in this period
     if (now > monthEndDate && !isHabitCompletedThisPeriod(habit, today, history)) {
       return true;
     }
     return false;
   }
-  
+
   // Daily and custom: original logic
   const todayStatus = history[today]?.[habit.id];
   if (todayStatus) return false;
-  
+
   if (!isHabitDueOnDate(habit, today, history)) return false;
-  
+
   const now = new Date();
   const todayEnd = new Date(today + 'T23:59:59');
-  
+
   return now > todayEnd;
 }
 
@@ -361,22 +361,22 @@ export function isHabitExpired(habit, today, history) {
 export function calcPoints(habit, activeEffects = []) {
   // Aplicar bonificaciones temporales al multiplicador base
   let effectiveMultiplier = habit.multiplier;
-  
+
   // Bonificaciones globales (afectan a todos los hábitos)
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   if (globalBoostEffect) {
     effectiveMultiplier += globalBoostEffect.value;
   }
-  
+
   // Bonificaciones dirigidas (solo a un hábito específico)
-  const habitBoostEffect = activeEffects.find(e => 
-    e.key === 'habit_mult_boost' && 
+  const habitBoostEffect = activeEffects.find(e =>
+    e.key === 'habit_mult_boost' &&
     (!e.targetHabitId || e.targetHabitId === habit.id)
   );
   if (habitBoostEffect) {
     effectiveMultiplier += habitBoostEffect.value;
   }
-  
+
   // Puntos base = minutos * multiplicador (máx 3.0)
   const basePoints = habit.minutes * Math.min(3.0, effectiveMultiplier);
 
@@ -406,14 +406,14 @@ export function calcPoints(habit, activeEffects = []) {
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
-  
+
   // Verificar bonificaciones dirigidas al hábito
-  const habitBoostEffect = activeEffects.find(e => 
-    e.key === 'habit_mult_boost' && 
+  const habitBoostEffect = activeEffects.find(e =>
+    e.key === 'habit_mult_boost' &&
     (!e.targetHabitId || e.targetHabitId === habit.id)
   );
   const habitBoost = habitBoostEffect ? habitBoostEffect.value : 0;
-  
+
   // Nuevo multiplicador = actual + 0.2 + bonificaciones, máx 3.0
   return Math.min(3.0, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost).toFixed(1)));
 }
@@ -485,23 +485,47 @@ export function calcGlobalStreak(habits, history) {
   if (habits.length === 0) return 0;
   let streak = 0;
 
+  // Nueva política de racha (sin retroactivo).
+  // Antes de esta fecha no recalculamos con la nueva semántica.
+  const STREAK_POLICY_START_DATE = '2026-03-09';
+
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
+
+  const isSameOrAfter = (dateA, dateB) => dateA >= dateB;
+
+  const isHabitActiveOnDate = (habit, dateKey) => {
+    const createdAt = habit?.createdAt;
+    if (!createdAt) return true;
+    const createdDate = new Date(createdAt).toISOString().split('T')[0];
+    return createdDate <= dateKey;
+  };
+
+  const requiresDailyCompletion = (habit, dateKey, allHistory) => {
+    if (habit.weeklyTimesTarget) return false;
+    if (habit.periodicity === 'weekly' || habit.periodicity === 'monthly') return false;
+    return isHabitDueOnDate(habit, dateKey, allHistory);
+  };
 
   // Recorrer hasta 365 días hacia atrás
   for (let i = 1; i <= 365; i++) {
     const key = getDateKey(i);
-    const day = history[key];
-    if (!day) break; // No hay más datos, terminar
+    if (!isSameOrAfter(key, STREAK_POLICY_START_DATE)) break;
 
-    // Obtener hábitos que correspondían ese día
-    const dueHabits = habits.filter(h => isHabitDueOnDate(h, key, history));
-    if (dueHabits.length === 0) continue; // No había hábitos, continuar
+    const day = history[key] ?? {};
+    const activeHabits = habits.filter(h => isHabitActiveOnDate(h, key));
+    if (activeHabits.length === 0) continue;
 
-    // Verificar si TODOS fueron completados
-    const allCompleted = dueHabits.every(h => isCompletedStatus(day[h.id]));
-    if (allCompleted) streak++;
-    else break; // Un día sin completar todo, terminar racha
+    // Regla principal: si existe cualquier fallo en hábitos activos, corta racha.
+    const hasFailed = activeHabits.some(h => day[h.id] === 'failed');
+    if (hasFailed) break;
+
+    // Para hábitos diarios/custom due ese día, sí exigimos completación explícita.
+    const strictDueHabits = activeHabits.filter(h => requiresDailyCompletion(h, key, history));
+    const allStrictDueCompleted = strictDueHabits.every(h => isCompletedStatus(day[h.id]));
+    if (!allStrictDueCompleted) break;
+
+    streak++;
   }
   return streak;
 }
@@ -574,16 +598,16 @@ export function getMonthEnd(dateStr) {
  */
 export function isHabitCompletedThisPeriod(habit, dateStr, history) {
   if (!history || Object.keys(history).length === 0) return false;
-  
+
   const date = new Date(dateStr + 'T12:00:00');
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
-  
+
   if (habit.periodicity === 'weekly') {
     const weekStart = getWeekStart(dateStr);
     const weekEnd = getWeekEnd(dateStr);
     const weekStartDate = new Date(weekStart + 'T12:00:00');
-    
+
     // Buscar cualquier completación en la semana
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(weekStartDate);
@@ -596,16 +620,16 @@ export function isHabitCompletedThisPeriod(habit, dateStr, history) {
     }
     return false;
   }
-  
+
   if (habit.periodicity === 'monthly') {
     const monthStart = getMonthStart(dateStr);
     const monthEnd = getMonthEnd(dateStr);
     const startDate = new Date(monthStart + 'T12:00:00');
     const endDate = new Date(monthEnd + 'T12:00:00');
-    
+
     // Calcular días en el mes
     const daysInMonth = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    
+
     // Buscar cualquier completación en el mes
     for (let i = 0; i < daysInMonth; i++) {
       const currentDate = new Date(startDate);
@@ -618,7 +642,7 @@ export function isHabitCompletedThisPeriod(habit, dateStr, history) {
     }
     return false;
   }
-  
+
   return false;
 }
 
@@ -634,10 +658,10 @@ export function isHabitCompletedThisPeriod(habit, dateStr, history) {
 export function getWeekCompletions(habitId, history, dateStr) {
   const weekStart = getWeekStart(dateStr);
   const weekStartDate = new Date(weekStart + 'T12:00:00');
-  
+
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
-  
+
   let completions = 0;
   // Contar de lunes a domingo
   for (let i = 0; i < 7; i++) {
@@ -658,9 +682,9 @@ export function getWeekCompletions(habitId, history, dateStr) {
  * Usadas para mostrar en la UI.
  */
 export const PERIODICITY_LABELS = {
-  daily:        'Diaria',
-  weekly:       'Semanal',
-  monthly:      'Mensual',
-  custom:       'Personalizado',
+  daily: 'Diaria',
+  weekly: 'Semanal',
+  monthly: 'Mensual',
+  custom: 'Personalizado',
 };
 
