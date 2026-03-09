@@ -14,8 +14,40 @@
  * @returns {JSX.Element} Tarjeta visual del hábito
  */
 import useGameStore from '../store/gameStore.js';
-import { getTodayKey, isHabitExpired, getWeekCompletions } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS } from '../utils/gameLogic.js';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
+
+function parseCustomDays(customDays) {
+  if (Array.isArray(customDays)) {
+    return customDays
+      .map(day => Number(day))
+      .filter(day => Number.isInteger(day) && day >= 1 && day <= 7);
+  }
+
+  if (typeof customDays === 'string' && customDays.trim()) {
+    return customDays
+      .split(',')
+      .map(day => Number(day.trim()))
+      .filter(day => Number.isInteger(day) && day >= 1 && day <= 7);
+  }
+
+  return [];
+}
+
+function getPeriodicityLabel(habit) {
+  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+    return `${habit.weeklyTimesTarget} veces/semana`;
+  }
+  if (habit.periodicity === 'custom') {
+    const customDays = parseCustomDays(habit.customDays);
+    if (!customDays.length) {
+      return null;
+    }
+    const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    return customDays.map(day => dayNames[day - 1]).join(', ');
+  }
+  return PERIODICITY_LABELS[habit.periodicity] || null;
+}
 
 export default function HabitCard({ habit, onEdit }) {
   const history = useGameStore(s => s.history ?? {});
@@ -44,21 +76,21 @@ export default function HabitCard({ habit, onEdit }) {
   const multColorClass = hasActiveEffect
     ? 'text-yellow-400'
     : habit.multiplier >= 3 ? 'text-quest-gold'
-    : habit.multiplier >= 2  ? 'text-quest-cyan'
-    : habit.multiplier >= 1.5 ? 'text-quest-green'
-    : 'text-quest-text';
+      : habit.multiplier >= 2 ? 'text-quest-cyan'
+        : habit.multiplier >= 1.5 ? 'text-quest-green'
+          : 'text-quest-text';
 
   // Selecciona el color del borde según el estado del hábito
-  const borderColorClass = isDone ? 'border-quest-green' 
-    : isFailed ? 'border-quest-red' 
-    : isExpired ? 'border-orange-500' 
-    : 'border-quest-border';
-  
+  const borderColorClass = isDone ? 'border-quest-green'
+    : isFailed ? 'border-quest-red'
+      : isExpired ? 'border-orange-500'
+        : 'border-quest-border';
+
   // Selecciona el color de la sombra según el estado
-  const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]' 
-    : isFailed ? 'shadow-[2px_2px_0_#440011]' 
-    : isExpired ? 'shadow-[2px_2px_0_#ff8800]' 
-    : 'shadow-pixel-sm';
+  const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]'
+    : isFailed ? 'shadow-[2px_2px_0_#440011]'
+      : isExpired ? 'shadow-[2px_2px_0_#ff8800]'
+        : 'shadow-pixel-sm';
 
   return (
     <div
@@ -73,6 +105,11 @@ export default function HabitCard({ habit, onEdit }) {
           <div className="text-[10px] text-quest-text truncate uppercase tracking-tight">
             {habit.name}
           </div>
+          {getPeriodicityLabel(habit) && (
+            <span className="text-[8px] text-quest-cyan/70 shrink-0">
+              · {getPeriodicityLabel(habit)}
+            </span>
+          )}
           {habit.streak > 0 && (
             <span className="text-[9px] text-quest-orange flex items-center gap-0.5 font-pixel shrink-0">
               🔥{habit.streak}
@@ -109,22 +146,20 @@ export default function HabitCard({ habit, onEdit }) {
         ) : isDetermined ? (
           <div className="w-full flex justify-center">
             <div
-              className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${
-                isDone
+              className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${isDone
                   ? 'text-quest-green border-quest-green bg-[#003322]'
                   : 'text-quest-red border-quest-red bg-[#330011]'
-              }`}
+                }`}
             >
               {isDone ? '✔ Hábito resuelto' : '✖ Hábito fallado'}
             </div>
           </div>
         ) : (
           <div className="w-full flex justify-center">
-            <div className={`px-3 py-2 text-[8px] font-pixel border ${
-              isExpired 
+            <div className={`px-3 py-2 text-[8px] font-pixel border ${isExpired
                 ? 'text-orange-500 border-orange-500/50 bg-orange-500/10'
                 : 'text-quest-textMuted border-quest-border/50'
-            }`}>
+              }`}>
               {isExpired ? '⚠️ Hábito expirado' : 'Toca para abrir opciones'}
             </div>
           </div>

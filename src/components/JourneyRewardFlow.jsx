@@ -7,7 +7,7 @@
  * Paso 1: Muestra el modal de historia (si hay una nueva historia)
  * Paso 2: Al cerrar la historia, otorga automáticamente los objetos
  * 
- * Lee `pendingJourneyReward` del store y llama a `claimJourneyItems()`
+ * Lee la cola `journeyRewardQueue` del store y llama a `claimJourneyItems()`
  * cuando el usuario cierra el modal de historia.
  * 
  * @component
@@ -23,13 +23,13 @@ import StoryScrollModal from './StoryScrollModal.jsx';
  * Step 1: Show StoryScrollModal (pergamino) — user reads the unlocked story.
  * Step 2: After closing the story, all 3 items are granted automatically.
  *
- * Reads `pendingJourneyReward` from the store.
+ * Reads the `journeyRewardQueue` from the store.
  * Calls `claimJourneyItems()` when the story is closed.
  *
  * Renders nothing when there is no pending reward.
  */
 export default function JourneyRewardFlow() {
-  const pendingReward = useGameStore(s => s.pendingJourneyReward);
+  const pendingReward = useGameStore(s => s.journeyRewardQueue?.[0] ?? null);
   const claimJourneyItems = useGameStore(s => s.claimJourneyItems);
 
   // 'story' | null — whether we should show the story modal
@@ -42,13 +42,18 @@ export default function JourneyRewardFlow() {
     }
   }, [pendingReward]);
 
+  useEffect(() => {
+    if (pendingReward && !pendingReward.story) {
+      claimJourneyItems();
+    }
+  }, [pendingReward, claimJourneyItems]);
+
   if (!pendingReward) return null;
 
-  const { journeyNumber, story, itemChoices } = pendingReward;
+  const { journeyNumber, story } = pendingReward;
 
-  // If there's no story to show, grant items immediately
+  // If there's no story to show, items are granted in the effect above
   if (!story) {
-    claimJourneyItems();
     return null;
   }
 

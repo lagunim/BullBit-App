@@ -2,7 +2,7 @@
  * DailyChallenge - Componente que muestra la misión diaria del juego
  * 
  * Las misiones diarias son desafíos opcionales que cambian cada día.
- * Pueden ser de diferente dificultad (easy, medium, hard) y ofrecen
+ * Pueden ser de diferente dificultad (easy, medium, hard, epic) y ofrecen
  * recompensas adicionales en puntos y objetos.
  * 
  * @component
@@ -45,6 +45,7 @@ export default function DailyChallenge() {
       case 'easy': return 'text-green-400';
       case 'medium': return 'text-yellow-400';
       case 'hard': return 'text-red-400';
+      case 'epic': return 'text-fuchsia-400';
       default: return 'text-gray-400';
     }
   };
@@ -55,6 +56,7 @@ export default function DailyChallenge() {
       case 'easy': return 'from-green-500/20 to-green-600/20 border-green-500/30';
       case 'medium': return 'from-yellow-500/20 to-yellow-600/20 border-yellow-500/30';
       case 'hard': return 'from-red-500/20 to-red-600/20 border-red-500/30';
+      case 'epic': return 'from-fuchsia-500/20 to-violet-600/20 border-fuchsia-500/30';
       default: return 'from-gray-500/20 to-gray-600/20 border-gray-500/30';
     }
   };

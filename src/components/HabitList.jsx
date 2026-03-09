@@ -19,7 +19,42 @@ import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
 import CreatePlanModal from './CreatePlanModal.jsx';
-import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor } from '../utils/gameLogic.js';
+import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor, PERIODICITY_LABELS } from '../utils/gameLogic.js';
+
+function parseCustomDays(customDays) {
+  if (Array.isArray(customDays)) {
+    return customDays
+      .map(day => Number(day))
+      .filter(day => Number.isInteger(day) && day >= 1 && day <= 7);
+  }
+
+  if (typeof customDays === 'string' && customDays.trim()) {
+    return customDays
+      .split(',')
+      .map(day => Number(day.trim()))
+      .filter(day => Number.isInteger(day) && day >= 1 && day <= 7);
+  }
+
+  return [];
+}
+
+function getPeriodicityLabel(habit) {
+  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+    return `${habit.weeklyTimesTarget} veces/semana`;
+  }
+  if (habit.periodicity === 'custom') {
+    const customDays = parseCustomDays(habit.customDays);
+    if (customDays.length) {
+      const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      return customDays.map(day => dayNames[day - 1]).join(', ');
+    }
+    if (habit.customInterval) {
+      return `Cada ${habit.customInterval} días`;
+    }
+    return 'Sin configurar';
+  }
+  return PERIODICITY_LABELS[habit.periodicity] || null;
+}
 
 export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
@@ -204,9 +239,11 @@ export default function HabitList() {
         >
           <div className="anim-fade-in card-pixel w-full max-w-[420px] !p-5 flex flex-col gap-5">
             <div className="flex justify-between items-center border-b border-quest-border pb-2">
-              <div className="text-sm text-quest-cyan font-pixel uppercase  flex items-center gap-2">
-                <span>{selectedHabit.emoji}</span>
-                <span className="truncate">{selectedHabit.name}</span>
+              <div className="flex flex-col gap-1">
+                <div className="text-sm text-quest-cyan font-pixel uppercase flex items-center gap-2">
+                  <span>{selectedHabit.emoji}</span>
+                  <span className="truncate">{selectedHabit.name}</span>
+                </div>
               </div>
               <button
                 onClick={closeSelected}
@@ -217,8 +254,14 @@ export default function HabitList() {
             </div>
 
             <div className="space-y-3">
+              {getPeriodicityLabel(selectedHabit) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-quest-textDim uppercase">Periodicidad</span>
+                  <span className="text-sm font-bold text-quest-cyan">{getPeriodicityLabel(selectedHabit)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-quest-textDim uppercase ">Duración</span>
+                <span className="text-xs text-quest-textDim uppercase">Duración</span>
                 <span className="text-sm font-bold text-quest-green">{selectedHabit.minutes} min</span>
               </div>
               <div className="flex items-center justify-between">

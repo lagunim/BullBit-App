@@ -25,6 +25,11 @@
 // La progresión es exponencial, creando mayor dificultad en niveles altos
 export const LEVEL_THRESHOLDS = [627, 2268, 4872, 9072, 15552, 25194, 39366, 59049];
 
+export function getLevelThreshold(level) {
+  return LEVEL_THRESHOLDS[level]
+    ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] * (level - LEVEL_THRESHOLDS.length + 2);
+}
+
 /**
  * Interpola entre dos colores hexadecimales.
  * Útil para crear gradientes de color dinámicos.
@@ -73,7 +78,7 @@ export function getProgressColor(pct) {
  * @returns {Object} { threshold, pct, remaining }
  */
 export function getLevelInfo(level, points) {
-  const threshold = LEVEL_THRESHOLDS[level] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] * (level - LEVEL_THRESHOLDS.length + 2);
+  const threshold = getLevelThreshold(level);
   const pct = Math.min(100, Math.round((points / threshold) * 100));
   return { threshold, pct, remaining: threshold - points };
 }

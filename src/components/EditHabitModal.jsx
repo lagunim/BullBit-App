@@ -17,6 +17,29 @@ import { PERIODICITY_LABELS } from '../utils/gameLogic.js';
 import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
 import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/habitThemes.js';
 
+function getPeriodicityDetails(habit) {
+  const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  
+  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+    return `${habit.weeklyTimesTarget} vez${habit.weeklyTimesTarget > 1 ? 'es' : ''} por semana`;
+  }
+  
+  if (habit.periodicity === 'custom') {
+    if (habit.customInterval && Number(habit.customInterval) > 0) {
+      return `Cada ${habit.customInterval} día${Number(habit.customInterval) > 1 ? 's' : ''}`;
+    }
+    if (habit.customDays && habit.customDays.length > 0) {
+      const days = habit.customDays.split(',').map(d => {
+        const idx = parseInt(d.trim(), 10) - 1;
+        return dayNames[idx] || d;
+      }).join(', ');
+      return days;
+    }
+  }
+  
+  return PERIODICITY_LABELS[habit.periodicity] || 'Diaria';
+}
+
 export default function EditHabitModal({ habit, onClose }) {
   const updateHabit = useGameStore(s => s.updateHabit);
   // Obtiene el tema del hábito o el tema por defecto
@@ -69,10 +92,15 @@ export default function EditHabitModal({ habit, onClose }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="anim-fade-in card-pixel w-full max-w-[420px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
         {/* Title */}
-        <div className="flex justify-between items-center border-b border-quest-border pb-3">
-          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
-            <span className="animate-pulse">✎</span> Editar Misión
-          </h2>
+        <div className="flex justify-between items-start border-b border-quest-border pb-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center gap-2">
+              <span className="animate-pulse">✎</span> Editar Misión
+            </h2>
+            <div className="text-[10px] text-quest-cyan font-pixel bg-quest-cyan/10 px-2 py-1 rounded border border-quest-cyan/30 inline-block w-fit">
+              📅 {getPeriodicityDetails(habit)}
+            </div>
+          </div>
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
