@@ -43,7 +43,7 @@ export default function InventoryPanel() {
 
   // Items que requieren seleccionar un hábito como objetivo
   // Son efectos instantáneos que se aplican a un hábito específico
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target', 'habit_mult_boost_target', 'delete_habit', 'fusion'];
 
   // Maneja el uso de un objeto del inventario
   // Algunos objetos requieren seleccionar un hábito objetivo primero

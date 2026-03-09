@@ -25,6 +25,7 @@
 
 import { supabase } from './supabase.js';
 import { attachThemeToHabit } from '../data/habitThemes.js';
+import { hydrateDailyChallenge, hydrateDailyChallenges } from '../data/dailies.js';
 
 /**
  * ID de placeholder usado cuando no se tiene un ID válido de servidor.
@@ -561,7 +562,7 @@ export async function checkDailyForToday(userId, today) {
 
   // Hay una misión seleccionada para hoy, reconstruir el objeto
   return {
-    currentDaily: {
+    currentDaily: hydrateDailyChallenge({
       ...(data.daily_data ?? {}),
       id: data.daily_id,
       progress: {
@@ -570,10 +571,36 @@ export async function checkDailyForToday(userId, today) {
         completed: data.completed,
       },
       completed: data.completed,
-    },
+    }),
     dailySelectionMade: true,
     lastDailyDate: data.date,
   };
+}
+
+export async function loadDailyChallengesCatalog() {
+  const { data, error } = await supabase
+    .from('daily_challenges')
+    .select('id, name, description, icon, difficulty, rewards, chosen')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('[db] loadDailyChallengesCatalog:', error.message);
+    return [];
+  }
+
+  return hydrateDailyChallenges(data ?? []);
+}
+
+export async function incrementItemChosen(itemId) {
+  if (!itemId) return;
+  const { error } = await supabase.rpc('increment_item_chosen', { p_item_id: itemId });
+  if (error) console.error('[db] incrementItemChosen:', error.message);
+}
+
+export async function incrementDailyChosen(dailyId) {
+  if (!dailyId) return;
+  const { error } = await supabase.rpc('increment_daily_chosen', { p_daily_id: dailyId });
+  if (error) console.error('[db] incrementDailyChosen:', error.message);
 }
 
 // ════════════════════════════════════════════════════════════════════════

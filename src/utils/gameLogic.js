@@ -23,13 +23,13 @@
 // Nivel thresholds (puntos necesarios para SUBIR DE NIVEL)
 // Ejemplo: LEVEL_THRESHOLDS[0] = 627 significa 627 puntos para pasar del nivel 0 al 1
 // La progresión es exponencial, creando mayor dificultad en niveles altos
-export const LEVEL_THRESHOLDS = [1020, 1320];
+export const LEVEL_THRESHOLDS = [1572, 2088];
 
 export function getLevelThreshold(level) {
   if (level < LEVEL_THRESHOLDS.length) {
     return LEVEL_THRESHOLDS[level];
   }
-  return 1500;
+  return 2160;
 }
 
 /**
@@ -354,6 +354,7 @@ export function isHabitExpired(habit, today, history) {
  * - global_mult_boost: +X a TODOS los multiplicadores
  * - habit_mult_boost: +X solo a un hábito específico
  * - double_points: dobla los puntos
+ * - triple_points: triplica los puntos
  * - next_triple: triplica los puntos (global o dirigido)
  * 
  * @param {Object} habit - Objeto del hábito completado
@@ -385,6 +386,7 @@ export function calcPoints(habit, activeEffects = []) {
   // Aplicar bonificadores de puntos
   let multiplier = 1;
   if (activeEffects.some(e => e.key === 'double_points')) multiplier *= 2;
+  if (activeEffects.some(e => e.key === 'triple_points')) multiplier *= 3;
   // Verificar efecto next_triple dirigido a este hábito
   if (activeEffects.some(e => e.key === 'next_triple' && e.targetHabitId === habit.id)) multiplier *= 3;
   // Verificar efecto next_triple global (legacy)
@@ -437,6 +439,8 @@ export function calcMultiplierOnComplete(habit, activeEffects = []) {
 export function calcMultiplierOnFail(habit, activeEffects = []) {
   // Verificar si hay escudo (protege el multiplicador)
   if (activeEffects.some(e => e.key === 'streak_shield')) return habit.multiplier;
+  // Amuleto de equilibrio: no baja el multiplicador al fallar
+  if (activeEffects.some(e => e.key === 'balance_shield')) return habit.multiplier;
   // Escudo dorado: protege Y aumenta +0.2
   if (activeEffects.some(e => e.key === 'golden_shield')) return parseFloat((habit.multiplier + 0.2).toFixed(1));
 

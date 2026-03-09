@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { ITEMS } from '../data/items.js';
-import { DAILY_CHALLENGES, getRandomDaily, checkDailyProgress } from '../data/dailies.js';
+import { DAILY_CHALLENGES, checkDailyProgress, hydrateDailyChallenges } from '../data/dailies.js';
 import {
   getTodayKey,
   getYesterdayKey,
@@ -39,6 +39,9 @@ import {
   updatePlanTask,
   applyTripleBonus,
   checkDailyForToday,
+  loadDailyChallengesCatalog,
+  incrementItemChosen,
+  incrementDailyChosen,
 } from '../lib/db.js';
 import { supabase } from '../lib/supabase.js';
 import { loadState, clearState } from '../lib/storage.js';
@@ -161,6 +164,7 @@ const useGameStore = create(
     dailyOptions: null,   // Array de 3 opciones para elegir
     dailySelectionMade: false, // Si el usuario ya eligió su daily
     lastDailyDate: null,  // 'YYYY-MM-DD'
+    dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
 
     // Gamification
     unlockedAchievements: [],
@@ -276,6 +280,7 @@ const useGameStore = create(
               dailyOptions: remoteData.dailyOptions ?? null,
               dailySelectionMade: remoteData.dailySelectionMade ?? false,
               lastDailyDate: remoteData.lastDailyDate,
+              dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
               lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
               plans: remoteData.plans ?? {},
             });
@@ -298,6 +303,7 @@ const useGameStore = create(
                 inventory: localState.inventory ?? [],
                 activeEffects: localState.activeEffects ?? [],
                 currentDaily: localState.currentDaily ?? null,
+                dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
                 lastDailyDate: localState.lastDailyDate ?? null,
                 lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
               });
@@ -347,6 +353,7 @@ const useGameStore = create(
                 inventory: [],
                 activeEffects: [],
                 currentDaily: null,
+                dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
                 lastDailyDate: null,
                 lastWeeklyProcessDate: null,
                 plans: {},
@@ -363,6 +370,15 @@ const useGameStore = create(
         } catch (err) {
           // Si Supabase falla, seguir con el estado local sin interrumpir
           console.error('[store] Error cargando datos de BD, usando estado local:', err);
+        }
+
+        try {
+          const catalog = await loadDailyChallengesCatalog();
+          if (catalog.length) {
+            set({ dailyCatalog: catalog });
+          }
+        } catch (error) {
+          console.error('[store] Error cargando catálogo de dailies:', error);
         }
 
         // Procesos de inicio (siempre, independientemente del origen de datos)
@@ -478,6 +494,7 @@ const useGameStore = create(
       const basePoints = minutesDone * habit.multiplier;
       let bonusMult = 1;
       if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      if (activeEffects.some(e => e.key === 'triple_points')) bonusMult *= 3;
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
@@ -558,6 +575,7 @@ const useGameStore = create(
       const basePoints = minutesDone * habit.multiplier;
       let bonusMult = 1;
       if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      if (activeEffects.some(e => e.key === 'triple_points')) bonusMult *= 3;
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
@@ -677,6 +695,11 @@ const useGameStore = create(
         .filter(i => i.qty > 0);
 
       if (item.effectType === 'timed') {
+        if (requiresTargeting(item.effectKey) && !targetHabitId) {
+          get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
+          return;
+        }
+
         // Support both global and targeted timed effects
         const effect = requiresTargeting(item.effectKey) && targetHabitId
           ? createTargetedEffect(item, targetHabitId)
@@ -705,6 +728,11 @@ const useGameStore = create(
         get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
       }
       else if (item.effectType === 'passive') {
+        if (requiresTargeting(item.effectKey) && !targetHabitId) {
+          get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
+          return;
+        }
+
         // Support both global and targeted passive effects  
         const effect = requiresTargeting(item.effectKey) && targetHabitId
           ? createTargetedEffect(item, targetHabitId)
@@ -728,21 +756,55 @@ const useGameStore = create(
         get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
       }
       else if (item.effectType === 'instant') {
-        // Handle targeted effects using generic system
-        if (requiresTargeting(item.effectKey) && targetHabitId) {
-          const targetedEffect = createTargetedEffect(item, targetHabitId);
+        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'fusion') && !targetHabitId) {
+          get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
+          return;
+        }
+
+        // Legacy instant effects that modify habits/state directly
+        if (item.effectKey === 'double_streak') {
+          const nextStreak = Math.max(1, (state.globalStreak ?? 0) * 2);
+          set({
+            inventory: newInventory,
+            globalStreak: nextStreak,
+          });
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            saveProfile(uid, {
+              level: get().level,
+              points: get().points,
+              lifetimePoints: get().lifetimePoints,
+              globalStreak: nextStreak,
+              lastWeeklyProcessDate: get().lastWeeklyProcessDate,
+            }).catch(() => { });
+          }
+        } else if (item.effectKey === 'copy_multiplier') {
+          const highest = Math.max(1.0, ...state.habits.map(h => h.multiplier ?? 1.0));
+          const copied = parseFloat(Math.min(3.0, highest).toFixed(1));
           set(state2 => ({
             inventory: newInventory,
-            activeEffects: [...state2.activeEffects, targetedEffect],
+            habits: state2.habits.map(h => ({ ...h, multiplier: copied })),
           }));
           const uid = get()._userId;
           if (uid) {
             saveInventory(uid, get().inventory).catch(() => { });
-            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+            saveHabits(uid, get().habits).catch(() => { });
           }
-        }
-        // Legacy instant effects that modify habits directly
-        else if (item.effectKey === 'mult_recovery' && targetHabitId) {
+        } else if (item.effectKey === 'delete_habit' && targetHabitId) {
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.filter(h => h.id !== targetHabitId),
+          }));
+
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            // Para "Vacío": eliminamos solo el hábito, conservando historial/estadísticas.
+            supabase.from('habits').delete().eq('id', targetHabitId).catch(() => { });
+          }
+          get()._recalcGlobalStreak();
+        } else if (item.effectKey === 'mult_recovery' && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
             habits: state2.habits.map(h =>
@@ -775,7 +837,7 @@ const useGameStore = create(
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
-        } else if (item.effectKey === 'mult_boost_target' && targetHabitId) {
+        } else if ((item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target') && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
             habits: state2.habits.map(h =>
@@ -789,6 +851,64 @@ const useGameStore = create(
             saveInventory(uid, get().inventory).catch(() => { });
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        } else if (item.effectKey === 'fusion' && targetHabitId) {
+          const targetHabit = state.habits.find(h => h.id === targetHabitId);
+          const donorHabit = state.habits
+            .filter(h => h.id !== targetHabitId)
+            .sort((a, b) => (b.multiplier ?? 1) - (a.multiplier ?? 1))[0];
+
+          if (!targetHabit || !donorHabit) {
+            get()._pushNotification('item', 'Necesitas al menos 2 hábitos para usar Poción de Fusión.');
+            return;
+          }
+
+          const merged = Math.min(3.0, parseFloat(((targetHabit.multiplier ?? 1) + (donorHabit.multiplier ?? 1)).toFixed(1)));
+
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h => h.id === targetHabitId ? { ...h, multiplier: merged } : h),
+          }));
+
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        } else if (item.effectKey === 'level_restore') {
+          const targetHabit = state.habits
+            .slice()
+            .sort((a, b) => (a.multiplier ?? 1) - (b.multiplier ?? 1))[0];
+
+          if (!targetHabit) {
+            get()._pushNotification('item', 'No tienes hábitos para aplicar Pluma de Fénix.');
+            return;
+          }
+
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h => h.id === targetHabit.id ? { ...h, multiplier: 3.0 } : h),
+          }));
+
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            const updatedHabit = get().habits.find(h => h.id === targetHabit.id);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+          }
+        }
+        // Handle targeted effects using generic system
+        else if (requiresTargeting(item.effectKey) && targetHabitId) {
+          const targetedEffect = createTargetedEffect(item, targetHabitId);
+          set(state2 => ({
+            inventory: newInventory,
+            activeEffects: [...state2.activeEffects, targetedEffect],
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            saveInventory(uid, get().inventory).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
         } else {
           set({ inventory: newInventory });
@@ -1079,8 +1199,8 @@ const useGameStore = create(
       // Ya procesamos esta semana
       if (state.lastWeeklyProcessDate === today) return;
 
-      // Obtener hábitos weekly_times
-      const weeklyHabits = state.habits.filter(h => h.periodicity === 'weekly_times' && h.weeklyTimesTarget);
+      // Obtener hábitos de objetivo semanal (incluye legacy con periodicidad custom)
+      const weeklyHabits = state.habits.filter(h => h.weeklyTimesTarget);
       if (weeklyHabits.length === 0) return;
 
       const yesterday = getYesterdayKey();
@@ -1102,13 +1222,13 @@ const useGameStore = create(
 
           // Calcular nuevo multiplicador con penalización y escudos
           let newMult = habit.multiplier;
-          if (activeEffects.some(e => e.key === 'streak_shield')) {
+          if (activeEffects.some(e => e.key === 'streak_shield') || activeEffects.some(e => e.key === 'balance_shield')) {
             // Shield protects - no penalty
           } else if (activeEffects.some(e => e.key === 'golden_shield')) {
             newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
           } else {
             const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
-            const actualPenalty = penaltyEffect ? penaltyEffect.value : totalPenalty;
+            const actualPenalty = penaltyEffect ? (penaltyEffect.value * missedCount) : totalPenalty;
             newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
           }
 
@@ -1300,13 +1420,6 @@ const useGameStore = create(
             // Existe una misión seleccionada para hoy, cargarla
             const { currentDaily } = dailyData;
 
-            // Restaurar la función condition desde DAILY_CHALLENGES
-            const dailyTemplate = DAILY_CHALLENGES.find(d => d.id === currentDaily.id);
-            if (dailyTemplate) {
-              currentDaily.condition = dailyTemplate.condition;
-              currentDaily.check = dailyTemplate.check;
-            }
-
             set({
               currentDaily,
               dailySelectionMade: true,
@@ -1318,7 +1431,10 @@ const useGameStore = create(
             get()._updateDailyProgress();
           } else {
             // No existe misión para hoy, generar opciones para el modal
-            const shuffled = [...DAILY_CHALLENGES].sort(() => Math.random() - 0.5);
+            const dailySource = get().dailyCatalog?.length
+              ? get().dailyCatalog
+              : hydrateDailyChallenges(DAILY_CHALLENGES);
+            const shuffled = [...dailySource].sort(() => Math.random() - 0.5);
             const options = shuffled.slice(0, 3).map(daily => ({
               ...daily,
               progress: { current: 0, target: 1, completed: false },
@@ -1395,6 +1511,8 @@ const useGameStore = create(
           progress_current: 0,
           progress_target: 1,
         }, { onConflict: 'user_id,date' });
+
+        incrementDailyChosen(dailyId).catch(() => { });
       }
 
       // Iniciar seguimiento de progreso
@@ -1492,6 +1610,7 @@ const useGameStore = create(
 
       if (chosenItemId) {
         get().grantItem(chosenItemId);
+        incrementItemChosen(chosenItemId).catch(() => { });
       }
 
       const itemName = chosenItemId ? ITEMS[chosenItemId]?.name : 'un objeto';
@@ -1599,6 +1718,7 @@ const useGameStore = create(
 
       let bonusMult = 1;
       if (activeEffects.some(e => e.key === 'double_points')) bonusMult *= 2;
+      if (activeEffects.some(e => e.key === 'triple_points')) bonusMult *= 3;
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple');
       if (nextTripleEffect) bonusMult *= 3;
 

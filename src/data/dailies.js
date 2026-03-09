@@ -489,6 +489,10 @@ export const DAILY_CHALLENGES = [
   }
 ];
 
+const DAILY_CHALLENGES_BY_ID = Object.fromEntries(
+  DAILY_CHALLENGES.map(daily => [daily.id, daily])
+);
+
 export const DIFFICULTY_CONFIG = {
   easy: { pointsMultiplier: 1.0, rarityBonus: 0 },
   medium: { pointsMultiplier: 1.5, rarityBonus: 1 },
@@ -504,11 +508,32 @@ export function getRandomDaily(excludeIds = []) {
   return availableDailies[randomIndex];
 }
 
+export function hydrateDailyChallenge(daily) {
+  if (!daily?.id) return null;
+
+  const template = DAILY_CHALLENGES_BY_ID[daily.id];
+  if (!template) return daily;
+
+  return {
+    ...template,
+    ...daily,
+    rewards: daily.rewards ?? template.rewards,
+    condition: template.condition,
+    check: template.check,
+  };
+}
+
+export function hydrateDailyChallenges(dailies = []) {
+  return dailies
+    .map(hydrateDailyChallenge)
+    .filter(Boolean);
+}
+
 export function checkDailyProgress(daily, gameState) {
   if (!daily || !daily.id) return { current: 0, target: 1, completed: false };
 
   // Find the original daily template with the condition function
-  const originalDaily = DAILY_CHALLENGES.find(d => d.id === daily.id);
+  const originalDaily = DAILY_CHALLENGES_BY_ID[daily.id];
   if (!originalDaily || !originalDaily.condition) {
     return { current: 0, target: 1, completed: false };
   }

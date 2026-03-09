@@ -35,16 +35,19 @@ function parseCustomDays(customDays) {
 }
 
 function getPeriodicityLabel(habit) {
-  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+  if (habit.weeklyTimesTarget) {
     return `${habit.weeklyTimesTarget} veces/semana`;
   }
   if (habit.periodicity === 'custom') {
     const customDays = parseCustomDays(habit.customDays);
-    if (!customDays.length) {
-      return null;
+    if (customDays.length) {
+      const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      return customDays.map(day => dayNames[day - 1]).join(', ');
     }
-    const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    return customDays.map(day => dayNames[day - 1]).join(', ');
+    if (habit.customInterval) {
+      return `Cada ${habit.customInterval} días`;
+    }
+    return null;
   }
   return PERIODICITY_LABELS[habit.periodicity] || null;
 }
@@ -66,7 +69,7 @@ export default function HabitCard({ habit, onEdit }) {
   const isExpired = isHabitExpired(habit, today, history);
 
   // Verifica si es un hábito de tipo "veces por semana"
-  const isWeeklyTimes = habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget;
+  const isWeeklyTimes = Boolean(habit.weeklyTimesTarget);
   // Obtiene las completaciones de la semana actual
   const weeklyCompletions = isWeeklyTimes ? getWeekCompletions(habit.id, history, today) : 0;
   // Determina si se alcanzó el objetivo semanal
@@ -147,8 +150,8 @@ export default function HabitCard({ habit, onEdit }) {
           <div className="w-full flex justify-center">
             <div
               className={`px-3 py-2 text-[8px] font-pixel border shadow-pixel-sm ${isDone
-                  ? 'text-quest-green border-quest-green bg-[#003322]'
-                  : 'text-quest-red border-quest-red bg-[#330011]'
+                ? 'text-quest-green border-quest-green bg-[#003322]'
+                : 'text-quest-red border-quest-red bg-[#330011]'
                 }`}
             >
               {isDone ? '✔ Hábito resuelto' : '✖ Hábito fallado'}
@@ -157,8 +160,8 @@ export default function HabitCard({ habit, onEdit }) {
         ) : (
           <div className="w-full flex justify-center">
             <div className={`px-3 py-2 text-[8px] font-pixel border ${isExpired
-                ? 'text-orange-500 border-orange-500/50 bg-orange-500/10'
-                : 'text-quest-textMuted border-quest-border/50'
+              ? 'text-orange-500 border-orange-500/50 bg-orange-500/10'
+              : 'text-quest-textMuted border-quest-border/50'
               }`}>
               {isExpired ? '⚠️ Hábito expirado' : 'Toca para abrir opciones'}
             </div>

@@ -27,7 +27,7 @@ const EFFECT_ICONS = {
   golden_shield: { icon: '⭐', title: 'Racha Dorada activa - El próximo fallo no te penaliza y suma +0.2', color: 'text-quest-gold' },
   balance_shield: { icon: '⚖️', title: 'Amuleto de Equilibrio activo - El multiplicador no baja al fallar', color: 'text-quest-cyan' },
   global_mult_boost: { icon: '📈', title: 'Poción de Impulso activa - +1.0 a todos los multiplicadores', color: 'text-quest-green' },
-  reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.1', color: 'text-quest-green' },
+  reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.2', color: 'text-quest-green' },
   double_points: { icon: '✨', title: 'Elixir del Doble activo - Puntos duplicados', color: 'text-purple-400' },
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
   next_triple: { icon: '🔺', title: 'Piedra de Poder activa - 3x puntos en hábito específico', color: 'text-purple-400' },
@@ -46,13 +46,13 @@ function hasActiveMultiplierEffect(rawEffects) {
   const activeEffects = rawEffects.filter(e =>
     !e.expiresAt || new Date(e.expiresAt) > now
   );
-  
+
   if (activeEffects.length === 0) return false;
-  
+
   // Efectos que afectan al multiplicador globalmente
-  return activeEffects.some(e => 
-    e.key === 'streak_shield' || 
-    e.key === 'golden_shield' || 
+  return activeEffects.some(e =>
+    e.key === 'streak_shield' ||
+    e.key === 'golden_shield' ||
     e.key === 'balance_shield' ||
     e.key === 'global_mult_boost' ||
     e.key === 'reduced_penalty'
@@ -76,25 +76,25 @@ export function useHabitTargetedEffects(habitId) {
   const activeEffects = rawEffects.filter(e =>
     !e.expiresAt || new Date(e.expiresAt) > now
   );
-  
+
   return activeEffects.filter(e => e.targetHabitId === habitId);
 }
 
 export function HabitTargetedIcons({ habitId, className = '' }) {
   const targetedEffects = useHabitTargetedEffects(habitId);
-  
+
   if (targetedEffects.length === 0) return null;
-  
+
   const icons = [];
-  
+
   targetedEffects.forEach(effect => {
     if (EFFECT_ICONS[effect.key]) {
       icons.push(EFFECT_ICONS[effect.key]);
     }
   });
-  
+
   if (icons.length === 0) return null;
-  
+
   return (
     <span className={`flex items-center gap-0.5 ${className}`}>
       {icons.map((effectIcon, index) => (
@@ -112,7 +112,7 @@ export function HabitTargetedIcons({ habitId, className = '' }) {
 
 export default function MultiplierIcons({ className = '' }) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
-  
+
   const now = new Date();
   const activeEffects = rawEffects.filter(e =>
     !e.expiresAt || new Date(e.expiresAt) > now
@@ -121,19 +121,19 @@ export default function MultiplierIcons({ className = '' }) {
   if (activeEffects.length === 0) return null;
 
   const icons = [];
-  
-  const hasShield = activeEffects.some(e => 
+
+  const hasShield = activeEffects.some(e =>
     e.key === 'streak_shield' || e.key === 'golden_shield' || e.key === 'balance_shield'
   );
   const hasGlobalBoost = activeEffects.some(e => e.key === 'global_mult_boost');
   const hasReducedPenalty = activeEffects.some(e => e.key === 'reduced_penalty');
-  const hasPointsBoost = activeEffects.some(e => 
+  const hasPointsBoost = activeEffects.some(e =>
     (e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple') &&
     !e.targetHabitId // Only show global effects
   );
-  
+
   if (hasShield) {
-    const shieldEffect = activeEffects.find(e => 
+    const shieldEffect = activeEffects.find(e =>
       e.key === 'golden_shield' || e.key === 'balance_shield' || e.key === 'streak_shield'
     );
     if (shieldEffect && EFFECT_ICONS[shieldEffect.key]) {
@@ -142,17 +142,17 @@ export default function MultiplierIcons({ className = '' }) {
       icons.push(EFFECT_ICONS['streak_shield']);
     }
   }
-  
+
   if (hasGlobalBoost) {
     icons.push(EFFECT_ICONS['global_mult_boost']);
   }
-  
+
   if (hasReducedPenalty) {
     icons.push(EFFECT_ICONS['reduced_penalty']);
   }
-  
+
   if (hasPointsBoost && !hasGlobalBoost) {
-    const pointsEffect = activeEffects.find(e => 
+    const pointsEffect = activeEffects.find(e =>
       (e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple') &&
       !e.targetHabitId // Only show global effects
     );

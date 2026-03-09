@@ -107,7 +107,7 @@ export default function HabitHistory() {
     }
 
     if (rawStatus === 'none' && !isToday && !isFuture) {
-      if (habit.periodicity === 'weekly_times') {
+      if (habit.weeklyTimesTarget) {
         return 'none';
       }
       return 'failed';

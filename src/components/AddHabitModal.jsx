@@ -60,6 +60,7 @@ export default function AddHabitModal({ onClose }) {
         setError('¡MÍNIMO 1 VEZ POR SEMANA!');
         return;
       }
+      habitPayload.periodicity = 'weekly_times';
       habitPayload.weeklyTimesTarget = target;
       habitPayload.customDays = '';
       habitPayload.customInterval = '';
@@ -148,8 +149,15 @@ export default function AddHabitModal({ onClose }) {
               className="input-pixel flex-1"
               value={form.periodicity}
               onChange={e => {
-                setForm(f => ({ ...f, periodicity: e.target.value }));
-                if (e.target.value === 'custom') {
+                const nextPeriodicity = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  periodicity: nextPeriodicity,
+                  ...(nextPeriodicity !== 'custom'
+                    ? { customDays: '', customInterval: '', customWeeklyTimes: '' }
+                    : {}),
+                }));
+                if (nextPeriodicity === 'custom') {
                   setShowCustomModal(true);
                 }
               }}
@@ -185,6 +193,7 @@ export default function AddHabitModal({ onClose }) {
             onSave={(data) => {
               setForm(f => ({
                 ...f,
+                periodicity: 'custom',
                 customDays: data.days,
                 customInterval: data.interval,
                 customWeeklyTimes: data.weeklyTimes,

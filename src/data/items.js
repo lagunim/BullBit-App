@@ -292,14 +292,14 @@ export const ITEMS = {
   /**
    * PLUMA DE FÉNIX
    * Tipo: Instantáneo
-   * Efecto: Recupera 1 nivel si bajas de nivel.
+   * Efecto: Aumenta a 3.0 el multiplicador del hábito con el multiplicador más bajo.
    */
   phoenix: {
     id: 'phoenix',
     name: 'Pluma de Fénix',
     icon: '🪶',
     rarity: 'legendary',
-    desc: 'Recupera 1 nivel si bajas de nivel.',
+    desc: 'Aumenta el multiplicador del hábito con el multiplicador más bajo a 3.',
     effectType: 'instant',
     effectKey: 'level_restore',
     effectValue: 1,
@@ -369,11 +369,11 @@ export const ITEMS = {
  */
 export const RARITY_COLORS = {
   // Común: Gris azulado, sin brillo
-  common:    { color: '#a0a0c0', glow: 'none',                  label: 'COMÚN' },
+  common: { color: '#a0a0c0', glow: 'none', label: 'COMÚN' },
   // Raro: Cian, brillo suave azul
-  rare:      { color: '#00e5ff', glow: '0 0 8px #00e5ff66',    label: 'RARO' },
+  rare: { color: '#00e5ff', glow: '0 0 8px #00e5ff66', label: 'RARO' },
   // Épico: Púrpura, brillo púrpura
-  epic:      { color: '#b44fff', glow: '0 0 8px #b44fff66',    label: 'ÉPICO' },
+  epic: { color: '#b44fff', glow: '0 0 8px #b44fff66', label: 'ÉPICO' },
   // Legendario: Dorado, brillo dorado intenso
-  legendary: { color: '#ffd700', glow: '0 0 12px #ffd70088',   label: 'LEGENDARIO' },
+  legendary: { color: '#ffd700', glow: '0 0 12px #ffd70088', label: 'LEGENDARIO' },
 };

@@ -39,7 +39,7 @@ function parseCustomDays(customDays) {
 }
 
 function getPeriodicityLabel(habit) {
-  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+  if (habit.weeklyTimesTarget) {
     return `${habit.weeklyTimesTarget} veces/semana`;
   }
   if (habit.periodicity === 'custom') {
@@ -85,7 +85,7 @@ export default function HabitList() {
 
   // Calcula si se ha alcanzado el objetivo semanal para hábitos de tipo "weekly_times"
   const isWeeklyTargetMet = (habit) => {
-    if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+    if (habit.weeklyTimesTarget) {
       const completions = getWeekCompletions(habit.id, history, today);
       return completions >= habit.weeklyTimesTarget;
     }
@@ -280,7 +280,7 @@ export default function HabitList() {
                   <span className="text-base font-bold text-quest-orange">🔥 {selectedHabit.streak}</span>
                 </div>
               )}
-              {selectedHabit.periodicity === 'weekly_times' && selectedHabit.weeklyTimesTarget && (
+              {selectedHabit.weeklyTimesTarget && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-quest-textDim uppercase ">Esta semana</span>
                   <span className="text-base font-bold text-quest-cyan">

@@ -19,11 +19,11 @@ import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/ha
 
 function getPeriodicityDetails(habit) {
   const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  
-  if (habit.periodicity === 'weekly_times' && habit.weeklyTimesTarget) {
+
+  if (habit.weeklyTimesTarget) {
     return `${habit.weeklyTimesTarget} vez${habit.weeklyTimesTarget > 1 ? 'es' : ''} por semana`;
   }
-  
+
   if (habit.periodicity === 'custom') {
     if (habit.customInterval && Number(habit.customInterval) > 0) {
       return `Cada ${habit.customInterval} día${Number(habit.customInterval) > 1 ? 's' : ''}`;
@@ -36,7 +36,7 @@ function getPeriodicityDetails(habit) {
       return days;
     }
   }
-  
+
   return PERIODICITY_LABELS[habit.periodicity] || 'Diaria';
 }
 
@@ -49,12 +49,13 @@ export default function EditHabitModal({ habit, onClose }) {
   const [form, setForm] = useState({
     name: habit.name,
     minutes: habit.minutes,
-    periodicity: habit.periodicity,
+    periodicity: 'custom',
     emoji: habit.emoji ?? defaultTheme?.icon,
     themeId: habit.themeId ?? DEFAULT_HABIT_THEME,
     customDays: habit.customDays || '',
     customInterval: habit.customInterval || '',
     customWeeklyTimes: habit.weeklyTimesTarget ? String(habit.weeklyTimesTarget) : '',
+    weeklyTimesTarget: habit.weeklyTimesTarget ? String(habit.weeklyTimesTarget) : '',
   });
   const [error, setError] = useState('');
   const [showCustomModal, setShowCustomModal] = useState(false);
@@ -72,15 +73,21 @@ export default function EditHabitModal({ habit, onClose }) {
     };
 
     // Manejar periodicidad semanal personalizada
-    if (form.periodicity === 'custom' && form.customWeeklyTimes) {
-      const target = Number(form.customWeeklyTimes);
+    if (form.periodicity === 'custom' && (form.weeklyTimesTarget || form.customWeeklyTimes)) {
+      const target = Number(form.weeklyTimesTarget || form.customWeeklyTimes);
       if (!Number.isFinite(target) || target < 1) {
         setError('¡MÍNIMO 1 VEZ POR SEMANA!');
         return;
       }
+      habitPayload.periodicity = 'weekly_times';
       habitPayload.weeklyTimesTarget = target;
+      habitPayload.customWeeklyTimes = String(target);
       habitPayload.customDays = '';
       habitPayload.customInterval = '';
+    } else if (form.periodicity !== 'custom') {
+      habitPayload.customDays = '';
+      habitPayload.customInterval = '';
+      habitPayload.customWeeklyTimes = '';
     }
 
     updateHabit(habit.id, habitPayload);
@@ -170,8 +177,15 @@ export default function EditHabitModal({ habit, onClose }) {
               className="input-pixel flex-1"
               value={form.periodicity}
               onChange={e => {
-                setForm(f => ({ ...f, periodicity: e.target.value }));
-                if (e.target.value === 'custom') {
+                const nextPeriodicity = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  periodicity: nextPeriodicity,
+                  ...(nextPeriodicity !== 'custom'
+                    ? { customDays: '', customInterval: '', customWeeklyTimes: '', weeklyTimesTarget: '' }
+                    : {}),
+                }));
+                if (nextPeriodicity === 'custom') {
                   setShowCustomModal(true);
                 }
               }}
@@ -191,24 +205,6 @@ export default function EditHabitModal({ habit, onClose }) {
           </div>
         </div>
 
-        {form.periodicity === 'weekly_times' && (
-          <div>
-            <label className="text-[18px] sm:text-[9px] text-quest-textDim block mb-2 font-pixel">VECES POR SEMANA</label>
-            <div className="flex items-center gap-3">
-              <input
-                className="input-pixel !w-20 text-center"
-                type="number"
-                inputMode="numeric"
-                min={1} max={7}
-                value={form.weeklyTimesTarget}
-                onChange={e => setForm(f => ({ ...f, weeklyTimesTarget: e.target.value }))}
-                placeholder="3"
-              />
-              <div className="text-[16px] sm:text-[7px] text-quest-textMuted uppercase">veces esta semana</div>
-            </div>
-          </div>
-        )}
-
         {error && <div className="text-quest-red text-[16px] sm:text-[7px] font-pixel animate-pulse bg-quest-red/10 p-2 border border-quest-red">{error}</div>}
 
         <div className="flex gap-3 mt-2">
@@ -220,8 +216,16 @@ export default function EditHabitModal({ habit, onClose }) {
           <CustomPeriodicityModal
             initialDays={form.customDays}
             initialInterval={form.customInterval}
+            initialWeeklyTimes={form.weeklyTimesTarget || form.customWeeklyTimes}
             onSave={(data) => {
-              setForm(f => ({ ...f, customDays: data.days, customInterval: data.interval }));
+              setForm(f => ({
+                ...f,
+                periodicity: 'custom',
+                customDays: data.days,
+                customInterval: data.interval,
+                customWeeklyTimes: data.weeklyTimes,
+                weeklyTimesTarget: data.weeklyTimes,
+              }));
               setShowCustomModal(false);
             }}
             onClose={() => setShowCustomModal(false)}
