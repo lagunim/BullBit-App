@@ -1,7 +1,7 @@
 /**
  * Header - Componente de encabezado principal de la aplicación
  * 
- * Muestra el logo, puntos actuales, nivel de viaje y efectos activos.
+ * Muestra el logo y efectos activos.
  * Se mantiene fijo en la parte superior de la pantalla (sticky).
  * 
  * @component
@@ -13,9 +13,6 @@ import { supabase } from "../lib/supabase.js";
 import ActiveEffectModal from "./ActiveEffectModal.jsx";
 
 export default function Header() {
-  // Obtiene datos del store global del juego
-  const level = useGameStore((s) => s.level ?? 0);
-  const points = useGameStore((s) => s.points ?? 0);
   const rawEffects = useGameStore((s) => s.activeEffects ?? []);
   const [selectedEffect, setSelectedEffect] = useState(null);
 
@@ -56,24 +53,6 @@ export default function Header() {
               </div>
             ))}
           </div>
-
-          {/* <div className="flex flex-col gap-2 mr-2"> */}
-          {/* Points */}
-          <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-green px-2 py-0.5 sm:px-3 sm:py-1">
-            <span className="text-[6px] text-quest-textDim">PTS</span>
-            <span className="text-[10px] sm:text-xs text-quest-green font-pixel">
-              {points.toLocaleString()}
-            </span>
-          </div>
-
-          {/* Journey badge */}
-          <div className="flex items-center gap-1.5 bg-quest-panel border border-quest-gold px-2 py-0.5 sm:px-3 sm:py-1">
-            <span className="text-[6px] text-quest-textDim">VIAJE</span>
-            <span className="text-[10px] sm:text-xs text-quest-gold font-pixel">
-              {level}
-            </span>
-          </div>
-          {/* </div> */}
 
           {/* Logout Button */}
           <button
