@@ -400,14 +400,14 @@ export const ITEMS = {
   /**
    * POCIÓN DE FUSIÓN
    * Tipo: Instantáneo
-   * Efecto: Combina dos hábitos: suma multiplicadores (máx 3.0).
+   * Efecto: Selecciona dos hábitos para fusionar sus multiplicadores sin límite. Se degradará -0.4 según periodicidad hasta llegar a ×3.
    */
   fusion_potion: {
     id: 'fusion_potion',
     name: 'Poción de Fusión',
     icon: '🧪',
     rarity: 'legendary',
-    desc: 'Combina dos hábitos: suma multiplicadores (máx 3.0).',
+    desc: 'Selecciona dos hábitos para fusionar sus multiplicadores sin límite. Se degradará -0.4 según periodicidad hasta llegar a ×3.',
     effectType: 'instant',
     effectKey: 'fusion',
     effectValue: 0,

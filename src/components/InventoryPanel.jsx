@@ -27,6 +27,8 @@ export default function InventoryPanel() {
   const pushNotification = useGameStore(s => s._pushNotification);
   const [selectedEffect, setSelectedEffect] = useState(null);
   const [pendingTargetItem, setPendingTargetItem] = useState(null);
+  const [pendingMultiSelectItem, setPendingMultiSelectItem] = useState(null);
+  const [selectedHabits, setSelectedHabits] = useState([]);
 
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
@@ -53,7 +55,10 @@ export default function InventoryPanel() {
 
   // Items que requieren seleccionar un hábito como objetivo
   // Son efectos instantáneos que se aplican a un hábito específico
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target', 'habit_mult_boost_target', 'delete_habit', 'fusion', 'phoenix_restore'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target', 'habit_mult_boost_target', 'delete_habit', 'phoenix_restore'];
+  
+  // Items que requieren seleccionar múltiples hábitos
+  const multiTargetEffects = ['fusion'];
   
   // Items que requieren seleccionar cantidad (no hábito)
   const quantitySelectEffects = ['void_exchange'];
@@ -91,6 +96,25 @@ export default function InventoryPanel() {
       });
       return;
     }
+
+    // Si el efecto requiere múltiples objetivos (Poción de Fusión)
+    if (multiTargetEffects.includes(item?.effectKey)) {
+      if (habits.length < 2) {
+        pushNotification?.('item', 'Necesitas al menos 2 hábitos para realizar una fusión.');
+        return;
+      }
+      setPendingMultiSelectItem({
+        itemId,
+        name: item?.name ?? 'Objeto',
+        icon: item?.icon ?? '🧪',
+        effectKey: item?.effectKey,
+        desc: item?.desc ?? 'Descripción no disponible',
+        requiredCount: 2
+      });
+      setSelectedHabits([]);
+      return;
+    }
+
     // Si el efecto requiere un objetivo (hábito específico)
     if (habitTargetEffects.includes(item?.effectKey)) {
       // Para Piedra de Poder, cualquier hábito es elegible
@@ -154,6 +178,24 @@ export default function InventoryPanel() {
     if (!pendingQuantityItem) return;
     useItem(pendingQuantityItem.itemId, null, qty);
     setPendingQuantityItem(null);
+  }
+
+  function handleHabitToggle(habitId) {
+    setSelectedHabits(prev => {
+      if (prev.includes(habitId)) {
+        return prev.filter(id => id !== habitId);
+      } else if (prev.length < (pendingMultiSelectItem?.requiredCount || 2)) {
+        return [...prev, habitId];
+      }
+      return prev;
+    });
+  }
+
+  function handleConfirmMultiSelect() {
+    if (!pendingMultiSelectItem || selectedHabits.length !== pendingMultiSelectItem.requiredCount) return;
+    useItem(pendingMultiSelectItem.itemId, null, selectedHabits);
+    setPendingMultiSelectItem(null);
+    setSelectedHabits([]);
   }
 
   return (
@@ -366,6 +408,87 @@ export default function InventoryPanel() {
                 className="btn-pixel-gray text-[8px] py-2 uppercase"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {pendingMultiSelectItem && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[12000] p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingMultiSelectItem(null); }}
+        >
+          <div className="card-pixel w-full max-w-[520px] bg-quest-bg border border-quest-border relative p-5">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <div className="text-xs text-quest-cyan uppercase font-pixel tracking-widest">
+                  {pendingMultiSelectItem.icon} {pendingMultiSelectItem.name}
+                </div>
+                <div className="text-[10px] text-quest-textDim font-pixel uppercase">
+                  {pendingMultiSelectItem.desc}
+                </div>
+                <div className="text-[8px] text-quest-cyan mt-1 uppercase font-pixel">
+                  Seleccionados: {selectedHabits.length}/{pendingMultiSelectItem.requiredCount}
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingMultiSelectItem(null)}
+                className="btn-pixel-gray py-1 px-3 text-[10px]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+              {habits.map(habit => {
+                const isSelected = selectedHabits.includes(habit.id);
+                const effectiveMult = getEffectiveMultiplierForHabit(habit);
+                const hasGem = hasPermanentMultiplierGem(habit.id, activeEffects);
+                
+                return (
+                  <label 
+                    key={habit.id} 
+                    className={`w-full flex items-center gap-3 p-3 border text-left text-[10px] font-pixel uppercase rounded-md cursor-pointer transition-all ${
+                      isSelected ? 'border-quest-cyan bg-quest-cyan/10 ring-1 ring-quest-cyan/30' : 'border-quest-border hover:border-quest-cyan/50 hover:bg-quest-cyan/5'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleHabitToggle(habit.id)}
+                      disabled={!isSelected && selectedHabits.length >= pendingMultiSelectItem.requiredCount}
+                      className="w-4 h-4 rounded-sm border-quest-border bg-quest-bg text-quest-cyan focus:ring-quest-cyan focus:ring-offset-0 cursor-pointer accent-quest-cyan"
+                    />
+                    <span className="text-xl">{habit.emoji}</span>
+                    <div className="flex-1 truncate">
+                      <div className="truncate text-quest-text">{habit.name}</div>
+                      <div className="text-[8px] text-quest-textDim flex items-center gap-1">
+                        {hasGem && <span title="Gema del Multiplicador activa">💠</span>}
+                        <span>×{effectiveMult.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between items-center mt-5">
+              <button
+                onClick={() => setPendingMultiSelectItem(null)}
+                className="btn-pixel-gray text-[8px] py-2 px-4 uppercase"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmMultiSelect}
+                disabled={selectedHabits.length !== pendingMultiSelectItem.requiredCount}
+                className="btn-pixel-cyan text-[8px] py-2 px-6 uppercase disabled:opacity-50 disabled:cursor-not-allowed shadow-pixel-sm"
+              >
+                FUSIONAR HÁBITOS
               </button>
             </div>
           </div>

@@ -431,6 +431,7 @@ const useGameStore = create(
         // Procesos de inicio (siempre, independientemente del origen de datos)
         get()._processExpiredHabits();
         get()._processWeeklyHabits();
+        get()._processFusionDegradation(); // Procesar degradación de fusión al inicio
         get()._recalcGlobalStreak();
         await get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
@@ -462,7 +463,19 @@ const useGameStore = create(
 
       const activeEffects = state._getActiveEffects();
       const earned = calcPoints(habit, activeEffects);
-      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      
+      // Lógica de multiplicador para completar
+      let newMult = calcMultiplierOnComplete(habit, activeEffects);
+      
+      // DEGRADACIÓN DE FUSIÓN: -0.4 incluso al completar
+      const fusionEffect = activeEffects.find(e => 
+        e.key === 'fusion_degradation' && e.targetHabitId === habitId
+      );
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date())) {
+        newMult = parseFloat(Math.max(3.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+        get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación diaria (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+      }
+      
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
@@ -707,12 +720,29 @@ const useGameStore = create(
       if (state.history[today]?.[habitId]) return;
 
       const activeEffects = state._getActiveEffects();
-      const newMult = calcMultiplierOnFail(habit, activeEffects);
+      
+      // Lógica de multiplicador para fallo
+      let newMult = calcMultiplierOnFail(habit, activeEffects);
+      
+      // DOBLE PENALIZACIÓN: fallo normal + degradación de fusión
+      const fusionEffect = activeEffects.find(e => 
+        e.key === 'fusion_degradation' && e.targetHabitId === habitId
+      );
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, todayDate)) {
+        newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+        get()._pushNotification('fail', `🧪 Hábito fusionado: ¡DOBLE PENALIZACIÓN POR FALLAR!`);
+      }
 
       // Consume shield if used
       let newActiveEffects = [...state.activeEffects];
       const shieldIdx = newActiveEffects.findIndex(e => e.key === 'streak_shield' || e.key === 'golden_shield');
       if (shieldIdx !== -1) newActiveEffects.splice(shieldIdx, 1);
+
+      // Si baja de 3.0, el efecto de fusión termina
+      if (newMult <= 3.0 && fusionEffect) {
+        newActiveEffects = newActiveEffects.filter(e => e !== fusionEffect);
+        get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+      }
 
       const gemLoss = removeGemIfLostThreshold(newActiveEffects, habitId, newMult);
       newActiveEffects = gemLoss.effects;
@@ -823,8 +853,13 @@ const useGameStore = create(
         get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
       }
       else if (item.effectType === 'instant') {
-        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'fusion' || item.effectKey === 'phoenix_restore') && !targetHabitId) {
+        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'phoenix_restore') && !targetHabitId) {
           get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
+          return;
+        }
+
+        if (item.effectKey === 'fusion' && (!targetHabitId || !Array.isArray(targetHabitId) || targetHabitId.length !== 2)) {
+          get()._pushNotification('item', 'Selecciona exactamente 2 hábitos para fusionar.');
           return;
         }
 
@@ -932,31 +967,66 @@ const useGameStore = create(
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
-        } else if (item.effectKey === 'fusion' && targetHabitId) {
-          const targetHabit = state.habits.find(h => h.id === targetHabitId);
-          const donorHabit = state.habits
-            .filter(h => h.id !== targetHabitId)
-            .sort((a, b) => (b.multiplier ?? 1) - (a.multiplier ?? 1))[0];
+        } else if (item.effectKey === 'fusion' && Array.isArray(targetHabitId) && targetHabitId.length === 2) {
+          const [h1Id, h2Id] = targetHabitId;
+          const h1 = state.habits.find(h => h.id === h1Id);
+          const h2 = state.habits.find(h => h.id === h2Id);
 
-          if (!targetHabit || !donorHabit) {
-            get()._pushNotification('item', 'Necesitas al menos 2 hábitos para usar Poción de Fusión.');
+          if (!h1 || !h2) {
+            get()._pushNotification('item', 'Error: Hábitos no encontrados.');
             return;
           }
 
-          const targetCap = getHabitMultiplierCap(targetHabitId, state.activeEffects);
-          const merged = Math.min(targetCap, parseFloat(((targetHabit.multiplier ?? 1) + (donorHabit.multiplier ?? 1)).toFixed(1)));
+          // Sumar multiplicadores sin límite
+          const fusedMult = parseFloat((Number(h1.multiplier ?? 1) + Number(h2.multiplier ?? 1)).toFixed(1));
+
+          const newActiveEffects = [
+            ...state.activeEffects,
+            {
+              key: 'fusion_degradation',
+              targetHabitId: h1Id,
+              itemName: 'Poción de Fusión',
+              degradationAmount: 0.4,
+              habitPeriodicityInfo: {
+                periodicity: h1.periodicity,
+                weeklyTimesTarget: h1.weeklyTimesTarget,
+                customPattern: h1.customPattern,
+                customDays: h1.customDays,
+                customInterval: h1.customInterval
+              },
+              createdAt: new Date().toISOString()
+            },
+            {
+              key: 'fusion_degradation',
+              targetHabitId: h2Id,
+              itemName: 'Poción de Fusión',
+              degradationAmount: 0.4,
+              habitPeriodicityInfo: {
+                periodicity: h2.periodicity,
+                weeklyTimesTarget: h2.weeklyTimesTarget,
+                customPattern: h2.customPattern,
+                customDays: h2.customDays,
+                customInterval: h2.customInterval
+              },
+              createdAt: new Date().toISOString()
+            }
+          ];
 
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h => h.id === targetHabitId ? { ...h, multiplier: merged } : h),
+            habits: state2.habits.map(h => 
+              (h.id === h1Id || h.id === h2Id) ? { ...h, multiplier: fusedMult } : h
+            ),
+            activeEffects: newActiveEffects
           }));
 
           const uid = get()._userId;
           if (uid) {
             saveInventory(uid, get().inventory).catch(() => { });
-            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+            saveHabits(uid, get().habits).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
+          get()._pushNotification('item', `🧪 ¡Fusión exitosa! Multiplicador: ×${fusedMult.toFixed(1)}`);
         } else if (item.effectKey === 'phoenix_restore' && targetHabitId) {
           const targetHabit = state.habits.find(h => h.id === targetHabitId);
           
@@ -1226,7 +1296,16 @@ const useGameStore = create(
 
               const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
               if (habitIndex !== -1) {
-                const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                // DOBLE PENALIZACIÓN EN PROCESO AUTOMÁTICO
+                let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
+                if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
+                  newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+                  if (newMult <= 3.0) {
+                    nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
+                  }
+                }
+
                 const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
                 nextActiveEffects = gemLoss.effects;
                 if (gemLoss.removed) removedGemCount += 1;
@@ -1456,6 +1535,94 @@ const useGameStore = create(
       set({ globalStreak: calcGlobalStreak(habits, history) });
       const uid = get()._userId;
       if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+    },
+
+    // ── FUSION LOGIC ───────────────────────────────────────────────
+    _shouldDegradeFusionToday(habit, fusionEffect, dateObj) {
+      const info = fusionEffect.habitPeriodicityInfo;
+      const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun...
+
+      switch (info.periodicity) {
+        case 'daily':
+          return true;
+        case 'weekly':
+          if (info.weeklyTimesTarget) {
+            // Distribuir según el target semanal
+            const target = info.weeklyTimesTarget;
+            const degradationDays = {
+              1: [1], // Lun
+              2: [1, 4], // Lun, Jue
+              3: [1, 3, 5], // Lun, Mie, Vie
+              4: [1, 2, 4, 5], // Lun, Mar, Jue, Vie
+              5: [1, 2, 3, 4, 5], // Lun-Vie
+              6: [1, 2, 3, 4, 5, 6], // Lun-Sab
+              7: [0, 1, 2, 3, 4, 5, 6] // Todos
+            };
+            const activeDays = degradationDays[target] || [1, 3, 5];
+            return activeDays.includes(dayOfWeek);
+          }
+          return dayOfWeek === 1; // Solo lunes para semanal simple
+        case 'monthly':
+          return dateObj.getDate() === 1; // Primero de mes
+        case 'custom':
+          // Reutilizar lógica de isHabitDueOnDate si es posible o imitarla
+          if (info.customDays) {
+            const days = info.customDays.split(',').map(Number);
+            return days.includes(dayOfWeek === 0 ? 7 : dayOfWeek);
+          }
+          if (info.customInterval) {
+            const created = new Date(habit.createdAt);
+            created.setHours(0,0,0,0);
+            const current = new Date(dateObj);
+            current.setHours(0,0,0,0);
+            const diffDays = Math.floor((current - created) / (1000 * 60 * 60 * 24));
+            return diffDays % info.customInterval === 0;
+          }
+          return true;
+        default:
+          return true;
+      }
+    },
+
+    _processFusionDegradation() {
+      const state = get();
+      const activeEffects = state._getActiveEffects();
+      const fusionEffects = activeEffects.filter(e => e.key === 'fusion_degradation');
+      if (fusionEffects.length === 0) return;
+
+      const today = new Date();
+      let hasChanges = false;
+      let nextHabits = [...state.habits];
+      let nextEffects = [...state.activeEffects];
+
+      fusionEffects.forEach(effect => {
+        const habit = nextHabits.find(h => h.id === effect.targetHabitId);
+        if (!habit) return;
+
+        if (get()._shouldDegradeFusionToday(habit, effect, today)) {
+          hasChanges = true;
+          // Degradación de -0.4 hasta un mínimo de 3.0
+          const currentMult = habit.multiplier ?? 1.0;
+          const nextMult = parseFloat(Math.max(3.0, currentMult - (effect.degradationAmount || 0.4)).toFixed(1));
+          
+          nextHabits = nextHabits.map(h => h.id === habit.id ? { ...h, multiplier: nextMult } : h);
+
+          // Si llegamos a 3.0, el efecto termina
+          if (nextMult <= 3.0) {
+            nextEffects = nextEffects.filter(e => e !== effect);
+            get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+          }
+        }
+      });
+
+      if (hasChanges) {
+        set({ habits: nextHabits, activeEffects: nextEffects });
+        const uid = get()._userId;
+        if (uid) {
+          saveHabits(uid, nextHabits).catch(() => { });
+          saveActiveEffects(uid, nextEffects).catch(() => { });
+        }
+      }
     },
 
     // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===

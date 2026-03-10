@@ -19,6 +19,7 @@ import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
 import CreatePlanModal from './CreatePlanModal.jsx';
+import { ITEMS } from '../data/items.js';
 import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor, PERIODICITY_LABELS } from '../utils/gameLogic.js';
 
 function parseCustomDays(customDays) {
@@ -59,6 +60,7 @@ function getPeriodicityLabel(habit) {
 export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
   const history = useGameStore(s => s.history ?? {});
+  const activeEffects = useGameStore(s => s.activeEffects ?? []);
   const removeHabit = useGameStore(s => s.removeHabit);
   const completeHabit = useGameStore(s => s.completeHabit);
   const completeHabitPartial = useGameStore(s => s.completeHabitPartial);
@@ -111,35 +113,9 @@ export default function HabitList() {
     setCustomError('');
   }
 
-  const isSelectedHabitAvailableToday = selectedHabit
+const isSelectedHabitAvailableToday = selectedHabit
     ? isHabitDueOnDate(selectedHabit, today, history)
     : false;
-
-  // Función para completar el hábito seleccionado
-  // Maneja tres casos: completado simple, parcial, o con tiempo extra
-  function handleComplete() {
-    if (!selectedHabit) return;
-    const trimmed = String(customMinutes).trim();
-    // Si no hay tiempo personalizado, completar normalmente
-    if (!trimmed) {
-      completeHabit(selectedHabit.id);
-      closeSelected();
-      return;
-    }
-    const minutes = Number(trimmed);
-    // Validar que sea un número válido y positivo
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      setCustomError('Introduce un número válido.');
-      return;
-    }
-    // Determinar si es parcial (menos tiempo) o con extra (más tiempo)
-    if (minutes < selectedHabit.minutes) {
-      completeHabitPartial(selectedHabit.id, minutes);
-    } else {
-      completeHabitOvertime(selectedHabit.id, minutes);
-    }
-    closeSelected();
-  }
 
   const hasActiveEffect = useHasActiveMultiplierEffect();
 
@@ -151,6 +127,10 @@ export default function HabitList() {
           : mult >= 1.5 ? 'text-quest-green'
             : 'text-quest-text';
   }
+
+  const habitEffects = activeEffects.filter(e => 
+    !e.targetHabitId || e.targetHabitId === selectedHabit?.id
+  );
 
   return (
     <div>
@@ -298,6 +278,58 @@ export default function HabitList() {
                   <span className="text-base font-bold text-quest-cyan">
                     {getWeekCompletions(selectedHabit.id, history, today)}/{selectedHabit.weeklyTimesTarget}
                   </span>
+                </div>
+              )}
+
+              {/* Sección de Efectos Activos */}
+              {habitEffects.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-quest-border/30 space-y-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] text-quest-textDim uppercase font-black tracking-wider">
+                      Efectos Activos
+                    </span>
+                    <div className="h-[1px] flex-1 bg-quest-border/20" />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    {habitEffects.map((effect, idx) => {
+                      // Buscar el item original para obtener metadatos (icono, desc, rareza)
+                      const item = Object.values(ITEMS).find(i => 
+                        i.effectKey === effect.key || 
+                        i.name === effect.itemName ||
+                        (i.effectKey + '_target') === effect.key ||
+                        (i.effectKey === 'phoenix_restore' && effect.key === 'phoenix_bonus')
+                      );
+
+                      return (
+                        <div key={idx} className="bg-black/40 border border-white/5 p-2 rounded flex gap-3 items-start group hover:border-quest-gold/30 transition-colors">
+                          <span className="text-xl drop-shadow-pixel">{item?.icon || '✨'}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center mb-0.5">
+                              <span className="text-[11px] font-bold text-quest-gold truncate">
+                                {item?.name || effect.itemName || 'Efecto Mágico'}
+                              </span>
+                              <div className="flex gap-1.5 items-center">
+                                {effect.usesRemaining !== undefined && (
+                                  <span className="text-[9px] px-1 bg-quest-blue/20 text-quest-blue font-bold border border-quest-blue/30 rounded-sm">
+                                    {effect.usesRemaining} usos
+                                  </span>
+                                )}
+                                {effect.expiresAt && (
+                                  <span className="text-[9px] text-quest-textDim italic">
+                                    Temporal
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-quest-text/80 leading-snug">
+                              {item?.desc || 'Efecto especial activo.'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
