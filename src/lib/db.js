@@ -113,6 +113,7 @@ function rowToEffect(row) {
     expiresAt: row.expires_at ?? undefined,
     itemName: row.item_name ?? undefined,
     targetHabitId: row.target_habit_id ?? undefined,
+    usesRemaining: row.uses_remaining ?? undefined,
   };
 }
 
@@ -508,6 +509,7 @@ export async function saveActiveEffects(userId, effects) {
     expires_at: e.expiresAt ?? null,
     item_name: e.itemName ?? null,
     target_habit_id: e.targetHabitId ?? null,
+    uses_remaining: e.usesRemaining ?? null,
   }));
   const { error } = await supabase.from('active_effects').insert(rows);
   if (error) console.error('[db] saveActiveEffects:', error.message);

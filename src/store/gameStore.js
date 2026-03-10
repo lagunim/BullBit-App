@@ -629,7 +629,7 @@ const useGameStore = create(
         if (updatedHabit) saveHabit(userId, updatedHabit).catch(() => { });
         saveHabitEntry(userId, habitId, today, 'completed').catch(() => { });
         saveProfile(userId, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
-        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId, nextEffects).catch(() => { });
+        saveActiveEffects(userId, nextEffects).catch(() => { });
         journeyRewards.forEach(reward => {
           if (reward.story) saveStory(userId, reward.journeyNumber, reward.story.id).catch(() => { });
         });
@@ -667,16 +667,33 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
-      const earned = Math.round(basePoints * bonusMult);
+      let earned = Math.round(basePoints * bonusMult);
+
+      // Apply phoenix_bonus to points
+      const phoenixEffectPartial = activeEffects.find(e => 
+        e.key === 'phoenix_bonus' && 
+        e.targetHabitId === habitId && 
+        (e.usesRemaining ?? 0) > 0
+      );
+      if (phoenixEffectPartial) earned = earned * phoenixEffectPartial.value;
 
       const newMult = calcMultiplierOnComplete(habit, activeEffects);
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
       // Consume "next_triple" if present
-      const nextEffects = nextTripleEffect
+      let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      // Decrement phoenix_bonus usesRemaining if present for this habit
+      nextEffects = nextEffects.map(e => {
+        if (e.key === 'phoenix_bonus' && e.targetHabitId === habitId && (e.usesRemaining ?? 0) > 0) {
+          const newUsesRemaining = e.usesRemaining - 1;
+          return newUsesRemaining > 0 ? { ...e, usesRemaining: newUsesRemaining } : null;
+        }
+        return e;
+      }).filter(Boolean);
 
       // Update history
       const newHistory = {
@@ -713,7 +730,7 @@ const useGameStore = create(
         if (updatedHabit) saveHabit(userId2, updatedHabit).catch(() => { });
         saveHabitEntry(userId2, habitId, today, 'partial').catch(() => { });
         saveProfile(userId2, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
-        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId2, nextEffects).catch(() => { });
+        saveActiveEffects(userId2, nextEffects).catch(() => { });
         journeyRewards.forEach(reward => {
           if (reward.story) saveStory(userId2, reward.journeyNumber, reward.story.id).catch(() => { });
         });
@@ -749,16 +766,33 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
-      const earned = Math.round(basePoints * bonusMult);
+      let earned = Math.round(basePoints * bonusMult);
+
+      // Apply phoenix_bonus to points
+      const phoenixEffectOvertime = activeEffects.find(e => 
+        e.key === 'phoenix_bonus' && 
+        e.targetHabitId === habitId && 
+        (e.usesRemaining ?? 0) > 0
+      );
+      if (phoenixEffectOvertime) earned = earned * phoenixEffectOvertime.value;
 
       const newMult = calcMultiplierOnComplete(habit, activeEffects);
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
       // Consume "next_triple" if present
-      const nextEffects = nextTripleEffect
+      let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      // Decrement phoenix_bonus usesRemaining if present for this habit
+      nextEffects = nextEffects.map(e => {
+        if (e.key === 'phoenix_bonus' && e.targetHabitId === habitId && (e.usesRemaining ?? 0) > 0) {
+          const newUsesRemaining = e.usesRemaining - 1;
+          return newUsesRemaining > 0 ? { ...e, usesRemaining: newUsesRemaining } : null;
+        }
+        return e;
+      }).filter(Boolean);
 
       // Update history
       const newHistory = {
@@ -795,7 +829,7 @@ const useGameStore = create(
         if (updatedHabit) saveHabit(userId3, updatedHabit).catch(() => { });
         saveHabitEntry(userId3, habitId, today, 'over').catch(() => { });
         saveProfile(userId3, { level: finalLevel, points: finalPoints, lifetimePoints: newLifetime, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
-        if (nextEffects.length !== state.activeEffects.length) saveActiveEffects(userId3, nextEffects).catch(() => { });
+        saveActiveEffects(userId3, nextEffects).catch(() => { });
         journeyRewards.forEach(reward => {
           if (reward.story) saveStory(userId3, reward.journeyNumber, reward.story.id).catch(() => { });
         });
@@ -1845,24 +1879,24 @@ const useGameStore = create(
 
           // Desbloquear historia si tiene y no estaba antes
           if (ach.storyId) {
-          const storyData = getStoryById(ach.storyId);
-          if (storyData) {
-            const newStory = {
-              journeyId: 0,
-              storyId: ach.storyId,
-              unlockedAt: new Date().toISOString()
-            };
-            const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
+            const storyData = getStoryById(ach.storyId);
+            if (storyData) {
+              const newStory = {
+                journeyId: 0,
+                storyId: ach.storyId,
+                unlockedAt: new Date().toISOString()
+              };
+              const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
 
-            if (!alreadyUnlocked) {
-              set(state3 => ({
-                unlockedStories: [...state3.unlockedStories, newStory],
-              }));
-              if (uid) saveStory(uid, 0, ach.storyId).catch(() => { });
-              get()._pushNotification('story', `📜 Historia desbloqueada`, ach.storyId);
+              if (!alreadyUnlocked) {
+                set(state3 => ({
+                  unlockedStories: [...state3.unlockedStories, newStory],
+                }));
+                if (uid) saveStory(uid, 0, ach.storyId).catch(() => { });
+                get()._pushNotification('story', `📜 Historia desbloqueada`, ach.storyId);
+              }
             }
           }
-        }
 
           // Otorgar recompensa de item
           if (ach.reward) {
@@ -1883,7 +1917,7 @@ const useGameStore = create(
         const nextState = {
           notifications: [...state.notifications, notificationObj],
         };
-        
+
         // Save to persistent notifications if it's an important type
         const importantTypes = ['achievement', 'story', 'item', 'level', 'journey'];
         if (importantTypes.includes(type)) {
@@ -1892,7 +1926,7 @@ const useGameStore = create(
             nextState.savedNotifications = [notificationObj, ...(state.savedNotifications || [])];
           }
         }
-        
+
         return nextState;
       });
 

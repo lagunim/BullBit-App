@@ -346,12 +346,12 @@ export default function HabitList() {
                               </span>
                               <div className="flex gap-1.5 items-center">
                                 {effect.usesRemaining !== undefined && (
-                                  <span className="text-[9px] px-1 bg-quest-blue/20 text-quest-blue font-bold border border-quest-blue/30 rounded-sm">
+                                  <span className=" text-quest-blue text-[9px] animate-pulse italic">
                                     {effect.usesRemaining} usos
                                   </span>
                                 )}
                                 {isTimed && effect.expiresAt && (
-                                  <span className="text-[9px] text-quest-purple italic">
+                                  <span className="text-[9px] animate-pulse text-quest-purple italic">
                                     {(() => {
                                       const expDate = new Date(effect.expiresAt);
                                       const now = new Date();
