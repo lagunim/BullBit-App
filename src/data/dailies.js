@@ -298,7 +298,7 @@ export const DAILY_CHALLENGES = [
   {
     id: 'iron_day',
     name: 'Día de Hierro',
-    description: 'Completa todos tus hábitos por encima de su multiplicador base',
+    description: 'Completa todos tus hábitos por encima de su tiempo base',
     icon: '🧱',
     difficulty: 'hard',
     condition: (state) => {
@@ -310,7 +310,7 @@ export const DAILY_CHALLENGES = [
 
       const fullyCompleted = state.habits.filter(habit => {
         const status = dayHistory[habit.id];
-        return status === 'completed' || status === 'over';
+        return status === 'over';
       }).length;
 
       const failed = state.habits.filter(habit => dayHistory[habit.id] === 'failed').length;
@@ -499,6 +499,12 @@ export const DIFFICULTY_CONFIG = {
   hard: { pointsMultiplier: 2.0, rarityBonus: 2 },
   epic: { pointsMultiplier: 2.5, rarityBonus: 3 }
 };
+
+export function getDailyByDifficulty(difficulty, excludeIds = []) {
+  const pool = DAILY_CHALLENGES.filter(d => d.difficulty === difficulty && !excludeIds.includes(d.id));
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 export function getRandomDaily(excludeIds = []) {
   const availableDailies = DAILY_CHALLENGES.filter(d => !excludeIds.includes(d.id));

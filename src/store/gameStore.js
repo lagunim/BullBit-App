@@ -1760,19 +1760,43 @@ const useGameStore = create(
             // Actualizar progreso de la misión actual
             get()._updateDailyProgress();
           } else {
-            // No existe misión para hoy, generar opciones para el modal
-            const dailySource = get().dailyCatalog?.length
-              ? get().dailyCatalog
-              : hydrateDailyChallenges(DAILY_CHALLENGES);
-            const shuffled = [...dailySource].sort(() => Math.random() - 0.5);
-            const options = shuffled.slice(0, 3).map(daily => ({
+            // No existe misión para hoy, generar opciones ponderadas para el modal
+            const { getDailyByDifficulty } = await import('../data/dailies.js');
+            
+            const pickWeighted = (diffA, diffB, weightA) => {
+              const targetDiff = Math.random() < weightA ? diffA : diffB;
+              let daily = getDailyByDifficulty(targetDiff, []);
+              // Fallback si no hay de esa dificultad (poco probable con el catálogo actual)
+              if (!daily) daily = getDailyByDifficulty(diffA === targetDiff ? diffB : diffA, []);
+              return daily;
+            };
+
+            const options = [];
+            const usedIds = [];
+
+            // Opción 1: 80% easy, 20% medium
+            const opt1 = pickWeighted('easy', 'medium', 0.8);
+            if (opt1) { options.push(opt1); usedIds.push(opt1.id); }
+
+            // Opción 2: 60% medium, 40% hard
+            let opt2 = pickWeighted('medium', 'hard', 0.6);
+            if (opt2 && usedIds.includes(opt2.id)) opt2 = getDailyByDifficulty('hard', usedIds) || getDailyByDifficulty('medium', usedIds);
+            if (opt2) { options.push(opt2); usedIds.push(opt2.id); }
+
+            // Opción 3: 60% hard, 40% epic
+            let opt3 = pickWeighted('hard', 'epic', 0.6);
+            if (opt3 && usedIds.includes(opt3.id)) opt3 = getDailyByDifficulty('epic', usedIds) || getDailyByDifficulty('hard', usedIds);
+            if (opt3) { options.push(opt3); usedIds.push(opt3.id); }
+
+            // Mapear a formato de progreso
+            const finalOptions = options.map(daily => ({
               ...daily,
               progress: { current: 0, target: 1, completed: false },
               completed: false,
             }));
 
             set({
-              dailyOptions: options,
+              dailyOptions: finalOptions,
               currentDaily: null,
               dailySelectionMade: false,
               lastDailyDate: today,
@@ -1783,7 +1807,7 @@ const useGameStore = create(
               user_id: userId,
               date: today,
               daily_id: null,
-              daily_data: { options },
+              daily_data: { options: finalOptions },
               daily_selection_made: false,
               completed: false,
               progress_current: 0,

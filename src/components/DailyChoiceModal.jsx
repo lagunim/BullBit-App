@@ -9,6 +9,7 @@ export default function DailyChoiceModal({ options, onSelect }) {
       case 'easy': return 'border-green-500/50 bg-green-500/10 text-green-400';
       case 'medium': return 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400';
       case 'hard': return 'border-red-500/50 bg-red-500/10 text-red-400';
+      case 'epic': return 'border-purple-500/50 bg-purple-500/10 text-purple-400';
       default: return 'border-gray-500/50 bg-gray-500/10 text-gray-400';
     }
   };
@@ -18,6 +19,7 @@ export default function DailyChoiceModal({ options, onSelect }) {
       case 'easy': return 'from-green-600/20 to-green-700/10';
       case 'medium': return 'from-yellow-600/20 to-yellow-700/10';
       case 'hard': return 'from-red-600/20 to-red-700/10';
+      case 'epic': return 'from-purple-600/20 to-purple-700/10';
       default: return 'from-gray-600/20 to-gray-700/10';
     }
   };
