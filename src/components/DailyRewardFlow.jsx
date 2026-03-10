@@ -11,6 +11,7 @@
  * @component
  * @returns {JSX.Element|null} Modal de recompensa diaria o null si no hay recompensa pendiente
  */
+import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS } from '../data/items.js';
@@ -29,27 +30,17 @@ import { ITEMS } from '../data/items.js';
  * @returns {JSX.Element} Modal de selección de objeto
  */
 function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
-  const [visible, setVisible] = useState(false);
   const [chosen, setChosen] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
-  // Animación de entrada al montar el componente
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  // Selecciona un objeto
   function handlePick(itemId) {
     if (confirming) return;
     setChosen(itemId);
   }
 
-  // Confirma la selección y cierra el modal
   function handleConfirm() {
     if (!chosen || confirming) return;
     setConfirming(true);
-    setVisible(false);
     setTimeout(() => {
       onClaim(chosen);
     }, 260);
@@ -57,7 +48,6 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
 
   // Obtiene los objetos del catálogo
   const items = itemChoices.map(id => ITEMS[id]).filter(Boolean);
-  const selectedItem = items.find(item => item.id === chosen) ?? null;
 
   const rarityLabel = {
     common: 'Común',
@@ -79,80 +69,78 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
     passive: 'Pasivo',
   };
 
-  return (
-    <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className={`w-full max-w-xl bg-quest-card border border-quest-gold shadow-[0_0_60px_rgba(0,0,0,0.7)] transformation ${visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'} transition-all duration-300`}
-        style={{ borderWidth: 3 }}>
-        <div className="px-6 py-5 text-center">
-          <h3 className="text-xs uppercase tracking-[0.35em] text-quest-gold mb-1">Daily completado</h3>
-          <p className="font-pixel text-[10px] leading-tight text-quest-text">{dailyName}</p>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm">
+      <div className="card-pixel w-full max-w-[480px] max-h-[calc(100dvh-60px)] overflow-y-auto flex flex-col gap-5 !p-6 border-quest-gold shadow-[4px_4px_0_theme(colors.quest.goldDark)]">
+        <div className="text-center border-b border-quest-border pb-4">
+          <h2 className="text-sm sm:text-xs text-quest-gold font-pixel uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
+            <span className="animate-pulse">🎁</span> Daily completado
+          </h2>
+          <p className="text-gray-400 text-[10px] sm:text-xs font-pixel">
+            {dailyName}
+          </p>
         </div>
-        <div className="flex gap-3 px-5 pb-4">
+
+        <div className="flex flex-col gap-4">
           {items.map(item => (
             <button
               key={item.id}
               type="button"
               onClick={() => handlePick(item.id)}
-              className={`flex-1 border-2 p-4 text-center transition-all card-pixel ${chosen === item.id ? 'border-quest-gold shadow-[0_0_0_1px_rgba(255,215,0,0.3)]' : 'border-quest-border hover:border-quest-gold/70'}`}
-              style={{ background: 'rgba(10,10,10,0.7)' }}
+              className={`text-left p-4 border-2 bg-gradient-to-r from-quest-goldDark/20 to-quest-gold/5 
+                hover:scale-[1.02] transition-all duration-200 cursor-pointer card-pixel
+                hover:shadow-[0_0_20px_rgba(255,215,0,0.3)] group
+                ${chosen === item.id ? 'border-quest-gold shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-quest-border'}`}
             >
-              <div className="text-3xl mb-2">{item.icon}</div>
-              <div className="font-pixel text-[8px] text-quest-text">{item.name}</div>
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{item.icon}</span>
+                  <div>
+                    <h3 className="font-bold text-white text-sm font-pixel">{item.name}</h3>
+                    <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border ${rarityClass[item.rarity] ?? 'text-quest-textDim border-quest-border'}`}>
+                      {rarityLabel[item.rarity] ?? item.rarity}
+                    </span>
+                  </div>
+                </div>
+                <span className={`text-quest-gold text-lg transition-all ${chosen === item.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>✓</span>
+              </div>
+
+              <p className="text-gray-300 text-[10px] sm:text-xs leading-relaxed mb-2">
+                {item.desc}
+              </p>
+
+              <div className="flex items-center gap-3 pt-2 border-t border-quest-border/50 text-[9px] font-pixel">
+                <div className="flex items-center gap-1">
+                  <span className="text-purple-400 text-[10px]">Tipo:</span>
+                  <span className="text-gray-300">{effectTypeLabel[item.effectType] ?? item.effectType}</span>
+                </div>
+                {item.durationDays && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-purple-400 text-[10px]">Duración:</span>
+                    <span className="text-gray-300">{item.durationDays} día(s)</span>
+                  </div>
+                )}
+              </div>
             </button>
           ))}
         </div>
 
-        <div className="px-5 pb-5">
-          {selectedItem ? (
-            <div className="card-pixel border-2 border-quest-border bg-black/40 p-3">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <p className="font-pixel text-[10px] text-quest-gold uppercase tracking-wider">Objeto seleccionado</p>
-                  <p className="font-pixel text-[11px] text-quest-text truncate">{selectedItem.icon} {selectedItem.name}</p>
-                </div>
-                <span className={`font-pixel text-[8px] border px-2 py-1 uppercase ${rarityClass[selectedItem.rarity] ?? 'text-quest-textDim border-quest-border'}`}>
-                  {rarityLabel[selectedItem.rarity] ?? selectedItem.rarity}
-                </span>
-              </div>
-
-              <p className="text-[10px] text-quest-textDim leading-relaxed mb-3">{selectedItem.desc}</p>
-
-              <div className="grid grid-cols-2 gap-2 text-[9px] font-pixel">
-                <div className="border border-quest-border px-2 py-1 text-quest-textDim">
-                  Tipo: <span className="text-quest-text">{effectTypeLabel[selectedItem.effectType] ?? selectedItem.effectType}</span>
-                </div>
-                <div className="border border-quest-border px-2 py-1 text-quest-textDim">
-                  Valor: <span className="text-quest-text">{selectedItem.effectValue ?? 0}</span>
-                </div>
-                {selectedItem.durationDays ? (
-                  <div className="border border-quest-border px-2 py-1 text-quest-textDim col-span-2">
-                    Duración: <span className="text-quest-text">{selectedItem.durationDays} día(s)</span>
-                  </div>
-                ) : (
-                  <div className="border border-quest-border px-2 py-1 text-quest-textDim col-span-2">
-                    Duración: <span className="text-quest-text">Inmediata</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="card-pixel border-2 border-quest-border bg-black/30 p-3 text-center font-pixel text-[9px] text-quest-textDim">
-              Selecciona un objeto para ver su información.
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-center px-6 pb-6">
+        <div className="flex items-center justify-center">
           <button
             onClick={handleConfirm}
             disabled={!chosen}
-            className={`btn-pixel text-[10px] px-6 py-2 ${chosen ? 'bg-quest-gold text-black' : 'opacity-40 cursor-not-allowed'}`}
+            className={`btn-pixel text-[10px] px-6 py-2 w-full ${chosen ? 'bg-quest-gold text-black' : 'opacity-40 cursor-not-allowed'}`}
           >
             {confirming ? 'RECLAMANDO...' : 'RECLAMAR OBJETO'}
           </button>
         </div>
+
+        <p className="text-center text-gray-500 text-[9px] font-pixel">
+          Toca un objeto para seleccionarlo
+        </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
