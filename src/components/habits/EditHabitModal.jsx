@@ -111,10 +111,10 @@ export default function EditHabitModal({ habit, onClose }) {
           <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
-        {/* Emoji selector */}
+        {/* Emoji selector - 3 columnas, 2 filas */}
         <div>
-          <label className="text-sm sm:text-[9px] text-quest-textDim block mb-3 font-pixel">TEMÁTICA</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <label className="text-[9px] text-quest-textDim block mb-2 font-pixel">ICONO</label>
+          <div className="grid grid-cols-3 gap-2">
             {HABIT_THEMES.map(theme => {
               const isSelected = form.themeId === theme.id;
               return (
@@ -122,20 +122,18 @@ export default function EditHabitModal({ habit, onClose }) {
                   key={theme.id}
                   type="button"
                   onClick={() => setForm(f => ({ ...f, themeId: theme.id, emoji: theme.icon }))}
-                  className={`flex flex-col items-center justify-center gap-1 py-3 rounded border-2 transition-all ${isSelected
-                    ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)] scale-105'
+                  className={`flex flex-col items-center justify-center py-2 gap-2 rounded border-2 transition-all ${isSelected
+                    ? 'bg-quest-panel border-quest-gold shadow-[0_0_8px_theme(colors.quest.gold)]'
                     : 'bg-quest-bg border-quest-border hover:border-quest-textDim'
                     }`}
                 >
-                  <span className="text-3xl leading-[1]">{theme.icon}</span>
-                  {isSelected && (
-                    <span className="text-[10px] uppercase text-quest-textDim">{theme.label}</span>
-                  )}
+                  <span className="text-2xl leading-[1]">{theme.icon}</span>
+                  <span className="text-[7px] uppercase text-quest-textDim mt-1">{theme.label}</span>
                 </button>
               );
             })}
           </div>
-          <div className="text-[10px] uppercase text-quest-textDim mt-2">
+          <div className="text-[9px] text-quest-textDim uppercase mt-2 font-pixel">
             {HABIT_THEME_BY_ID[form.themeId]?.description}
           </div>
         </div>
