@@ -424,21 +424,21 @@ export default function HabitList() {
               );
             })()}
 
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex gap-2 mt-2">
               <button
                 onClick={() => {
                   setEditingHabit(selectedHabit);
                   closeSelected();
                 }}
-                className="btn-pixel-gold w-full text-xs py-3 font-bold uppercase "
+                className="btn-pixel-gold flex-1 text-xs py-3 font-bold uppercase "
               >
-                ✎ Editar hábito
+                ✎ Editar
               </button>
               <button
                 onClick={() => setDeleteConfirm(true)}
-                className="btn-pixel-red w-full text-xs py-3 font-bold uppercase "
+                className="btn-pixel-red flex-1 text-xs py-3 font-bold uppercase "
               >
-                🗑 Borrar hábito
+                🗑 Borrar
               </button>
             </div>
 
