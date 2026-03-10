@@ -34,6 +34,7 @@ const EFFECT_ICONS = {
   next_triple: { icon: '🔺', title: 'Piedra de Poder activa - 3x puntos en hábito específico', color: 'text-purple-400' },
   habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
   perm_base_mult: { icon: '💠', title: 'Gema del Multiplicador activa - Este hábito puede llegar a ×4', color: 'text-quest-gold' },
+  phoenix_bonus: { icon: '🪶', title: 'Pluma de Fénix activa - Los próximos completados otorgan el doble de puntos', color: 'text-quest-gold' },
 };
 
 /**
@@ -188,7 +189,8 @@ export default function MultiplierIcons({ className = '' }) {
   if (icons.length === 0) return null;
 
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div className={`grid grid-cols-3 gap-1 ${className}`}>
+      {/* <div className={`flex items-center gap-1 ${className}`}> */}
       {icons.map((effect, index) => (
         <span
           key={`${effect.icon}-${index}`}
