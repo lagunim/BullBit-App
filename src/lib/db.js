@@ -411,27 +411,73 @@ export async function saveHabitEntries(userId, entries) {
 // ════════════════════════════════════════════════════════════════════════
 
 /**
- * Reemplaza TODO el inventario del usuario.
- * 
- * ESTRATEGIA: Delete + Insert en lugar de update.
- * Se usa esta estrategia porque el inventario es pequeño (< 20 items)
- * y es más simple que gestionar actualizaciones individuales.
+ * Sincroniza el inventario del usuario con estado local.
+ *
+ * ESTRATEGIA:
+ * 1) Normaliza y deduplica entradas por itemId
+ * 2) Upsert por (user_id,item_id)
+ * 3) Elimina items remotos que ya no existen localmente
  * 
  * @param {string} userId - ID del usuario
  * @param {Array} inventory - Array de objetos { itemId, qty }
  */
 export async function saveInventory(userId, inventory) {
-  // Borrar todo e insertar de nuevo (inventario suele ser pequeño, < 20 items)
-  await supabase.from('user_inventory').delete().eq('user_id', userId);
-  if (!inventory.length) return;
-  const rows = inventory.map(i => ({
+  const normalized = new Map();
+  for (const entry of (inventory ?? [])) {
+    if (!entry?.itemId) continue;
+    const qty = Number(entry.qty ?? 0);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    normalized.set(entry.itemId, (normalized.get(entry.itemId) ?? 0) + qty);
+  }
+
+  const itemIds = [...normalized.keys()];
+  if (!itemIds.length) {
+    const { error } = await supabase.from('user_inventory').delete().eq('user_id', userId);
+    if (error) console.error('[db] saveInventory:', error.message);
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const rows = itemIds.map(itemId => ({
     user_id: userId,
-    item_id: i.itemId,
-    quantity: i.qty,
-    updated_at: new Date().toISOString(),
+    item_id: itemId,
+    quantity: normalized.get(itemId),
+    updated_at: now,
   }));
-  const { error } = await supabase.from('user_inventory').insert(rows);
-  if (error) console.error('[db] saveInventory:', error.message);
+
+  const { error: upsertError } = await supabase
+    .from('user_inventory')
+    .upsert(rows, { onConflict: 'user_id,item_id' });
+
+  if (upsertError) {
+    console.error('[db] saveInventory:', upsertError.message);
+    return;
+  }
+
+  // Eliminar items remotos que ya no existen en el estado local.
+  const { data: existingRows, error: existingError } = await supabase
+    .from('user_inventory')
+    .select('item_id')
+    .eq('user_id', userId);
+
+  if (existingError) {
+    console.error('[db] saveInventory:', existingError.message);
+    return;
+  }
+
+  const staleItemIds = (existingRows ?? [])
+    .map(row => row.item_id)
+    .filter(itemId => !normalized.has(itemId));
+
+  if (!staleItemIds.length) return;
+
+  const { error: cleanupError } = await supabase
+    .from('user_inventory')
+    .delete()
+    .eq('user_id', userId)
+    .in('item_id', staleItemIds);
+
+  if (cleanupError) console.error('[db] saveInventory:', cleanupError.message);
 }
 
 // ════════════════════════════════════════════════════════════════════════

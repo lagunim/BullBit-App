@@ -328,10 +328,9 @@ export default function HabitHistory() {
             {deleteConfirm && (
               <div className="mt-2 p-2 border border-quest-red bg-quest-red/10 text-xs font-pixel">
                 <div className="mb-2">
-                  <p>
-                    <span className="text-quest-red text-xs">¿Seguro que quieres borrar este hábito?</span>
-                    <br />
-                    <span className="text-quest-textDim text-xs">Esta acción no se puede deshacer.</span>
+                  <p className='text-quest-textDim'>
+                    ¿Seguro que quieres borrar este hábito?
+                    <span className=" text-quest-red"> Esta acción no se puede deshacer.</span>
                   </p>
                 </div>
                 <div className="flex gap-2">

@@ -188,6 +188,96 @@ function resolveJourneyProgress({ level, points, earnedPoints, unlockedStories, 
   return { finalLevel, finalPoints, rewards };
 }
 
+const INVENTORY_SAVE_DEBOUNCE_MS = 180;
+const inventorySaveQueue = new Map();
+
+function normalizeInventorySnapshot(inventory) {
+  const normalized = new Map();
+  for (const entry of (inventory ?? [])) {
+    if (!entry?.itemId) continue;
+    const qty = Number(entry.qty ?? 0);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    normalized.set(entry.itemId, (normalized.get(entry.itemId) ?? 0) + qty);
+  }
+
+  return [...normalized.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([itemId, qty]) => ({ itemId, qty }));
+}
+
+function clearQueuedInventorySaves(exceptUserId) {
+  for (const [queuedUserId, entry] of inventorySaveQueue.entries()) {
+    if (exceptUserId && queuedUserId === exceptUserId) continue;
+    if (entry.timer) clearTimeout(entry.timer);
+    inventorySaveQueue.delete(queuedUserId);
+  }
+}
+
+function flushInventorySave(userId) {
+  const entry = inventorySaveQueue.get(userId);
+  if (!entry) return;
+  if (entry.running) {
+    entry.needsRun = true;
+    return;
+  }
+
+  entry.running = true;
+  entry.timer = null;
+
+  const run = async () => {
+    try {
+      do {
+        entry.needsRun = false;
+        const snapshot = normalizeInventorySnapshot(entry.getSnapshot?.() ?? []);
+        const signature = JSON.stringify(snapshot);
+        if (!snapshot.length && entry.lastSavedSignature === '[]') {
+          continue;
+        }
+        if (entry.lastSavedSignature === signature) {
+          continue;
+        }
+
+        await saveInventory(userId, snapshot);
+        entry.lastSavedSignature = signature;
+      } while (entry.needsRun);
+    } catch {
+      // Mantener fire-and-forget para no bloquear UX por errores de red.
+    } finally {
+      entry.running = false;
+      if (!entry.timer && !entry.needsRun) {
+        inventorySaveQueue.delete(userId);
+      }
+    }
+  };
+
+  run();
+}
+
+function queueInventorySave(userId, getSnapshot) {
+  if (!userId || typeof getSnapshot !== 'function') return;
+
+  let entry = inventorySaveQueue.get(userId);
+  if (!entry) {
+    entry = {
+      timer: null,
+      running: false,
+      needsRun: false,
+      getSnapshot,
+      lastSavedSignature: null,
+    };
+    inventorySaveQueue.set(userId, entry);
+  }
+
+  entry.getSnapshot = getSnapshot;
+  entry.needsRun = true;
+
+  if (entry.timer) {
+    clearTimeout(entry.timer);
+  }
+
+  entry.timer = setTimeout(() => flushInventorySave(userId), INVENTORY_SAVE_DEBOUNCE_MS);
+}
+
 const useGameStore = create(
   (set, get) => ({
     // Core
@@ -294,6 +384,9 @@ const useGameStore = create(
       if (!userId) return;
 
       const state = get();
+      if (state._userId && state._userId !== userId) {
+        clearQueuedInventorySaves();
+      }
       if (state._initPromise && state._initializingUserId === userId) {
         await state._initPromise;
         return;
@@ -381,7 +474,7 @@ const useGameStore = create(
                 }
               }
               if (entries.length) saveHabitEntries(userId, entries).catch(() => { });
-              if (localState.inventory?.length) saveInventory(userId, localState.inventory).catch(() => { });
+              if (localState.inventory?.length) queueInventorySave(userId, () => localState.inventory);
               if (normalizedEffects.length) saveActiveEffects(userId, normalizedEffects).catch(() => { });
               if (localState.unlockedAchievements?.length) saveAchievements(userId, localState.unlockedAchievements).catch(() => { });
               if (localState.currentDaily && localState.lastDailyDate) {
@@ -466,19 +559,19 @@ const useGameStore = create(
 
       const activeEffects = state._getActiveEffects();
       const earned = calcPoints(habit, activeEffects);
-      
+
       // Lógica de multiplicador para completar
       let newMult = calcMultiplierOnComplete(habit, activeEffects);
-      
+
       // DEGRADACIÓN DE FUSIÓN: -0.4 incluso al completar
-      const fusionEffect = activeEffects.find(e => 
+      const fusionEffect = activeEffects.find(e =>
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date())) {
         newMult = parseFloat(Math.max(3.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
         get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación diaria (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
       }
-      
+
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
@@ -486,12 +579,12 @@ const useGameStore = create(
       const usedEffect = state.activeEffects.find(e =>
         e.key === 'next_triple' && effectAppliesTo(e, habitId)
       );
-      
+
       // Decrement phoenix_bonus usesRemaining if present for this habit
       let nextEffects = usedEffect
         ? state.activeEffects.filter(e => e !== usedEffect)
         : state.activeEffects;
-        
+
       nextEffects = nextEffects.map(e => {
         if (e.key === 'phoenix_bonus' && e.targetHabitId === habitId && (e.usesRemaining ?? 0) > 0) {
           const newUsesRemaining = e.usesRemaining - 1;
@@ -725,20 +818,20 @@ const useGameStore = create(
       // Lógica de multiplicador para fallo
       const activeEffects = state._getActiveEffects();
       let newMult = calcMultiplierOnFail(habit, activeEffects);
-      
+
       // Consume shield if used
       let newActiveEffects = [...state.activeEffects];
       const shield = newActiveEffects.find(e => e.key === 'golden_shield') || newActiveEffects.find(e => e.key === 'streak_shield');
       if (shield) {
         newActiveEffects = newActiveEffects.filter(e => e !== shield);
-        const msg = shield.key === 'golden_shield' 
-          ? `⭐ Racha Dorada consumida: ¡Protección y +0.2 al multiplicador!` 
+        const msg = shield.key === 'golden_shield'
+          ? `⭐ Racha Dorada consumida: ¡Protección y +0.2 al multiplicador!`
           : `🛡️ ${shield.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`;
         get()._pushNotification('item', msg);
       }
 
       // DOBLE PENALIZACIÓN: fallo normal + degradación de fusión
-      const fusionEffect = activeEffects.find(e => 
+      const fusionEffect = activeEffects.find(e =>
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, today)) {
@@ -827,7 +920,7 @@ const useGameStore = create(
         // Persistir en BD
         const uid = get()._userId;
         if (uid) {
-          saveInventory(uid, get().inventory).catch(() => { });
+          queueInventorySave(uid, () => get().inventory);
           saveActiveEffects(uid, get().activeEffects).catch(() => { });
         }
         get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
@@ -855,7 +948,7 @@ const useGameStore = create(
         // Persistir en BD
         const uid = get()._userId;
         if (uid) {
-          saveInventory(uid, get().inventory).catch(() => { });
+          queueInventorySave(uid, () => get().inventory);
           saveActiveEffects(uid, get().activeEffects).catch(() => { });
         }
         get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
@@ -885,7 +978,7 @@ const useGameStore = create(
           });
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveProfile(uid, {
               level: get().level,
               points: get().points,
@@ -906,7 +999,7 @@ const useGameStore = create(
           }));
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveHabits(uid, get().habits).catch(() => { });
           }
         } else if (item.effectKey === 'delete_habit' && targetHabitId) {
@@ -918,7 +1011,7 @@ const useGameStore = create(
 
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
             // Para "Vacío": eliminamos solo el hábito, conservando historial/estadísticas.
             supabase.from('habits').delete().eq('id', targetHabitId).catch(() => { });
@@ -938,7 +1031,7 @@ const useGameStore = create(
           }));
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
@@ -954,7 +1047,7 @@ const useGameStore = create(
           }));
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
         } else if ((item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target') && targetHabitId) {
@@ -971,7 +1064,7 @@ const useGameStore = create(
           }));
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
@@ -1022,7 +1115,7 @@ const useGameStore = create(
 
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h => 
+            habits: state2.habits.map(h =>
               (h.id === h1Id || h.id === h2Id) ? { ...h, multiplier: fusedMult } : h
             ),
             activeEffects: newActiveEffects
@@ -1030,19 +1123,19 @@ const useGameStore = create(
 
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveHabits(uid, get().habits).catch(() => { });
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
           get()._pushNotification('item', `🧪 ¡Fusión exitosa! Multiplicador: ×${fusedMult.toFixed(1)}`);
         } else if (item.effectKey === 'phoenix_restore' && targetHabitId) {
           const targetHabit = state.habits.find(h => h.id === targetHabitId);
-          
+
           if (!targetHabit) {
             get()._pushNotification('item', 'Hábito no encontrado.');
             return;
           }
-          
+
           if ((targetHabit.multiplier ?? 1) >= 3) {
             get()._pushNotification('item', 'Este hábito ya tiene multiplicador ×3 o superior.');
             return;
@@ -1051,7 +1144,7 @@ const useGameStore = create(
           // Establecer multiplicador a 3.0
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h => 
+            habits: state2.habits.map(h =>
               h.id === targetHabitId ? { ...h, multiplier: 3.0 } : h
             ),
             activeEffects: [...state2.activeEffects, {
@@ -1065,7 +1158,7 @@ const useGameStore = create(
 
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
@@ -1079,30 +1172,33 @@ const useGameStore = create(
 
           const rarityMap = { 2: 'common', 4: 'rare', 6: 'epic', 10: 'legendary' };
           const rarity = rarityMap[quantity] || 'common';
-          
+
           const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity && i.id !== 'void_stone');
           if (itemsOfRarity.length === 0) {
             get()._pushNotification('item', 'No hay objetos de esta rareza disponibles.');
             return;
           }
-          
+
           const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
-          
+
           const stonesToRemove = quantity - 1;
           const finalInventory = stonesToRemove > 0
             ? newInventory.map(i => i.itemId === itemId ? { ...i, qty: i.qty - stonesToRemove } : i).filter(i => i.qty > 0)
             : newInventory;
 
+          const randomExistingQty = finalInventory.find(i => i.itemId === randomItem.id)?.qty ?? 0;
+          const mergedInventory = finalInventory
+            .filter(i => i.itemId !== randomItem.id)
+            .concat({ itemId: randomItem.id, qty: randomExistingQty + 1 })
+            .filter(i => i.qty > 0);
+
           set(state2 => ({
-            inventory: [
-              ...finalInventory,
-              { itemId: randomItem.id, qty: (finalInventory.find(i => i.itemId === randomItem.id)?.qty ?? 0) + 1 }
-            ].filter(i => i.qty > 0),
+            inventory: mergedInventory,
           }));
 
           const uid = get()._userId;
-          if (uid) saveInventory(uid, get().inventory).catch(() => { });
-          
+          if (uid) queueInventorySave(uid, () => get().inventory);
+
           get()._pushNotification('item', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`);
         }
         // Handle targeted effects using generic system
@@ -1114,13 +1210,13 @@ const useGameStore = create(
           }));
           const uid = get()._userId;
           if (uid) {
-            saveInventory(uid, get().inventory).catch(() => { });
+            queueInventorySave(uid, () => get().inventory);
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
         } else {
           set({ inventory: newInventory });
           const uid = get()._userId;
-          if (uid) saveInventory(uid, get().inventory).catch(() => { });
+          if (uid) queueInventorySave(uid, () => get().inventory);
         }
         get()._pushNotification('item', `${item.icon} ${item.name} usado!`);
       }
@@ -1144,7 +1240,7 @@ const useGameStore = create(
       });
       // Persistir en BD
       const uid = get()._userId;
-      if (uid) saveInventory(uid, get().inventory).catch(() => { });
+      if (uid) queueInventorySave(uid, () => get().inventory);
     },
 
     // ── JOURNEY REWARDS ───────────────────────────────────────────
@@ -1484,9 +1580,9 @@ const useGameStore = create(
 
           // Calcular nuevo multiplicador con penalización y escudos
           let newMult = habit.multiplier;
-          const shield = nextActiveEffects.find(e => e.key === 'golden_shield') || 
-                        nextActiveEffects.find(e => e.key === 'streak_shield') || 
-                        nextActiveEffects.find(e => e.key === 'balance_shield');
+          const shield = nextActiveEffects.find(e => e.key === 'golden_shield') ||
+            nextActiveEffects.find(e => e.key === 'streak_shield') ||
+            nextActiveEffects.find(e => e.key === 'balance_shield');
 
           if (shield) {
             if (shield.key === 'golden_shield') {
@@ -1570,20 +1666,20 @@ const useGameStore = create(
     _recalcGlobalStreak() {
       const { habits, history, globalStreak: oldStreak } = get();
       const newStreak = calcGlobalStreak(habits, history);
-      
+
       const oldIsMultiple = oldStreak > 0 && oldStreak % 3 === 0;
       const newIsMultiple = newStreak > 0 && newStreak % 3 === 0;
-      
+
       if (newStreak > 0 && newIsMultiple && !oldIsMultiple) {
-        const rarity = newStreak >= 12 ? 'legendary' 
-          : newStreak >= 9 ? 'epic' 
-          : newStreak >= 6 ? 'rare' 
-          : 'common';
-        
+        const rarity = newStreak >= 12 ? 'legendary'
+          : newStreak >= 9 ? 'epic'
+            : newStreak >= 6 ? 'rare'
+              : 'common';
+
         const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity);
         if (itemsOfRarity.length > 0) {
           const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
-          set({ 
+          set({
             globalStreak: newStreak,
             streakReward: randomItem,
           });
@@ -1594,7 +1690,7 @@ const useGameStore = create(
           return;
         }
       }
-      
+
       set({ globalStreak: newStreak });
       const uid = get()._userId;
       if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: newStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
@@ -1639,9 +1735,9 @@ const useGameStore = create(
           }
           if (info.customInterval) {
             const created = new Date(habit.createdAt);
-            created.setHours(0,0,0,0);
+            created.setHours(0, 0, 0, 0);
             const current = new Date(dateObj);
-            current.setHours(0,0,0,0);
+            current.setHours(0, 0, 0, 0);
             const diffDays = Math.floor((current - created) / (1000 * 60 * 60 * 24));
             return diffDays % info.customInterval === 0;
           }
@@ -1671,7 +1767,7 @@ const useGameStore = create(
           // Degradación de -0.4 hasta un mínimo de 3.0
           const currentMult = habit.multiplier ?? 1.0;
           const nextMult = parseFloat(Math.max(3.0, currentMult - (effect.degradationAmount || 0.4)).toFixed(1));
-          
+
           nextHabits = nextHabits.map(h => h.id === habit.id ? { ...h, multiplier: nextMult } : h);
 
           // Si llegamos a 3.0, el efecto termina
@@ -1829,7 +1925,7 @@ const useGameStore = create(
           } else {
             // No existe misión para hoy, generar opciones ponderadas para el modal
             const { getDailyByDifficulty } = await import('../data/dailies.js');
-            
+
             const pickWeighted = (diffA, diffB, weightA) => {
               const targetDiff = Math.random() < weightA ? diffA : diffB;
               let daily = getDailyByDifficulty(targetDiff, []);

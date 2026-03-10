@@ -335,7 +335,7 @@ export default function HabitList() {
 
                       const isTimed = item?.effectType === 'timed' || effect.expiresAt;
                       const isUsable = item?.effectType === 'instant' && item.maxStack > 1;
-                      
+
                       return (
                         <div key={idx} className="bg-black/40 border border-white/5 p-2 rounded flex gap-3 items-start group hover:border-quest-gold/30 transition-colors">
                           <span className="text-xl animate-pulse drop-shadow-pixel">{item?.icon || '✨'}</span>
@@ -455,7 +455,10 @@ export default function HabitList() {
             {deleteConfirm && (
               <div className="mt-2 p-3 border border-quest-red bg-quest-red/10 text-xs font-pixel">
                 <div className="mb-2">
-                  ¿Seguro que quieres borrar este hábito? Esta acción no se puede deshacer.
+                  <p className='text-quest-textDim'>
+                    ¿Seguro que quieres borrar este hábito?
+                    <span className=" text-quest-red"> Esta acción no se puede deshacer.</span>
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <button
