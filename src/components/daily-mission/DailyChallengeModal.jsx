@@ -15,8 +15,8 @@
  * @returns {JSX.Element|null} Modal de misión diaria o null si no hay misión
  */
 import { createPortal } from 'react-dom';
-import { ITEMS } from '../data/items.js';
-import { getProgressColor } from '../utils/gameLogic.js';
+import { ITEMS } from '../../data/items.js';
+import { getProgressColor } from '../../utils/gameLogic.js';
 
 export default function DailyChallengeModal({ daily, onClose }) {
   if (!daily) return null;

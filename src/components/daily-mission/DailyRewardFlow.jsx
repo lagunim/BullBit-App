@@ -13,8 +13,8 @@
  */
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
-import useGameStore from '../store/gameStore.js';
-import { ITEMS } from '../data/items.js';
+import useGameStore from '../../store/gameStore.js';
+import { ITEMS } from '../../data/items.js';
 
 /**
  * DailyItemChoiceModal - Modal de selección de objeto para recompensas diarias

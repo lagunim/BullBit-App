@@ -8,9 +8,9 @@
  * @returns {JSX.Element} Barra de navegación superior con información del jugador
  */
 import { useState } from "react";
-import useGameStore from "../store/gameStore.js";
-import { supabase } from "../lib/supabase.js";
-import ActiveEffectModal from "./ActiveEffectModal.jsx";
+import useGameStore from "../../store/gameStore.js";
+import { supabase } from "../../lib/supabase.js";
+import ActiveEffectModal from "../inventory/ActiveEffectModal.jsx";
 
 export default function Header() {
   const rawEffects = useGameStore((s) => s.activeEffects ?? []);

@@ -17,7 +17,7 @@
  * @param {Function} props.onUseItem - Función para usar un objeto
  * @returns {JSX.Element} Panel de objetos
  */
-import { ITEMS, RARITY_COLORS, RARITY_BORDERS, RARITY_LABELS } from '../lib/items.js';
+import { ITEMS, RARITY_COLORS, RARITY_BORDERS, RARITY_LABELS } from '../../lib/items.js';
 
 export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
   // Filtra solo los objetos con cantidad > 0

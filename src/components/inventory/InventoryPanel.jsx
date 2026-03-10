@@ -14,10 +14,10 @@
  */
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
-import { ITEMS, RARITY_COLORS } from '../data/items.js';
+import useGameStore from '../../store/gameStore.js';
+import { ITEMS, RARITY_COLORS } from '../../data/items.js';
 import ActiveEffectModal from './ActiveEffectModal.jsx';
-import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../utils/gameLogic.js';
+import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../../utils/gameLogic.js';
 
 export default function InventoryPanel() {
   const inventory = useGameStore(s => s.inventory ?? []);

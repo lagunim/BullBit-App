@@ -15,7 +15,7 @@
  * @component
  * @returns {JSX.Element} Contenedor de notificaciones flotantes
  */
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 
 /**
  * Definición de estilos para cada tipo de notificación

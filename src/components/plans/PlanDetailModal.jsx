@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 
 export default function PlanDetailModal({ date, onClose }) {
   const { plans, completePlanTask, deletePlanTask, removePlan } = useGameStore();

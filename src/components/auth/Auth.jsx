@@ -14,7 +14,7 @@
  * @returns {JSX.Element} Formulario de login/register
  */
 import { useState } from 'react';
-import { supabase } from '../lib/supabase.js';
+import { supabase } from '../../lib/supabase.js';
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);

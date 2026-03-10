@@ -9,9 +9,9 @@
  * @returns {JSX.Element|null} Tarjeta de misión diaria o null si no hay misión
  */
 import { useState } from 'react';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 import DailyChallengeModal from './DailyChallengeModal.jsx';
-import { getProgressColor } from '../utils/gameLogic.js';
+import { getProgressColor } from '../../utils/gameLogic.js';
 
 export default function DailyChallenge() {
   const { currentDaily, dailyOptions, dailySelectionMade } = useGameStore();

@@ -13,9 +13,9 @@
  * @param {Function} props.onEdit - Función llamada al hacer click en la tarjeta
  * @returns {JSX.Element} Tarjeta visual del hábito
  */
-import useGameStore from '../store/gameStore.js';
-import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS } from '../utils/gameLogic.js';
-import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons, useEffectiveMultiplier } from './MultiplierIcons.jsx';
+import useGameStore from '../../store/gameStore.js';
+import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS } from '../../utils/gameLogic.js';
+import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons, useEffectiveMultiplier } from '../progress/MultiplierIcons.jsx';
 
 function parseCustomDays(customDays) {
   if (Array.isArray(customDays)) {

@@ -12,8 +12,8 @@
  */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
-import { getDateKey } from '../utils/gameLogic.js';
+import useGameStore from '../../store/gameStore.js';
+import { getDateKey } from '../../utils/gameLogic.js';
 import EditHabitModal from './EditHabitModal.jsx';
 
 /**

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 
 function createUuid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {

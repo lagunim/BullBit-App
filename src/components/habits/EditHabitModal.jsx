@@ -12,10 +12,10 @@
  */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
-import { PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import useGameStore from '../../store/gameStore.js';
+import { PERIODICITY_LABELS } from '../../utils/gameLogic.js';
 import CustomPeriodicityModal from './CustomPeriodicityModal.jsx';
-import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../data/habitThemes.js';
+import { HABIT_THEMES, HABIT_THEME_BY_ID, DEFAULT_HABIT_THEME } from '../../data/habitThemes.js';
 
 function getPeriodicityDetails(habit) {
   const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];

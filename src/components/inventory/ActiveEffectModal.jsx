@@ -16,7 +16,7 @@
  * @returns {JSX.Element|null} Modal de efecto activo o null si no hay efecto
  */
 import { createPortal } from 'react-dom';
-import { ITEMS, RARITY_COLORS } from '../data/items.js';
+import { ITEMS, RARITY_COLORS } from '../../data/items.js';
 
 /**
  * Obtiene el objeto ITEMS correspondiente a un efecto activo

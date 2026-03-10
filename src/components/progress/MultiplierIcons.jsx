@@ -16,8 +16,8 @@
  * @component
  * @returns {JSX.Element|null} Iconos de efectos o null si no hay efectos
  */
-import useGameStore from '../store/gameStore.js';
-import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../utils/gameLogic.js';
+import useGameStore from '../../store/gameStore.js';
+import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../../utils/gameLogic.js';
 
 /**
  * Mapeo de iconos y colores para cada tipo de efecto de multiplicador

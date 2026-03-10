@@ -13,10 +13,10 @@
  */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
-import { ACHIEVEMENTS, RARITY_COLORS } from '../data/achievements.js';
-import { getProgressColor } from '../utils/gameLogic.js';
-import { getStoryById } from '../data/stories.js';
+import useGameStore from '../../store/gameStore.js';
+import { ACHIEVEMENTS, RARITY_COLORS } from '../../data/achievements.js';
+import { getProgressColor } from '../../utils/gameLogic.js';
+import { getStoryById } from '../../data/stories.js';
 
 function StoryModal({ story, onClose }) {
   if (!story) return null;

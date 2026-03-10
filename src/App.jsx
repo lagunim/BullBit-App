@@ -25,24 +25,24 @@
 import { useState, useEffect, useRef } from 'react';
 
 // Componentes hijos
-import Header from './Header.jsx';
-import LevelProgress from './LevelProgress.jsx';
-import HabitList from './HabitList.jsx';
-import HabitHistory from './HabitHistory.jsx';
-import AchievementsPanel from './AchievementsPanel.jsx';
-import InventoryPanel from './InventoryPanel.jsx';
-import DailyChallenge from './DailyChallenge.jsx';
-import PlanCard from './PlanCard.jsx';
-import Notifications from './Notifications.jsx';
-import Auth from './Auth.jsx';
-import StoriesPanel from './StoriesPanel.jsx';
-import JourneyRewardFlow from './JourneyRewardFlow.jsx';
-import DailyRewardFlow from './DailyRewardFlow.jsx';
-import DailyChoiceModal from './DailyChoiceModal.jsx';
+import Header from './components/layout/Header.jsx';
+import LevelProgress from './components/progress/LevelProgress.jsx';
+import HabitList from './components/habits/HabitList.jsx';
+import HabitHistory from './components/habits/HabitHistory.jsx';
+import AchievementsPanel from './components/progress/AchievementsPanel.jsx';
+import InventoryPanel from './components/inventory/InventoryPanel.jsx';
+import DailyChallenge from './components/daily-mission/DailyChallenge.jsx';
+import PlanCard from './components/plans/PlanCard.jsx';
+import Notifications from './components/ui/Notifications.jsx';
+import Auth from './components/auth/Auth.jsx';
+import StoriesPanel from './components/journey/StoriesPanel.jsx';
+import JourneyRewardFlow from './components/journey/JourneyRewardFlow.jsx';
+import DailyRewardFlow from './components/daily-mission/DailyRewardFlow.jsx';
+import DailyChoiceModal from './components/daily-mission/DailyChoiceModal.jsx';
 
 // Utilidades
-import { supabase } from '../lib/supabase.js';
-import useGameStore from '../store/gameStore.js';
+import { supabase } from './lib/supabase.js';
+import useGameStore from './store/gameStore.js';
 
 // ════════════════════════════════════════════════════════════════════════
 // DEFINICIÓN DE PESTAÑAS

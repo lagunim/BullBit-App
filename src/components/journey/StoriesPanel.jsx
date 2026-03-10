@@ -14,8 +14,8 @@
  * @returns {JSX.Element} Panel lateral con lista de historias
  */
 import { useState, useEffect } from 'react';
-import useGameStore from '../store/gameStore.js';
-import { getStoryById } from '../data/stories.js';
+import useGameStore from '../../store/gameStore.js';
+import { getStoryById } from '../../data/stories.js';
 import StoryScrollModal from './StoryScrollModal.jsx';
 
 export default function StoriesPanel({ onClose }) {

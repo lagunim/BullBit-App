@@ -13,14 +13,14 @@
  */
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 import HabitCard from './HabitCard.jsx';
 import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
-import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
-import CreatePlanModal from './CreatePlanModal.jsx';
-import { ITEMS } from '../data/items.js';
-import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor, PERIODICITY_LABELS } from '../utils/gameLogic.js';
+import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from '../progress/MultiplierIcons.jsx';
+import CreatePlanModal from '../plans/CreatePlanModal.jsx';
+import { ITEMS } from '../../data/items.js';
+import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor, PERIODICITY_LABELS } from '../../utils/gameLogic.js';
 
 function parseCustomDays(customDays) {
   if (Array.isArray(customDays)) {

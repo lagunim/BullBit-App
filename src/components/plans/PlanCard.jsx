@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 import CreatePlanModal from './CreatePlanModal.jsx';
 import PlanDetailModal from './PlanDetailModal.jsx';
 

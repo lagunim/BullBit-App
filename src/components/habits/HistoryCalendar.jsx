@@ -13,7 +13,7 @@
  * @param {Object} props.completions - Objeto con completaciones por fecha
  * @returns {JSX.Element|null} Calendario de historial o mensaje si no hay hábitos
  */
-import { formatDate } from '../lib/gameEngine.js';
+import { formatDate } from '../../lib/gameEngine.js';
 
 /**
  * Genera un array con los últimos 90 días formateados

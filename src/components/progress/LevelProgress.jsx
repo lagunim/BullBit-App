@@ -16,8 +16,8 @@
  * @param {Function} props.onOpenStories - Función para abrir el panel de historias
  * @returns {JSX.Element} Tarjeta de progreso de nivel
  */
-import useGameStore from '../store/gameStore.js';
-import { getLevelInfo, getProgressColor } from '../utils/gameLogic.js';
+import useGameStore from '../../store/gameStore.js';
+import { getLevelInfo, getProgressColor } from '../../utils/gameLogic.js';
 
 export default function LevelProgress({ onOpenStories }) {
   const level = useGameStore(s => s.level ?? 0);

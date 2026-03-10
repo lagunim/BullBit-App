@@ -14,7 +14,7 @@
  * @returns {JSX.Element|null} Modal de historia o null si no hay recompensa pendiente
  */
 import { useState, useEffect } from 'react';
-import useGameStore from '../store/gameStore.js';
+import useGameStore from '../../store/gameStore.js';
 import StoryScrollModal from './StoryScrollModal.jsx';
 
 /**
