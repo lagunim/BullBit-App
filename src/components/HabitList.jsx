@@ -113,7 +113,34 @@ export default function HabitList() {
     setCustomError('');
   }
 
-const isSelectedHabitAvailableToday = selectedHabit
+  function handleComplete() {
+    if (!selectedHabit) return;
+
+    const hasCustomValue = customMinutes.trim() !== '';
+    if (!hasCustomValue) {
+      completeHabit(selectedHabit.id);
+      closeSelected();
+      return;
+    }
+
+    const minutesValue = Number(customMinutes);
+    if (!Number.isFinite(minutesValue) || minutesValue < 1 || minutesValue > 480) {
+      setCustomError('Ingresa un valor válido entre 1 y 480 minutos.');
+      return;
+    }
+
+    if (minutesValue < selectedHabit.minutes) {
+      completeHabitPartial(selectedHabit.id, minutesValue);
+    } else if (minutesValue > selectedHabit.minutes) {
+      completeHabitOvertime(selectedHabit.id, minutesValue);
+    } else {
+      completeHabit(selectedHabit.id);
+    }
+
+    closeSelected();
+  }
+
+  const isSelectedHabitAvailableToday = selectedHabit
     ? isHabitDueOnDate(selectedHabit, today, history)
     : false;
 
@@ -128,7 +155,7 @@ const isSelectedHabitAvailableToday = selectedHabit
             : 'text-quest-text';
   }
 
-  const habitEffects = activeEffects.filter(e => 
+  const habitEffects = activeEffects.filter(e =>
     !e.targetHabitId || e.targetHabitId === selectedHabit?.id
   );
 
@@ -290,12 +317,12 @@ const isSelectedHabitAvailableToday = selectedHabit
                     </span>
                     <div className="h-[1px] flex-1 bg-quest-border/20" />
                   </div>
-                  
+
                   <div className="grid gap-2">
                     {habitEffects.map((effect, idx) => {
                       // Buscar el item original para obtener metadatos (icono, desc, rareza)
-                      const item = Object.values(ITEMS).find(i => 
-                        i.effectKey === effect.key || 
+                      const item = Object.values(ITEMS).find(i =>
+                        i.effectKey === effect.key ||
                         i.name === effect.itemName ||
                         (i.effectKey + '_target') === effect.key ||
                         (i.effectKey === 'phoenix_restore' && effect.key === 'phoenix_bonus')
