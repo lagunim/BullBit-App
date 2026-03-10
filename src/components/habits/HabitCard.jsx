@@ -14,7 +14,7 @@
  * @returns {JSX.Element} Tarjeta visual del hábito
  */
 import useGameStore from '../../store/gameStore.js';
-import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS } from '../../utils/gameLogic.js';
+import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS, getHabitStreak } from '../../utils/gameLogic.js';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons, useEffectiveMultiplier } from '../progress/MultiplierIcons.jsx';
 
 function parseCustomDays(customDays) {
@@ -58,6 +58,9 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const effectiveMultiplier = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
 
   const today = getTodayKey();
+  // Calcula la racha dinámica del hábito basándose en el historial real
+  const dynamicStreak = getHabitStreak(habit, history);
+  
   // Obtiene el estado del hábito para el día de hoy desde el historial
   const todayStatus = history[today]?.[habit.id];
   // Determina si el hábito está marcado como hecho (completo, parcial o extra)
@@ -123,9 +126,9 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
               · {getPeriodicityLabel(habit)}
             </span>
           )}
-          {habit.streak > 0 && (
+          {dynamicStreak > 0 && (
             <span className="text-[9px] text-quest-orange flex items-center gap-0.5 font-pixel shrink-0">
-              🔥{habit.streak}
+              🔥{dynamicStreak}
             </span>
           )}
         </div>

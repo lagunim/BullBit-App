@@ -703,6 +703,7 @@ export function getWeekCompletions(habitId, history, dateStr) {
     const dateKey = currentDate.toISOString().split('T')[0];
     const dayData = history[dateKey] ?? {};
     const status = dayData[habitId];
+
     if (isCompletedStatus(status)) {
       completions++;
     }
@@ -711,7 +712,53 @@ export function getWeekCompletions(habitId, history, dateStr) {
 }
 
 /**
+ * Obtiene la racha actual de un hábito específico basándose en el historial.
+ * Esto asegura que la racha mostrada sea la real hasta hoy, incluso si no se ha
+ * procesado el fallo automático todavía.
+ * 
+ * @param {Object} habit - Objeto del hábito
+ * @param {Object} history - Historial completo de completaciones
+ * @returns {number} Racha actual consecutiva
+ */
+export function getHabitStreak(habit, history) {
+  let streak = 0;
+  const today = getTodayKey();
+  
+  const isCompletedStatus = (status) =>
+    status === 'completed' || status === 'partial' || status === 'over';
+
+  // Si hoy ya se falló, la racha es 0
+  if (history[today]?.[habit.id] === 'failed') return 0;
+  
+  // Si hoy se completó, empezamos en 1
+  if (isCompletedStatus(history[today]?.[habit.id])) {
+    streak = 1;
+  }
+
+  // Contar hacia atrás desde ayer
+  for (let i = 1; i <= 365; i++) {
+    const dateKey = getDateKey(i);
+    const status = history[dateKey]?.[habit.id];
+    
+    // Si el hábito no era debido ese día, saltamos el día sin romper la racha
+    if (!isHabitDueOnDate(habit, dateKey, history)) {
+      continue;
+    }
+
+    if (isCompletedStatus(status)) {
+      streak++;
+    } else {
+      // Si era debido y no se completó (o se falló), se rompe la racha
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
  * Etiquetas legible de las periodicidades disponibles.
+
  * Usadas para mostrar en la UI.
  */
 export const PERIODICITY_LABELS = {
