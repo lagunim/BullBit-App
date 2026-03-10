@@ -333,6 +333,9 @@ export default function HabitList() {
                         (i.effectKey === 'phoenix_restore' && effect.key === 'phoenix_bonus')
                       );
 
+                      const isTimed = item?.effectType === 'timed' || effect.expiresAt;
+                      const isUsable = item?.effectType === 'instant' && item.maxStack > 1;
+                      
                       return (
                         <div key={idx} className="bg-black/40 border border-white/5 p-2 rounded flex gap-3 items-start group hover:border-quest-gold/30 transition-colors">
                           <span className="text-xl animate-pulse drop-shadow-pixel">{item?.icon || '✨'}</span>
@@ -347,9 +350,17 @@ export default function HabitList() {
                                     {effect.usesRemaining} usos
                                   </span>
                                 )}
-                                {effect.expiresAt && (
-                                  <span className="text-[9px] text-quest-textDim italic">
-                                    Temporal
+                                {isTimed && effect.expiresAt && (
+                                  <span className="text-[9px] text-quest-purple italic">
+                                    {(() => {
+                                      const expDate = new Date(effect.expiresAt);
+                                      const now = new Date();
+                                      const diffDays = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+                                      if (diffDays <= 0) return 'Expira hoy';
+                                      if (diffDays === 1) return '1 día';
+                                      if (diffDays < 7) return `${diffDays} días`;
+                                      return expDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                                    })()}
                                   </span>
                                 )}
                               </div>
