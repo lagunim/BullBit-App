@@ -328,10 +328,8 @@ export default function App() {
     return <Auth />;
   }
 
-  // Configurar handlers táctiles solo en vista móvil
-  const touchHandlers = isMobileView
-    ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd }
-    : {};
+  // Configurar handlers táctiles (siempre activos para evitar problemas de detección inicial)
+  const touchHandlers = { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd };
 
   // ════════════════════════════════════════════════════════════════════════
   // RENDERIZADO PRINCIPAL
@@ -346,7 +344,10 @@ export default function App() {
       <div className="flex-1 overflow-hidden relative">
         <div
           className="flex h-full transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))` }}
+          style={{ 
+            transform: `translateX(calc(-${currentIndex * 100}% + ${bounceOffset}px))`,
+            touchAction: 'pan-y' // Permite scroll vertical pero delega el horizontal a JS
+          }}
           {...touchHandlers}
         >
           {/* PESTAÑA 1: INICIO */}
