@@ -1,3 +1,11 @@
+/**
+ * Lista maestra de desafíos diarios.
+ * Cada desafío contiene:
+ * - id: Identificador único.
+ * - name/description: Texto para la UI.
+ * - condition: Función que evalúa el progreso basado en el estado global (state).
+ * - rewards: Puntos y items otorgados al completar.
+ */
 export const DAILY_CHALLENGES = [
   {
     id: 'productive_day',
@@ -8,6 +16,7 @@ export const DAILY_CHALLENGES = [
     condition: (state) => {
       const today = new Date().toISOString().split('T')[0];
       const dayHistory = state.history[today] || {};
+      // Filtramos el historial de hoy buscando estados de éxito (completado, parcial o excedido)
       const completed = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
       ).length;
@@ -30,6 +39,7 @@ export const DAILY_CHALLENGES = [
       let count = 0;
 
       Object.entries(dayHistory).forEach(([habitId, status]) => {
+        // Buscamos hábitos con un multiplicador igual o superior a 2.0 que estén completados
         if (status === 'completed' || status === 'partial' || status === 'over') {
           const habit = state.habits.find(h => h.id === habitId);
           if (habit && habit.multiplier >= 2.0) {
@@ -60,7 +70,7 @@ export const DAILY_CHALLENGES = [
         if (status === 'completed' || status === 'partial' || status === 'over') {
           const habit = state.habits.find(h => h.id === habitId);
           if (habit) {
-            // Para 'partial' asumimos 15 minutos, para otros el tiempo completo
+            // Lógica de cálculo de tiempo: parcial suma 15 min, el resto el tiempo base del hábito
             const minutes = status === 'partial' ? 15 : habit.minutes;
             totalMinutes += minutes;
           }
@@ -489,10 +499,15 @@ export const DAILY_CHALLENGES = [
   }
 ];
 
+// Mapa para acceso rápido por ID
 const DAILY_CHALLENGES_BY_ID = Object.fromEntries(
   DAILY_CHALLENGES.map(daily => [daily.id, daily])
 );
 
+/**
+ * Configuración de bonificadores por dificultad.
+ * Define el multiplicador de puntos y bonus de rareza para cada nivel.
+ */
 export const DIFFICULTY_CONFIG = {
   easy: { pointsMultiplier: 1.0, rarityBonus: 0 },
   medium: { pointsMultiplier: 1.5, rarityBonus: 1 },
@@ -500,12 +515,18 @@ export const DIFFICULTY_CONFIG = {
   epic: { pointsMultiplier: 2.5, rarityBonus: 3 }
 };
 
+/**
+ * Obtiene un desafío aleatorio filtrado por dificultad y excluyendo IDs específicos.
+ */
 export function getDailyByDifficulty(difficulty, excludeIds = []) {
   const pool = DAILY_CHALLENGES.filter(d => d.difficulty === difficulty && !excludeIds.includes(d.id));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/**
+ * Obtiene cualquier desafío aleatorio que no esté en la lista de excluidos.
+ */
 export function getRandomDaily(excludeIds = []) {
   const availableDailies = DAILY_CHALLENGES.filter(d => !excludeIds.includes(d.id));
   if (availableDailies.length === 0) return DAILY_CHALLENGES[0]; // fallback
@@ -514,6 +535,10 @@ export function getRandomDaily(excludeIds = []) {
   return availableDailies[randomIndex];
 }
 
+/**
+ * Combina un objeto de desafío (posiblemente de la base de datos/estado guardado)
+ * con su plantilla original para recuperar funciones como 'condition'.
+ */
 export function hydrateDailyChallenge(daily) {
   if (!daily?.id) return null;
 
@@ -529,12 +554,21 @@ export function hydrateDailyChallenge(daily) {
   };
 }
 
+/**
+ * Hidrata una lista completa de desafíos.
+ */
 export function hydrateDailyChallenges(dailies = []) {
   return dailies
     .map(hydrateDailyChallenge)
     .filter(Boolean);
 }
 
+/**
+ * Evalúa el progreso de un desafío contra el estado actual del juego.
+ * @param {Object} daily - El desafío a verificar (debe estar hidratado).
+ * @param {Object} gameState - El estado global de la aplicación.
+ * @returns {Object} { current, target, completed }
+ */
 export function checkDailyProgress(daily, gameState) {
   if (!daily || !daily.id) return { current: 0, target: 1, completed: false };
 

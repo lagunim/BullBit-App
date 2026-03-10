@@ -719,24 +719,26 @@ const useGameStore = create(
       if (!isHabitDueOnDate(habit, today, state.history)) return;
       if (state.history[today]?.[habitId]) return;
 
-      const activeEffects = state._getActiveEffects();
-      
       // Lógica de multiplicador para fallo
+      const activeEffects = state._getActiveEffects();
       let newMult = calcMultiplierOnFail(habit, activeEffects);
       
+      // Consume shield if used
+      let newActiveEffects = [...state.activeEffects];
+      const shield = newActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+      if (shield) {
+        newActiveEffects = newActiveEffects.filter(e => e !== shield);
+        get()._pushNotification('item', `🛡️ ${shield.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`);
+      }
+
       // DOBLE PENALIZACIÓN: fallo normal + degradación de fusión
       const fusionEffect = activeEffects.find(e => 
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
-      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, todayDate)) {
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, today)) {
         newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
         get()._pushNotification('fail', `🧪 Hábito fusionado: ¡DOBLE PENALIZACIÓN POR FALLAR!`);
       }
-
-      // Consume shield if used
-      let newActiveEffects = [...state.activeEffects];
-      const shieldIdx = newActiveEffects.findIndex(e => e.key === 'streak_shield' || e.key === 'golden_shield');
-      if (shieldIdx !== -1) newActiveEffects.splice(shieldIdx, 1);
 
       // Si baja de 3.0, el efecto de fusión termina
       if (newMult <= 3.0 && fusionEffect) {
@@ -1298,6 +1300,13 @@ const useGameStore = create(
               if (habitIndex !== -1) {
                 // DOBLE PENALIZACIÓN EN PROCESO AUTOMÁTICO
                 let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+
+                // Consume shield if used
+                const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+                if (shield) {
+                  nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                }
+
                 const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
                 if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
                   newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
@@ -1337,7 +1346,14 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+
+                  // Consume shield if used
+                  const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+                  if (shield) {
+                    nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                  }
+
                   const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
                   nextActiveEffects = gemLoss.effects;
                   if (gemLoss.removed) removedGemCount += 1;
@@ -1373,7 +1389,14 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+
+                  // Consume shield if used
+                  const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+                  if (shield) {
+                    nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                  }
+
                   const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
                   nextActiveEffects = gemLoss.effects;
                   if (gemLoss.removed) removedGemCount += 1;
