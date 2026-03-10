@@ -316,6 +316,7 @@ const useGameStore = create(
 
     // UI notifications queue
     notifications: [],
+    savedNotifications: [],
 
     // Streak rewards
     streakReward: null,
@@ -1199,7 +1200,7 @@ const useGameStore = create(
           const uid = get()._userId;
           if (uid) queueInventorySave(uid, () => get().inventory);
 
-          get()._pushNotification('item', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`);
+          get()._pushNotification('item', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`, randomItem.id);
         }
         // Handle targeted effects using generic system
         else if (requiresTargeting(item.effectKey) && targetHabitId) {
@@ -1282,7 +1283,7 @@ const useGameStore = create(
         ? reward.itemChoices.map(id => ITEMS[id]?.name || id).join(', ')
         : '';
 
-      get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos${itemNames ? `: ${itemNames}` : ''}`);
+      get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos${itemNames ? `: ${itemNames}` : ''}`, reward.journeyNumber);
       get()._checkAchievements();
     },
 
@@ -1840,13 +1841,17 @@ const useGameStore = create(
         if (uid) saveAchievements(uid, newlyUnlocked.map(a => a.id)).catch(() => { });
 
         newlyUnlocked.forEach(ach => {
-          get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`);
+          get()._pushNotification('achievement', `🏆 LOGRO: ${ach.name}`, ach.id);
 
-          // Desbloquear historia específica si tiene storyId
+          // Desbloquear historia si tiene y no estaba antes
           if (ach.storyId) {
-            const newStory = { journeyId: 0, storyId: ach.storyId, unlockedAt: new Date().toISOString() };
-
-            // Verificar si ya está desbloqueada (por seguridad)
+          const storyData = getStoryById(ach.storyId);
+          if (storyData) {
+            const newStory = {
+              journeyId: 0,
+              storyId: ach.storyId,
+              unlockedAt: new Date().toISOString()
+            };
             const alreadyUnlocked = get().unlockedStories.some(s => s.storyId === ach.storyId);
 
             if (!alreadyUnlocked) {
@@ -1854,9 +1859,10 @@ const useGameStore = create(
                 unlockedStories: [...state3.unlockedStories, newStory],
               }));
               if (uid) saveStory(uid, 0, ach.storyId).catch(() => { });
-              get()._pushNotification('story', `📜 Historia desbloqueada`);
+              get()._pushNotification('story', `📜 Historia desbloqueada`, ach.storyId);
             }
           }
+        }
 
           // Otorgar recompensa de item
           if (ach.reward) {
@@ -1869,16 +1875,42 @@ const useGameStore = create(
       }
     },
 
-    _pushNotification(type, msg) {
+    _pushNotification(type, msg, refId = null) {
       const id = Date.now() + Math.random();
-      set(state => ({
-        notifications: [...state.notifications, { id, type, msg }],
-      }));
+      const notificationObj = { id, type, msg, refId, timestamp: Date.now() };
+
+      set(state => {
+        const nextState = {
+          notifications: [...state.notifications, notificationObj],
+        };
+        
+        // Save to persistent notifications if it's an important type
+        const importantTypes = ['achievement', 'story', 'item', 'level', 'journey'];
+        if (importantTypes.includes(type)) {
+          // Si es un item sin refId, suele ser un error o mensaje de uso, no lo guardamos en el historial
+          if (!(type === 'item' && !refId)) {
+            nextState.savedNotifications = [notificationObj, ...(state.savedNotifications || [])];
+          }
+        }
+        
+        return nextState;
+      });
+
       setTimeout(() => {
         set(state => ({
           notifications: state.notifications.filter(n => n.id !== id),
         }));
       }, 10000);
+    },
+
+    removeSavedNotification(id) {
+      set(state => ({
+        savedNotifications: (state.savedNotifications || []).filter(n => n.id !== id)
+      }));
+    },
+
+    clearSavedNotifications() {
+      set({ savedNotifications: [] });
     },
 
     dismissNotification(id) {

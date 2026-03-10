@@ -339,7 +339,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-quest-bg antialiased">
       {/* Header fijo en la parte superior */}
-      <Header />
+      <Header onNavigate={handleTabChange} />
 
       {/* Área de contenido principal con navegación horizontal */}
       <div className="flex-1 overflow-hidden relative">

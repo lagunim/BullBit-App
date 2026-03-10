@@ -18,6 +18,7 @@
  * @returns {JSX.Element} Panel de objetos
  */
 import { ITEMS, RARITY_COLORS, RARITY_BORDERS, RARITY_LABELS } from '../../lib/items.js';
+import ItemCard from './ItemCard.jsx';
 
 export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
   // Filtra solo los objetos con cantidad > 0
@@ -63,20 +64,7 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
           <h3 className="font-pixel text-[9px] text-quest-textDim mb-3">🎒 OBJETOS [{owned.reduce((a,i)=>a+i.qty,0)}]</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {owned.map(item => (
-              <div key={item.id} className={`${RARITY_BORDERS[item.rarity]} bg-quest-card p-4`}>
-                <div className="flex items-start gap-3 mb-3">
-                  <span className="text-3xl flex-shrink-0">{item.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-pixel text-[9px] ${RARITY_COLORS[item.rarity]}`}>{item.name}</div>
-                    <div className="font-pixel text-[7px] text-quest-textDim mt-1 leading-relaxed">{item.description}</div>
-                    <div className="flex gap-2 mt-2">
-                      <span className={`font-pixel text-[7px] ${RARITY_COLORS[item.rarity]}`}>[x{item.qty}]</span>
-                      <span className="font-pixel text-[7px] text-quest-textMuted">{RARITY_LABELS[item.rarity]}</span>
-                    </div>
-                  </div>
-                </div>
-                <button onClick={() => onUseItem(item.id)} className="pixel-btn pixel-btn-blue text-[9px] w-full py-2">▶ USAR</button>
-              </div>
+              <ItemCard key={item.id} item={item} qty={item.qty} onUse={onUseItem} />
             ))}
           </div>
         </div>

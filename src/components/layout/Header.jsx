@@ -11,10 +11,13 @@ import { useState } from "react";
 import useGameStore from "../../store/gameStore.js";
 import { supabase } from "../../lib/supabase.js";
 import ActiveEffectModal from "../inventory/ActiveEffectModal.jsx";
+import NotificationsModal from "../ui/NotificationsModal.jsx";
 
-export default function Header() {
+export default function Header({ onNavigate }) {
   const rawEffects = useGameStore((s) => s.activeEffects ?? []);
+  const savedNotifications = useGameStore((s) => s.savedNotifications || []);
   const [selectedEffect, setSelectedEffect] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Filtra los efectos activos (no expirados)
   const now = new Date();
@@ -54,6 +57,20 @@ export default function Header() {
             ))}
           </div>
 
+          {/* Notifications Button */}
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="btn-pixel-gray p-3 sm:p-1.5 relative"
+            title="Notificaciones"
+          >
+            <span className="text-xs">🔔</span>
+            {savedNotifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-quest-red text-white text-[8px] font-pixel px-1 rounded-full border border-quest-border">
+                {savedNotifications.length}
+              </span>
+            )}
+          </button>
+
           {/* Logout Button */}
           <button
             onClick={() => supabase.auth.signOut()}
@@ -67,6 +84,13 @@ export default function Header() {
 
       {selectedEffect && (
         <ActiveEffectModal effect={selectedEffect} onClose={() => setSelectedEffect(null)} />
+      )}
+      
+      {showNotifications && (
+        <NotificationsModal 
+          onClose={() => setShowNotifications(false)} 
+          onNavigateTab={onNavigate} 
+        />
       )}
     </header>
   );
