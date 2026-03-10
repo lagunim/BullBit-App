@@ -157,7 +157,13 @@ export default function HabitList() {
 
   const habitEffects = activeEffects.filter(e =>
     !e.targetHabitId || e.targetHabitId === selectedHabit?.id
-  );
+  ).reduce((acc, effect) => {
+    // Evitar duplicados por clave de efecto
+    if (!acc.some(e => e.key === effect.key)) {
+      acc.push(effect);
+    }
+    return acc;
+  }, []);
 
   return (
     <div>
