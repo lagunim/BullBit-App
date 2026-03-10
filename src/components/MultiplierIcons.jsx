@@ -135,11 +135,11 @@ export function HabitTargetedIcons({ habitId, className = '' }) {
   if (icons.length === 0) return null;
 
   return (
-    <span className={`flex items-center gap-0.5 ${className}`}>
+    <span className={`flex items-center gap-1 ${className}`}>
       {icons.map((effectIcon, index) => (
         <span
           key={index}
-          className={`text-[10px] ${effectIcon.color} animate-pulse`}
+          className={`text-[11px] ${effectIcon.color} animate-pulse drop-shadow-sm`}
           title={`${effectIcon.title} - Aplicado a este hábito`}
         >
           {effectIcon.icon}
@@ -189,8 +189,7 @@ export default function MultiplierIcons({ className = '' }) {
   if (icons.length === 0) return null;
 
   return (
-    <div className={`grid grid-cols-3 gap-1 ${className}`}>
-      {/* <div className={`flex items-center gap-1 ${className}`}> */}
+    <div className={`flex items-center gap-1 ${className}`}>
       {icons.map((effect, index) => (
         <span
           key={`${effect.icon}-${index}`}

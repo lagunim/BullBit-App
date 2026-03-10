@@ -80,25 +80,25 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const multColorClass = !isAvailableToday
     ? 'text-quest-textMuted'
     : hasActiveEffect
-    ? 'text-yellow-400'
-    : effectiveMultiplier >= 3 ? 'text-quest-gold'
-      : effectiveMultiplier >= 2 ? 'text-quest-cyan'
-        : effectiveMultiplier >= 1.5 ? 'text-quest-green'
-          : 'text-quest-text';
+      ? 'text-yellow-400'
+      : effectiveMultiplier >= 3 ? 'text-quest-gold'
+        : effectiveMultiplier >= 2 ? 'text-quest-cyan'
+          : effectiveMultiplier >= 1.5 ? 'text-quest-green'
+            : 'text-quest-text';
 
   // Selecciona el color del borde según el estado del hábito
   const borderColorClass = isDone ? 'border-quest-green'
     : isFailed ? 'border-quest-red'
       : isExpired ? 'border-orange-500'
         : !isAvailableToday ? 'border-slate-500/70'
-        : 'border-quest-border';
+          : 'border-quest-border';
 
   // Selecciona el color de la sombra según el estado
   const shadowColorClass = isDone ? 'shadow-[2px_2px_0_#004422]'
     : isFailed ? 'shadow-[2px_2px_0_#440011]'
       : isExpired ? 'shadow-[2px_2px_0_#ff8800]'
         : !isAvailableToday ? 'shadow-[2px_2px_0_#334155]'
-        : 'shadow-pixel-sm';
+          : 'shadow-pixel-sm';
 
   return (
     <div
