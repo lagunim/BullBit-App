@@ -105,7 +105,7 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
       onClick={onEdit}
     >
       <div className="flex items-center gap-2 w-full">
-        <div className="text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">
+        <div className={`text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all ${isAvailableToday && !isDetermined ? 'animate-subtle-pulse' : ''}`}>
           {habit.emoji}
         </div>
         <div className="flex items-center gap-2 min-w-0">
