@@ -18,6 +18,8 @@ import {
   getMonthStart,
   getMonthEnd,
   getWeekCompletions,
+  getHabitMultiplierCap,
+  hasPermanentMultiplierGem,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
 import { assignStoryForJourney, assignStoryForEpicAchievement, assignStoryForLegendaryAchievement } from '../data/stories.js';
@@ -98,6 +100,49 @@ function createTargetedEffect(item, targetHabitId) {
  */
 function effectAppliesTo(effect, habitId) {
   return !effect.targetHabitId || effect.targetHabitId === habitId;
+}
+
+function normalizeActiveEffects(rawEffects = [], habits = []) {
+  const now = new Date();
+  const habitIds = new Set(habits.map(h => h.id));
+  const permGemByHabit = new Set();
+  const normalized = [];
+
+  rawEffects.forEach(effect => {
+    if (!effect) return;
+
+    if (effect.expiresAt && new Date(effect.expiresAt) <= now) {
+      return;
+    }
+
+    if (effect.key === 'perm_base_mult') {
+      if (!effect.targetHabitId || !habitIds.has(effect.targetHabitId)) {
+        return;
+      }
+      if (permGemByHabit.has(effect.targetHabitId)) {
+        return;
+      }
+      permGemByHabit.add(effect.targetHabitId);
+    }
+
+    normalized.push(effect);
+  });
+
+  return normalized;
+}
+
+function removeGemIfLostThreshold(activeEffects = [], habitId, nextMultiplier) {
+  if (!habitId || nextMultiplier >= 3) {
+    return { effects: activeEffects, removed: false };
+  }
+
+  const shouldHaveGem = hasPermanentMultiplierGem(habitId, activeEffects);
+  if (!shouldHaveGem) {
+    return { effects: activeEffects, removed: false };
+  }
+
+  const effects = activeEffects.filter(e => !(e.key === 'perm_base_mult' && e.targetHabitId === habitId));
+  return { effects, removed: true };
 }
 
 function migrateHabitIds(habits) {
@@ -263,6 +308,7 @@ const useGameStore = create(
           const remoteData = await loadUserData(userId);
 
           if (remoteData) {
+            const normalizedEffects = normalizeActiveEffects(remoteData.activeEffects ?? [], remoteData.habits ?? []);
             // ── Hay datos en Supabase → usarlos como fuente de verdad ──
             set({
               habits: remoteData.habits,
@@ -275,7 +321,7 @@ const useGameStore = create(
               unlockedStories: remoteData.unlockedStories ?? [],
               journeyRewardQueue: [],
               inventory: remoteData.inventory,
-              activeEffects: remoteData.activeEffects,
+              activeEffects: normalizedEffects,
               currentDaily: remoteData.currentDaily,
               dailyOptions: remoteData.dailyOptions ?? null,
               dailySelectionMade: remoteData.dailySelectionMade ?? false,
@@ -290,6 +336,7 @@ const useGameStore = create(
             if (localState && Object.keys(localState).length) {
               const { habits: migratedHabits, idMap } = migrateHabitIds(localState.habits ?? []);
               const migratedHistory = migrateHistory(localState.history ?? {}, idMap);
+              const normalizedEffects = normalizeActiveEffects(localState.activeEffects ?? [], migratedHabits);
 
               set({
                 habits: migratedHabits.map(attachThemeToHabit),
@@ -301,7 +348,7 @@ const useGameStore = create(
                 unlockedAchievements: localState.unlockedAchievements ?? [],
                 journeyRewardQueue: [],
                 inventory: localState.inventory ?? [],
-                activeEffects: localState.activeEffects ?? [],
+                activeEffects: normalizedEffects,
                 currentDaily: localState.currentDaily ?? null,
                 dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
                 lastDailyDate: localState.lastDailyDate ?? null,
@@ -332,7 +379,7 @@ const useGameStore = create(
               }
               if (entries.length) saveHabitEntries(userId, entries).catch(() => { });
               if (localState.inventory?.length) saveInventory(userId, localState.inventory).catch(() => { });
-              if (localState.activeEffects?.length) saveActiveEffects(userId, localState.activeEffects).catch(() => { });
+              if (normalizedEffects.length) saveActiveEffects(userId, normalizedEffects).catch(() => { });
               if (localState.unlockedAchievements?.length) saveAchievements(userId, localState.unlockedAchievements).catch(() => { });
               if (localState.currentDaily && localState.lastDailyDate) {
                 saveDaily(userId, localState.currentDaily, localState.lastDailyDate).catch(() => { });
@@ -438,7 +485,7 @@ const useGameStore = create(
         points: state.points,
         earnedPoints: earned,
         unlockedStories: state.unlockedStories,
-        pickJourneyItemChoices: get()._pickJourneyItemChoices,
+        pickJourneyItemChoices: get()._pickJourneyRewards,
       });
 
       set(state2 => ({
@@ -522,7 +569,7 @@ const useGameStore = create(
         points: state.points,
         earnedPoints: earned,
         unlockedStories: state.unlockedStories,
-        pickJourneyItemChoices: get()._pickJourneyItemChoices,
+        pickJourneyItemChoices: get()._pickJourneyRewards,
       });
 
       set(state2 => ({
@@ -604,7 +651,7 @@ const useGameStore = create(
         points: state.points,
         earnedPoints: earned,
         unlockedStories: state.unlockedStories,
-        pickJourneyItemChoices: get()._pickJourneyItemChoices,
+        pickJourneyItemChoices: get()._pickJourneyRewards,
       });
 
       set(state2 => ({
@@ -657,6 +704,9 @@ const useGameStore = create(
       const shieldIdx = newActiveEffects.findIndex(e => e.key === 'streak_shield' || e.key === 'golden_shield');
       if (shieldIdx !== -1) newActiveEffects.splice(shieldIdx, 1);
 
+      const gemLoss = removeGemIfLostThreshold(newActiveEffects, habitId, newMult);
+      newActiveEffects = gemLoss.effects;
+
       const newHistory = {
         ...state.history,
         [today]: { ...(state.history[today] ?? {}), [habitId]: 'failed' },
@@ -681,6 +731,9 @@ const useGameStore = create(
       }
 
       get()._pushNotification('fail', `Penalización: ×${newMult.toFixed(1)}`);
+      if (gemLoss.removed) {
+        get()._pushNotification('item', '💠 La Gema del Multiplicador se perdió al bajar de ×3.0.');
+      }
       get()._recalcGlobalStreak();
       get()._updateDailyProgress();
     },
@@ -765,6 +818,11 @@ const useGameStore = create(
           return;
         }
 
+        if (item.effectKey === 'perm_base_mult' && targetHabitId && hasPermanentMultiplierGem(targetHabitId, state.activeEffects)) {
+          get()._pushNotification('item', 'Ese hábito ya tiene activa la Gema del Multiplicador.');
+          return;
+        }
+
         // Legacy instant effects that modify habits/state directly
         if (item.effectKey === 'double_streak') {
           const nextStreak = Math.max(1, (state.globalStreak ?? 0) * 2);
@@ -785,10 +843,13 @@ const useGameStore = create(
           }
         } else if (item.effectKey === 'copy_multiplier') {
           const highest = Math.max(1.0, ...state.habits.map(h => h.multiplier ?? 1.0));
-          const copied = parseFloat(Math.min(3.0, highest).toFixed(1));
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h => ({ ...h, multiplier: copied })),
+            habits: state2.habits.map(h => {
+              const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+              const copied = parseFloat(Math.min(cap, highest).toFixed(1));
+              return { ...h, multiplier: copied };
+            }),
           }));
           const uid = get()._userId;
           if (uid) {
@@ -799,11 +860,13 @@ const useGameStore = create(
           set(state2 => ({
             inventory: newInventory,
             habits: state2.habits.filter(h => h.id !== targetHabitId),
+            activeEffects: state2.activeEffects.filter(e => e.targetHabitId !== targetHabitId),
           }));
 
           const uid = get()._userId;
           if (uid) {
             saveInventory(uid, get().inventory).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
             // Para "Vacío": eliminamos solo el hábito, conservando historial/estadísticas.
             supabase.from('habits').delete().eq('id', targetHabitId).catch(() => { });
           }
@@ -813,7 +876,10 @@ const useGameStore = create(
             inventory: newInventory,
             habits: state2.habits.map(h =>
               h.id === targetHabitId
-                ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
+                ? (() => {
+                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                  return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
+                })()
                 : h
             ),
           }));
@@ -826,27 +892,27 @@ const useGameStore = create(
         } else if (item.effectKey === 'perm_base_mult' && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h =>
-              h.id === targetHabitId
-                ? {
-                  ...h, baseMultiplier: Math.min(3.0, parseFloat(((h.baseMultiplier ?? 1.0) + item.effectValue).toFixed(1))),
-                  multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1)))
-                }
-                : h
-            ),
+            activeEffects: [...state2.activeEffects.filter(e => !(e.key === 'perm_base_mult' && e.targetHabitId === targetHabitId)), {
+              key: 'perm_base_mult',
+              value: item.effectValue,
+              targetHabitId,
+              itemName: item.name,
+            }],
           }));
           const uid = get()._userId;
           if (uid) {
             saveInventory(uid, get().inventory).catch(() => { });
-            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
-            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
         } else if ((item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target') && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
             habits: state2.habits.map(h =>
               h.id === targetHabitId
-                ? { ...h, multiplier: Math.min(3.0, parseFloat((h.multiplier + item.effectValue).toFixed(1))) }
+                ? (() => {
+                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                  return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
+                })()
                 : h
             ),
           }));
@@ -867,7 +933,8 @@ const useGameStore = create(
             return;
           }
 
-          const merged = Math.min(3.0, parseFloat(((targetHabit.multiplier ?? 1) + (donorHabit.multiplier ?? 1)).toFixed(1)));
+          const targetCap = getHabitMultiplierCap(targetHabitId, state.activeEffects);
+          const merged = Math.min(targetCap, parseFloat(((targetHabit.multiplier ?? 1) + (donorHabit.multiplier ?? 1)).toFixed(1)));
 
           set(state2 => ({
             inventory: newInventory,
@@ -928,6 +995,9 @@ const useGameStore = create(
       if (!item) return;
       set(state => {
         const existing = state.inventory.find(i => i.itemId === itemId);
+        if (itemId === 'multiplier_gem' && existing?.qty >= 1) {
+          return {};
+        }
         const maxStack = item.maxStack ?? 99;
         if (existing && existing.qty >= maxStack) return {};
         return {
@@ -985,35 +1055,39 @@ const useGameStore = create(
     },
 
     /**
-     * Picks 3 distinct random item choices for a journey reward.
-     * Higher journeys get better rarities.
+     * Picks 3 random items for journey completion.
+     * - 2 items: 70% common, 30% rare
+     * - 1 item: 70% epic, 30% legendary
      */
-    _pickJourneyItemChoices(journeyNumber) {
+    _pickJourneyRewards(journeyNumber) {
       const allItemIds = Object.keys(ITEMS);
-      const rarityByJourney = journeyNumber <= 2 ? ['common', 'common', 'rare']
-        : journeyNumber <= 4 ? ['common', 'rare', 'rare']
-          : journeyNumber <= 6 ? ['rare', 'rare', 'epic']
-            : ['rare', 'epic', 'epic'];
-
       const chosen = [];
       const usedIds = new Set();
 
-      for (const rarity of rarityByJourney) {
-        const pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
+      const rarity1 = Math.random() < 0.7 ? 'common' : 'rare';
+      const rarity2 = Math.random() < 0.7 ? 'common' : 'rare';
+      const rarity3 = Math.random() < 0.7 ? 'epic' : 'legendary';
+
+      const rarities = [rarity1, rarity2, rarity3];
+
+      for (const rarity of rarities) {
+        let pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
         if (pool.length === 0) {
-          // Fallback: any unused item
-          const fallback = allItemIds.filter(id => !usedIds.has(id));
-          if (fallback.length === 0) break;
-          const pick = fallback[Math.floor(Math.random() * fallback.length)];
-          chosen.push(pick);
-          usedIds.add(pick);
-        } else {
-          const pick = pool[Math.floor(Math.random() * pool.length)];
+          pool = allItemIds.filter(id => !usedIds.has(id));
+        }
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        if (pick) {
           chosen.push(pick);
           usedIds.add(pick);
         }
       }
+
       return chosen;
+    },
+
+    // Compatibilidad: hay llamadas existentes que esperan este nombre.
+    _pickJourneyItemChoices(journeyNumber) {
+      return get()._pickJourneyRewards(journeyNumber);
     },
 
     _pickDailyItemChoices(daily) {
@@ -1072,6 +1146,8 @@ const useGameStore = create(
       const updatedHabits = [...state.habits];
       const newHistory = { ...state.history };
       const activeEffects = state._getActiveEffects();
+      let nextActiveEffects = [...activeEffects];
+      let removedGemCount = 0;
 
       for (const habit of state.habits) {
         if (habit.periodicity === 'weekly_times' || habit.periodicity === 'custom') continue;
@@ -1092,7 +1168,10 @@ const useGameStore = create(
 
               const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
               if (habitIndex !== -1) {
-                const newMult = calcMultiplierOnFail(habit, activeEffects);
+                const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                nextActiveEffects = gemLoss.effects;
+                if (gemLoss.removed) removedGemCount += 1;
                 updatedHabits[habitIndex] = {
                   ...updatedHabits[habitIndex],
                   multiplier: newMult,
@@ -1121,7 +1200,10 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  const newMult = calcMultiplierOnFail(habit, activeEffects);
+                  const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  nextActiveEffects = gemLoss.effects;
+                  if (gemLoss.removed) removedGemCount += 1;
                   updatedHabits[habitIndex] = {
                     ...updatedHabits[habitIndex],
                     multiplier: newMult,
@@ -1154,7 +1236,10 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  const newMult = calcMultiplierOnFail(habit, activeEffects);
+                  const newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  nextActiveEffects = gemLoss.effects;
+                  if (gemLoss.removed) removedGemCount += 1;
                   updatedHabits[habitIndex] = {
                     ...updatedHabits[habitIndex],
                     multiplier: newMult,
@@ -1174,13 +1259,15 @@ const useGameStore = create(
 
       set({
         habits: updatedHabits,
-        history: newHistory
+        history: newHistory,
+        activeEffects: nextActiveEffects,
       });
 
       const uid = get()._userId;
       if (uid) {
         saveHabits(uid, updatedHabits).catch(() => { });
         if (failedEntries.length > 0) saveHabitEntries(uid, failedEntries).catch(() => { });
+        if (nextActiveEffects.length !== state.activeEffects.length) saveActiveEffects(uid, nextActiveEffects).catch(() => { });
       }
 
       const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
@@ -1189,6 +1276,9 @@ const useGameStore = create(
         : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
 
       get()._pushNotification('auto_fail', message);
+      if (removedGemCount > 0) {
+        get()._pushNotification('item', `💠 ${removedGemCount} gema(s) de multiplicador se perdieron por bajar de ×3.0.`);
+      }
       get()._recalcGlobalStreak();
     },
 
@@ -1210,6 +1300,8 @@ const useGameStore = create(
       const yesterday = getYesterdayKey();
       const lastWeekStart = getWeekStart(yesterday);
       const activeEffects = state._getActiveEffects();
+      let nextActiveEffects = [...activeEffects];
+      let removedGemCount = 0;
 
       const newHistory = { ...state.history };
       const updatedHabits = [...state.habits];
@@ -1226,15 +1318,19 @@ const useGameStore = create(
 
           // Calcular nuevo multiplicador con penalización y escudos
           let newMult = habit.multiplier;
-          if (activeEffects.some(e => e.key === 'streak_shield') || activeEffects.some(e => e.key === 'balance_shield')) {
+          if (nextActiveEffects.some(e => e.key === 'streak_shield') || nextActiveEffects.some(e => e.key === 'balance_shield')) {
             // Shield protects - no penalty
-          } else if (activeEffects.some(e => e.key === 'golden_shield')) {
+          } else if (nextActiveEffects.some(e => e.key === 'golden_shield')) {
             newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
           } else {
-            const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
+            const penaltyEffect = nextActiveEffects.find(e => e.key === 'reduced_penalty');
             const actualPenalty = penaltyEffect ? (penaltyEffect.value * missedCount) : totalPenalty;
             newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
           }
+
+          const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+          nextActiveEffects = gemLoss.effects;
+          if (gemLoss.removed) removedGemCount += 1;
 
           // Marcar todos los días de la semana pasada como failed (para registro)
           for (let i = 0; i < 7; i++) {
@@ -1267,6 +1363,7 @@ const useGameStore = create(
         set({
           habits: updatedHabits,
           history: newHistory,
+          activeEffects: nextActiveEffects,
           lastWeeklyProcessDate: today
         });
         // Persistir en BD (fire & forget)
@@ -1281,10 +1378,14 @@ const useGameStore = create(
             }
           }
           if (entries.length) saveHabitEntries(uid, entries).catch(() => { });
+          if (nextActiveEffects.length !== state.activeEffects.length) saveActiveEffects(uid, nextActiveEffects).catch(() => { });
           saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: today }).catch(() => { });
         }
         get()._recalcGlobalStreak();
         get()._pushNotification('weekly_review', 'Resumen semanal de hábitos procesado');
+        if (removedGemCount > 0) {
+          get()._pushNotification('item', `💠 ${removedGemCount} gema(s) de multiplicador se perdieron por bajar de ×3.0.`);
+        }
       } else {
         set({ lastWeeklyProcessDate: today });
         const uid = get()._userId;
@@ -1562,7 +1663,7 @@ const useGameStore = create(
           points: state.points,
           earnedPoints: points,
           unlockedStories: state.unlockedStories,
-          pickJourneyItemChoices: get()._pickJourneyItemChoices,
+          pickJourneyItemChoices: get()._pickJourneyRewards,
         });
         journeyRewards = progress.rewards;
         const newLifetime = state.lifetimePoints + points;
@@ -1744,7 +1845,7 @@ const useGameStore = create(
         points: state.points,
         earnedPoints: earned,
         unlockedStories: state.unlockedStories,
-        pickJourneyItemChoices: get()._pickJourneyItemChoices,
+        pickJourneyItemChoices: get()._pickJourneyRewards,
       });
       let finalPoints = progress.finalPoints;
       let finalLevel = progress.finalLevel;
@@ -1760,7 +1861,7 @@ const useGameStore = create(
           points: finalPoints,
           earnedPoints: tripleBonus,
           unlockedStories: state.unlockedStories,
-          pickJourneyItemChoices: get()._pickJourneyItemChoices,
+          pickJourneyItemChoices: get()._pickJourneyRewards,
         });
         finalPoints = bonusProgress.finalPoints;
         finalLevel = bonusProgress.finalLevel;
