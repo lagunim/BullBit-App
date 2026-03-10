@@ -53,6 +53,75 @@ export const ITEMS = {
   },
 
   /**
+   * GOTA DE ESFUERZO
+   * Tipo: Instantáneo
+   * Efecto: Añade +0.2 al multiplicador de DOS hábitos seleccionados (máx 3.0).
+   */
+  effort_drop: {
+    id: 'effort_drop',
+    name: 'Gota de Esfuerzo',
+    icon: '💧',
+    rarity: 'common',
+    desc: 'Añade +0.2 al multiplicador de DOS hábitos seleccionados (máx 3.0).',
+    effectType: 'instant',
+    effectKey: 'mult_boost_target_two',
+    effectValue: 0.2,
+    maxStack: 5,
+  },
+
+  /**
+   * SEMILLA DE HÁBITO
+   * Tipo: Temporal
+   * Efecto: Añade +0.5 al multiplicador durante 1 día.
+   */
+  habit_seed: {
+    id: 'habit_seed',
+    name: 'Semilla de Hábito',
+    icon: '🌱',
+    rarity: 'common',
+    desc: 'Añade +0.5 al multiplicador durante 1 día.',
+    effectType: 'timed',
+    effectKey: 'small_mult_boost',
+    effectValue: 0.5,
+    durationDays: 1,
+    maxStack: 5,
+  },
+
+  /**
+   * FRAGMENTO DE PUNTO
+   * Tipo: Instantáneo
+   * Efecto: Multiplica por 1.5 los puntos de la próxima completación.
+   */
+  point_fragment: {
+    id: 'point_fragment',
+    name: 'Fragmento de Punto',
+    icon: '🔹',
+    rarity: 'common',
+    desc: 'Multiplica por 1.5 los puntos de la próxima completación.',
+    effectType: 'instant',
+    effectKey: 'next_point_boost',
+    effectValue: 1.5,
+    maxStack: 5,
+  },
+
+  /**
+   * MARCA DE PROTECCIÓN
+   * Tipo: Pasivo
+   * Efecto: La próxima penalización por fallo se reduce de -0.4 a -0.2.
+   */
+  protection_mark: {
+    id: 'protection_mark',
+    name: 'Marca de Protección',
+    icon: '⭕',
+    rarity: 'common',
+    desc: 'La próxima penalización por fallo se reduce de -0.4 a -0.2.',
+    effectType: 'passive',
+    effectKey: 'reduced_fail',
+    effectValue: 0.2,
+    maxStack: 5,
+  },
+
+  /**
    * POCIÓN DE IMPULSO
    * Tipo: Temporal
    * Efecto: Añade +1.0 a TODOS los multiplicadores durante 3 días.
@@ -292,35 +361,40 @@ export const ITEMS = {
   /**
    * PLUMA DE FÉNIX
    * Tipo: Instantáneo
-   * Efecto: Aumenta a 3.0 el multiplicador del hábito con el multiplicador más bajo.
+   * Efecto: Selecciona un hábito con multiplicador < 3 para establecerlo en ×3.
+   * Los próximos 5 completados otorgan el doble de puntos.
    */
   phoenix: {
     id: 'phoenix',
     name: 'Pluma de Fénix',
     icon: '🪶',
     rarity: 'legendary',
-    desc: 'Aumenta el multiplicador del hábito con el multiplicador más bajo a 3.',
+    desc: 'Selecciona un hábito con multiplicador < 3 para establecerlo en ×3. Los próximos 5 completados otorgan doble de puntos.',
     effectType: 'instant',
-    effectKey: 'level_restore',
-    effectValue: 1,
+    effectKey: 'phoenix_restore',
+    effectValue: 3.0,
     maxStack: 1,
   },
 
   /**
-   * VACÍO
+   * PIEDRA DEL VACÍO
    * Tipo: Instantáneo
-   * Efecto: Elimina un hábito sin perder progreso ni estadísticas.
+   * Efecto: Canjea piedras del vacío por objetos aleatorios.
+   * - 2 piedras → 1 objeto common
+   * - 4 piedras → 1 objeto rare
+   * - 6 piedras → 1 objeto epic
+   * - 10 piedras → 1 objeto legendary
    */
-  void: {
-    id: 'void',
-    name: 'Vacío',
+  void_stone: {
+    id: 'void_stone',
+    name: 'Piedra del Vacío',
     icon: '🕳️',
     rarity: 'common',
-    desc: 'Elimina un hábito sin perder progreso ni estadísticas.',
+    desc: 'Canjea piedras por objetos: 2(Common), 4(Rare), 6(Epic), 10(Legendary).',
     effectType: 'instant',
-    effectKey: 'delete_habit',
+    effectKey: 'void_exchange',
     effectValue: 0,
-    maxStack: 3,
+    maxStack: 10,
   },
 
   /**

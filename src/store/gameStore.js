@@ -470,9 +470,19 @@ const useGameStore = create(
       const usedEffect = state.activeEffects.find(e =>
         e.key === 'next_triple' && effectAppliesTo(e, habitId)
       );
-      const nextEffects = usedEffect
+      
+      // Decrement phoenix_bonus usesRemaining if present for this habit
+      let nextEffects = usedEffect
         ? state.activeEffects.filter(e => e !== usedEffect)
         : state.activeEffects;
+        
+      nextEffects = nextEffects.map(e => {
+        if (e.key === 'phoenix_bonus' && e.targetHabitId === habitId && (e.usesRemaining ?? 0) > 0) {
+          const newUsesRemaining = e.usesRemaining - 1;
+          return newUsesRemaining > 0 ? { ...e, usesRemaining: newUsesRemaining } : null;
+        }
+        return e;
+      }).filter(Boolean);
 
       // Update history
       const newHistory = {
@@ -739,7 +749,7 @@ const useGameStore = create(
     },
 
     // ── ITEMS ──────────────────────────────────────────────────────
-    useItem(itemId, targetHabitId = null) {
+    useItem(itemId, targetHabitId = null, quantity = 1) {
       const state = get();
       const item = ITEMS[itemId];
       if (!item) return;
@@ -813,7 +823,7 @@ const useGameStore = create(
         get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
       }
       else if (item.effectType === 'instant') {
-        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'fusion') && !targetHabitId) {
+        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'fusion' || item.effectKey === 'phoenix_restore') && !targetHabitId) {
           get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
           return;
         }
@@ -947,27 +957,75 @@ const useGameStore = create(
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
-        } else if (item.effectKey === 'level_restore') {
-          const targetHabit = state.habits
-            .slice()
-            .sort((a, b) => (a.multiplier ?? 1) - (b.multiplier ?? 1))[0];
-
+        } else if (item.effectKey === 'phoenix_restore' && targetHabitId) {
+          const targetHabit = state.habits.find(h => h.id === targetHabitId);
+          
           if (!targetHabit) {
-            get()._pushNotification('item', 'No tienes hábitos para aplicar Pluma de Fénix.');
+            get()._pushNotification('item', 'Hábito no encontrado.');
+            return;
+          }
+          
+          if ((targetHabit.multiplier ?? 1) >= 3) {
+            get()._pushNotification('item', 'Este hábito ya tiene multiplicador ×3 o superior.');
             return;
           }
 
+          // Establecer multiplicador a 3.0
           set(state2 => ({
             inventory: newInventory,
-            habits: state2.habits.map(h => h.id === targetHabit.id ? { ...h, multiplier: 3.0 } : h),
+            habits: state2.habits.map(h => 
+              h.id === targetHabitId ? { ...h, multiplier: 3.0 } : h
+            ),
+            activeEffects: [...state2.activeEffects, {
+              key: 'phoenix_bonus',
+              value: 2, // multiplicador de puntos
+              targetHabitId,
+              usesRemaining: 5,
+              itemName: item.name,
+            }],
           }));
 
           const uid = get()._userId;
           if (uid) {
             saveInventory(uid, get().inventory).catch(() => { });
-            const updatedHabit = get().habits.find(h => h.id === targetHabit.id);
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
+        } else if (item.effectKey === 'void_exchange') {
+          const currentQty = (state.inventory.find(i => i.itemId === itemId)?.qty ?? 0) + 1;
+          if (quantity > currentQty) {
+            get()._pushNotification('item', 'No tienes suficientes Piedras del Vacío.');
+            return;
+          }
+
+          const rarityMap = { 2: 'common', 4: 'rare', 6: 'epic', 10: 'legendary' };
+          const rarity = rarityMap[quantity] || 'common';
+          
+          const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity && i.id !== 'void_stone');
+          if (itemsOfRarity.length === 0) {
+            get()._pushNotification('item', 'No hay objetos de esta rareza disponibles.');
+            return;
+          }
+          
+          const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
+          
+          const stonesToRemove = quantity - 1;
+          const finalInventory = stonesToRemove > 0
+            ? newInventory.map(i => i.itemId === itemId ? { ...i, qty: i.qty - stonesToRemove } : i).filter(i => i.qty > 0)
+            : newInventory;
+
+          set(state2 => ({
+            inventory: [
+              ...finalInventory,
+              { itemId: randomItem.id, qty: (finalInventory.find(i => i.itemId === randomItem.id)?.qty ?? 0) + 1 }
+            ].filter(i => i.qty > 0),
+          }));
+
+          const uid = get()._userId;
+          if (uid) saveInventory(uid, get().inventory).catch(() => { });
+          
+          get()._pushNotification('item', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`);
         }
         // Handle targeted effects using generic system
         else if (requiresTargeting(item.effectKey) && targetHabitId) {

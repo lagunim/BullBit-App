@@ -53,12 +53,44 @@ export default function InventoryPanel() {
 
   // Items que requieren seleccionar un hábito como objetivo
   // Son efectos instantáneos que se aplican a un hábito específico
-  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target', 'habit_mult_boost_target', 'delete_habit', 'fusion'];
+  const habitTargetEffects = ['mult_recovery', 'perm_base_mult', 'next_triple_target', 'mult_boost_target', 'habit_mult_boost_target', 'delete_habit', 'fusion', 'phoenix_restore'];
+  
+  // Items que requieren seleccionar cantidad (no hábito)
+  const quantitySelectEffects = ['void_exchange'];
+  
+  const [pendingQuantityItem, setPendingQuantityItem] = useState(null);
 
   // Maneja el uso de un objeto del inventario
   // Algunos objetos requieren seleccionar un hábito objetivo primero
   function handleUse(itemId) {
     const item = ITEMS[itemId];
+    // Si el efecto requiere cantidad (Piedra del Vacío)
+    if (quantitySelectEffects.includes(item?.effectKey)) {
+      const invEntry = inventory.find(i => i.itemId === itemId);
+      const qty = invEntry?.qty ?? 0;
+      
+      const options = [];
+      if (qty >= 2) options.push({ qty: 2, label: '2 Piedras → Common', rarity: 'common' });
+      if (qty >= 4) options.push({ qty: 4, label: '4 Piedras → Rare', rarity: 'rare' });
+      if (qty >= 6) options.push({ qty: 6, label: '6 Piedras → Epic', rarity: 'epic' });
+      if (qty >= 10) options.push({ qty: 10, label: '10 Piedras → Legendary', rarity: 'legendary' });
+      
+      if (options.length === 0) {
+        pushNotification?.('item', 'Necesitas al menos 2 Piedras del Vacío.');
+        return;
+      }
+      
+      setPendingQuantityItem({
+        itemId,
+        name: item?.name ?? 'Objeto',
+        icon: item?.icon ?? '🕳️',
+        effectKey: item?.effectKey,
+        desc: item?.desc ?? 'Descripción no disponible',
+        options,
+        availableQty: qty
+      });
+      return;
+    }
     // Si el efecto requiere un objetivo (hábito específico)
     if (habitTargetEffects.includes(item?.effectKey)) {
       // Para Piedra de Poder, cualquier hábito es elegible
@@ -67,14 +99,18 @@ export default function InventoryPanel() {
         ? habits
         : item.effectKey === 'perm_base_mult'
           ? habits.filter(h => !hasPermanentMultiplierGem(h.id, activeEffects))
-          : habits.filter(h => (h?.multiplier ?? 1) < 3);
+          : item.effectKey === 'phoenix_restore'
+            ? habits.filter(h => (h?.multiplier ?? 1) < 3)
+            : habits.filter(h => (h?.multiplier ?? 1) < 3);
 
       if (eligible.length === 0) {
         const message = item.effectKey === 'next_triple_target'
           ? 'No tienes hábitos disponibles.'
           : item.effectKey === 'perm_base_mult'
             ? 'Todos tus hábitos ya tienen activa la Gema del Multiplicador.'
-            : 'Todos tus hábitos ya tienen multiplicador máximo.';
+            : item.effectKey === 'phoenix_restore'
+              ? 'Todos tus hábitos ya tienen multiplicador ×3 o superior.'
+              : 'Todos tus hábitos ya tienen multiplicador máximo.';
         pushNotification?.('item', message);
         return;
       }
@@ -101,7 +137,9 @@ export default function InventoryPanel() {
       ? habits
       : pendingTargetItem.effectKey === 'perm_base_mult'
         ? habits.filter(habit => !hasPermanentMultiplierGem(habit.id, activeEffects))
-        : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
+        : pendingTargetItem.effectKey === 'phoenix_restore'
+          ? habits.filter(habit => (habit?.multiplier ?? 1) < 3)
+          : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
 
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   }, [habits, pendingTargetItem, activeEffects]);
@@ -110,6 +148,12 @@ export default function InventoryPanel() {
     if (!pendingTargetItem) return;
     useItem(pendingTargetItem.itemId, habitId);
     setPendingTargetItem(null);
+  }
+
+  function handleSelectQuantity(qty) {
+    if (!pendingQuantityItem) return;
+    useItem(pendingQuantityItem.itemId, null, qty);
+    setPendingQuantityItem(null);
   }
 
   return (
@@ -257,6 +301,68 @@ export default function InventoryPanel() {
             <div className="flex justify-end mt-4">
               <button
                 onClick={() => setPendingTargetItem(null)}
+                className="btn-pixel-gray text-[8px] py-2 uppercase"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {pendingQuantityItem && createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[12000] p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setPendingQuantityItem(null); }}
+        >
+          <div className="card-pixel w-full max-w-[420px] bg-quest-bg border border-quest-border relative p-5">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <div className="text-xs text-quest-purple uppercase font-pixel tracking-widest">
+                  {pendingQuantityItem.icon} {pendingQuantityItem.name}
+                </div>
+                <div className="text-[10px] text-quest-textDim font-pixel uppercase">
+                  {pendingQuantityItem.desc}
+                </div>
+                <div className="text-[8px] text-quest-cyan mt-1">
+                  Disponibles: {pendingQuantityItem.availableQty}
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingQuantityItem(null)}
+                className="btn-pixel-gray py-1 px-3 text-[10px]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {pendingQuantityItem.options.map(opt => (
+                <button
+                  key={opt.qty}
+                  onClick={() => handleSelectQuantity(opt.qty)}
+                  className="w-full flex items-center justify-between p-4 border border-quest-border text-left text-[10px] font-pixel uppercase rounded-md hover:border-quest-cyan hover:bg-quest-cyan/5 transition-colors"
+                >
+                  <span className="text-quest-text">{opt.label}</span>
+                  <span 
+                    className="text-[8px] px-2 py-1 border uppercase"
+                    style={{ 
+                      borderColor: RARITY_COLORS[opt.rarity]?.color ?? '#fff',
+                      color: RARITY_COLORS[opt.rarity]?.color ?? '#fff'
+                    }}
+                  >
+                    {RARITY_COLORS[opt.rarity]?.label ?? opt.rarity}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setPendingQuantityItem(null)}
                 className="btn-pixel-gray text-[8px] py-2 uppercase"
               >
                 Cancelar

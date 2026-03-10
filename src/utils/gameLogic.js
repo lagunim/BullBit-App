@@ -392,6 +392,9 @@ export function calcPoints(habit, activeEffects = []) {
   if (activeEffects.some(e => e.key === 'next_triple' && e.targetHabitId === habit.id)) multiplier *= 3;
   // Verificar efecto next_triple global (legacy)
   if (activeEffects.some(e => e.key === 'next_triple' && !e.targetHabitId)) multiplier *= 3;
+  // Verificar efecto phoenix_bonus dirigido a este hábito
+  const phoenixEffect = activeEffects.find(e => e.key === 'phoenix_bonus' && e.targetHabitId === habit.id && (e.usesRemaining ?? 0) > 0);
+  if (phoenixEffect) multiplier *= phoenixEffect.value;
 
   return Math.round(basePoints * multiplier);
 }
