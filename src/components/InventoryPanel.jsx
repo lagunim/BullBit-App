@@ -33,6 +33,14 @@ export default function InventoryPanel() {
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
 
+  const displayedEffects = activeEffects.reduce((acc, effect) => {
+    // Evitar duplicados por clave de efecto Y objetivo
+    if (!acc.some(e => e.key === effect.key && e.targetHabitId === effect.targetHabitId)) {
+      acc.push(effect);
+    }
+    return acc;
+  }, []);
+
   function getEffectiveMultiplierForHabit(habit) {
     const globalBoost = activeEffects.find(e => e.key === 'global_mult_boost')?.value ?? 0;
     const habitBoost = activeEffects.find(e =>
@@ -208,7 +216,7 @@ export default function InventoryPanel() {
       </div>
 
       {/* Active effects */}
-      {activeEffects.length > 0 && (
+      {displayedEffects.length > 0 && (
         <div className="anim-fade-in">
           <div className="text-xs text-quest-gold font-pixel mb-3 flex items-center gap-2">
             <h2 className='text-[10px] sm:text-xs font-pixel uppercase'>
@@ -216,7 +224,7 @@ export default function InventoryPanel() {
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {activeEffects.map((eff, i) => (
+            {displayedEffects.map((eff, i) => (
               <div
                 key={i}
                 onClick={() => setSelectedEffect(eff)}
