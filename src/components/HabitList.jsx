@@ -292,7 +292,6 @@ export default function HabitList() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-quest-textDim uppercase ">Multiplicador actual</span>
                 <div className="flex items-center gap-2">
-                  <MultiplierIcons />
                   <HabitTargetedIcons habitId={selectedHabit.id} />
                   <span className={`text-sm font-bold ${getMultColor(selectedHabit.multiplier)}`}>
                     ×{(selectedHabit.multiplier ?? 1).toFixed(1)}
@@ -336,7 +335,7 @@ export default function HabitList() {
 
                       return (
                         <div key={idx} className="bg-black/40 border border-white/5 p-2 rounded flex gap-3 items-start group hover:border-quest-gold/30 transition-colors">
-                          <span className="text-xl drop-shadow-pixel">{item?.icon || '✨'}</span>
+                          <span className="text-xl animate-pulse drop-shadow-pixel">{item?.icon || '✨'}</span>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-0.5">
                               <span className="text-[11px] font-bold text-quest-gold truncate">
