@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS, RARITY_COLORS } from '../data/items.js';
 import ActiveEffectModal from './ActiveEffectModal.jsx';
+import { useEffectiveMultiplier } from './MultiplierIcons.jsx';
 
 export default function InventoryPanel() {
   const inventory = useGameStore(s => s.inventory ?? []);
@@ -214,19 +215,22 @@ export default function InventoryPanel() {
             </div>
 
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
-              {eligibleHabits.map(habit => (
-                <button
-                  key={habit.id}
-                  onClick={() => handleSelectHabit(habit.id)}
-                  className="w-full flex items-center gap-3 p-3 border border-quest-border text-left text-[10px] font-pixel uppercase rounded-md hover:border-quest-cyan hover:bg-quest-cyan/5 transition-colors"
-                >
-                  <span className="text-xl">{habit.emoji}</span>
-                  <div className="flex-1 truncate">
-                    <div className="truncate text-quest-text">{habit.name}</div>
-                    <div className="text-[8px] text-quest-textDim">×{(habit.multiplier ?? 1).toFixed(1)}</div>
-                  </div>
-                </button>
-              ))}
+              {eligibleHabits.map(habit => {
+                const effectiveMult = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
+                return (
+                  <button
+                    key={habit.id}
+                    onClick={() => handleSelectHabit(habit.id)}
+                    className="w-full flex items-center gap-3 p-3 border border-quest-border text-left text-[10px] font-pixel uppercase rounded-md hover:border-quest-cyan hover:bg-quest-cyan/5 transition-colors"
+                  >
+                    <span className="text-xl">{habit.emoji}</span>
+                    <div className="flex-1 truncate">
+                      <div className="truncate text-quest-text">{habit.name}</div>
+                      <div className="text-[8px] text-quest-textDim">×{effectiveMult.toFixed(1)}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex justify-end mt-4">

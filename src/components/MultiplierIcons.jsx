@@ -80,6 +80,31 @@ export function useHabitTargetedEffects(habitId) {
   return activeEffects.filter(e => e.targetHabitId === habitId);
 }
 
+export function useEffectiveMultiplier(habitId, baseMultiplier = 1) {
+  const rawEffects = useGameStore(s => s.activeEffects ?? []);
+  const now = new Date();
+  const activeEffects = rawEffects.filter(e =>
+    !e.expiresAt || new Date(e.expiresAt) > now
+  );
+
+  let effectiveMultiplier = baseMultiplier;
+
+  const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
+  if (globalBoostEffect) {
+    effectiveMultiplier += globalBoostEffect.value || 1.0;
+  }
+
+  const habitBoostEffect = activeEffects.find(e =>
+    e.key === 'habit_mult_boost' &&
+    (!e.targetHabitId || e.targetHabitId === habitId)
+  );
+  if (habitBoostEffect) {
+    effectiveMultiplier += habitBoostEffect.value || 1.0;
+  }
+
+  return Math.min(3.0, effectiveMultiplier);
+}
+
 export function HabitTargetedIcons({ habitId, className = '' }) {
   const targetedEffects = useHabitTargetedEffects(habitId);
 

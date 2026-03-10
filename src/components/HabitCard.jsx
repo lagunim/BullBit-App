@@ -15,7 +15,7 @@
  */
 import useGameStore from '../store/gameStore.js';
 import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS } from '../utils/gameLogic.js';
-import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from './MultiplierIcons.jsx';
+import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons, useEffectiveMultiplier } from './MultiplierIcons.jsx';
 
 function parseCustomDays(customDays) {
   if (Array.isArray(customDays)) {
@@ -55,6 +55,7 @@ function getPeriodicityLabel(habit) {
 export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const history = useGameStore(s => s.history ?? {});
   const hasActiveEffect = useHasActiveMultiplierEffect();
+  const effectiveMultiplier = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
 
   const today = getTodayKey();
   // Obtiene el estado del hábito para el día de hoy desde el historial
@@ -80,9 +81,9 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
     ? 'text-quest-textMuted'
     : hasActiveEffect
     ? 'text-yellow-400'
-    : habit.multiplier >= 3 ? 'text-quest-gold'
-      : habit.multiplier >= 2 ? 'text-quest-cyan'
-        : habit.multiplier >= 1.5 ? 'text-quest-green'
+    : effectiveMultiplier >= 3 ? 'text-quest-gold'
+      : effectiveMultiplier >= 2 ? 'text-quest-cyan'
+        : effectiveMultiplier >= 1.5 ? 'text-quest-green'
           : 'text-quest-text';
 
   // Selecciona el color del borde según el estado del hábito
@@ -132,7 +133,7 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
           <MultiplierIcons />
           <HabitTargetedIcons habitId={habit.id} />
           <span className={`text-[10px] font-pixel ${multColorClass}`}>
-            ×{(habit.multiplier ?? 1).toFixed(1)}
+            ×{effectiveMultiplier.toFixed(1)}
           </span>
         </div>
       </div>
