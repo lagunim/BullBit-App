@@ -27,7 +27,7 @@ const EFFECT_ICONS = {
   streak_shield: { icon: '🛡️', title: 'Escudo de Racha activo - Protege de penalizaciones', color: 'text-quest-cyan' },
   golden_shield: { icon: '⭐', title: 'Racha Dorada activa - El próximo fallo no te penaliza y suma +0.2', color: 'text-quest-gold' },
   balance_shield: { icon: '⚖️', title: 'Amuleto de Equilibrio activo - El multiplicador no baja al fallar', color: 'text-quest-cyan' },
-  global_mult_boost: { icon: '📈', title: 'Poción de Impulso activa - +1.0 a todos los multiplicadores', color: 'text-quest-green' },
+  global_mult_boost: { icon: '⚗️', title: 'Poción de Impulso activa - +1.0 a todos los multiplicadores', color: 'text-quest-green' },
   reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.2', color: 'text-quest-green' },
   double_points: { icon: '✨', title: 'Elixir del Doble activo - Puntos duplicados', color: 'text-purple-400' },
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
@@ -160,58 +160,44 @@ export default function MultiplierIcons({ className = '' }) {
 
   const icons = [];
 
-  const hasShield = activeEffects.some(e =>
-    e.key === 'streak_shield' || e.key === 'golden_shield' || e.key === 'balance_shield'
-  );
-  const hasGlobalBoost = activeEffects.some(e => e.key === 'global_mult_boost');
-  const hasReducedPenalty = activeEffects.some(e => e.key === 'reduced_penalty');
-  const hasPointsBoost = activeEffects.some(e =>
-    (e.key === 'double_points' || e.key === 'triple_points' || e.key === 'next_triple') &&
-    !e.targetHabitId // Only show global effects
-  );
-
-  if (hasShield) {
-    const shieldEffect = activeEffects.find(e =>
-      e.key === 'golden_shield' || e.key === 'balance_shield' || e.key === 'streak_shield'
-    );
-    if (shieldEffect && EFFECT_ICONS[shieldEffect.key]) {
-      icons.push(EFFECT_ICONS[shieldEffect.key]);
-    } else {
-      icons.push(EFFECT_ICONS['streak_shield']);
+  // 1. Escudos y Protecciones (Prioridad 1)
+  const shieldKeys = ['golden_shield', 'balance_shield', 'streak_shield'];
+  shieldKeys.forEach(key => {
+    if (activeEffects.some(e => e.key === key)) {
+      icons.push(EFFECT_ICONS[key]);
     }
-  }
+  });
 
-  if (hasGlobalBoost) {
+  // 2. Impulsos de Multiplicador (Prioridad 2)
+  if (activeEffects.some(e => e.key === 'global_mult_boost')) {
     icons.push(EFFECT_ICONS['global_mult_boost']);
   }
 
-  if (hasReducedPenalty) {
+  if (activeEffects.some(e => e.key === 'reduced_penalty')) {
     icons.push(EFFECT_ICONS['reduced_penalty']);
   }
 
-  if (hasPointsBoost && !hasGlobalBoost) {
-    const pointsEffect = activeEffects.find(e =>
-      (e.key === 'triple_points' || e.key === 'double_points' || e.key === 'next_triple') &&
-      !e.targetHabitId // Only show global effects
-    );
-    if (pointsEffect && EFFECT_ICONS[pointsEffect.key]) {
-      icons.push(EFFECT_ICONS[pointsEffect.key]);
+  // 3. Impulsos de Puntos (Prioridad 3)
+  const pointBoostKeys = ['triple_points', 'double_points', 'next_triple'];
+  pointBoostKeys.forEach(key => {
+    if (activeEffects.some(e => e.key === key && !e.targetHabitId)) {
+      icons.push(EFFECT_ICONS[key]);
     }
-  }
+  });
 
   if (icons.length === 0) return null;
 
   return (
-    <span className={`flex items-center gap-0.5 ${className}`}>
+    <div className={`flex items-center gap-1 ${className}`}>
       {icons.map((effect, index) => (
         <span
-          key={index}
-          className={`text-[10px] ${effect.color} animate-pulse`}
+          key={`${effect.icon}-${index}`}
+          className={`text-[11px] ${effect.color} animate-pulse drop-shadow-sm`}
           title={effect.title}
         >
           {effect.icon}
         </span>
       ))}
-    </span>
+    </div>
   );
 }

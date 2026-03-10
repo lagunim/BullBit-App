@@ -109,10 +109,15 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
         <div className={`text-2xl shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all ${isAvailableToday && !isDetermined ? 'animate-subtle-pulse' : ''}`}>
           {habit.emoji}
         </div>
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className={`text-[10px] truncate uppercase tracking-tight ${isAvailableToday ? 'text-quest-text' : 'text-quest-textMuted'}`}>
             {habit.name}
           </div>
+          {isExpired && !isDetermined && (
+            <span className="text-[9px] text-orange-500 shrink-0" title="Hábito expirado">
+              ⚠️
+            </span>
+          )}
           {getPeriodicityLabel(habit) && (
             <span className={`text-[8px] shrink-0 ${isAvailableToday ? 'text-quest-cyan/70' : 'text-quest-textMuted/80'}`}>
               · {getPeriodicityLabel(habit)}
@@ -124,17 +129,14 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
             </span>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-1 shrink-0">
-          {isExpired && !isDetermined && (
-            <span className="text-[9px] text-orange-500" title="Hábito expirado">
-              ⚠️
-            </span>
-          )}
-          <MultiplierIcons />
-          <HabitTargetedIcons habitId={habit.id} />
-          <span className={`text-[10px] font-pixel ${multColorClass}`}>
+        <div className="ml-auto flex flex-col items-end gap-0.5 shrink-0 min-w-[40px]">
+          <span className={`text-[12px] font-pixel leading-none ${multColorClass}`}>
             ×{effectiveMultiplier.toFixed(1)}
           </span>
+          <div className="flex flex-wrap justify-end gap-0.5">
+            <MultiplierIcons habitId={habit.id} />
+            <HabitTargetedIcons habitId={habit.id} />
+          </div>
         </div>
       </div>
 

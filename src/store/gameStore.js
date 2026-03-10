@@ -725,10 +725,13 @@ const useGameStore = create(
       
       // Consume shield if used
       let newActiveEffects = [...state.activeEffects];
-      const shield = newActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+      const shield = newActiveEffects.find(e => e.key === 'golden_shield') || newActiveEffects.find(e => e.key === 'streak_shield');
       if (shield) {
         newActiveEffects = newActiveEffects.filter(e => e !== shield);
-        get()._pushNotification('item', `🛡️ ${shield.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`);
+        const msg = shield.key === 'golden_shield' 
+          ? `⭐ Racha Dorada consumida: ¡Protección y +0.2 al multiplicador!` 
+          : `🛡️ ${shield.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`;
+        get()._pushNotification('item', msg);
       }
 
       // DOBLE PENALIZACIÓN: fallo normal + degradación de fusión
@@ -1302,7 +1305,7 @@ const useGameStore = create(
                 let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
 
                 // Consume shield if used
-                const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
+                const shield = nextActiveEffects.find(e => e.key === 'golden_shield') || nextActiveEffects.find(e => e.key === 'streak_shield');
                 if (shield) {
                   nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
                 }
@@ -1478,10 +1481,18 @@ const useGameStore = create(
 
           // Calcular nuevo multiplicador con penalización y escudos
           let newMult = habit.multiplier;
-          if (nextActiveEffects.some(e => e.key === 'streak_shield') || nextActiveEffects.some(e => e.key === 'balance_shield')) {
-            // Shield protects - no penalty
-          } else if (nextActiveEffects.some(e => e.key === 'golden_shield')) {
-            newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
+          const shield = nextActiveEffects.find(e => e.key === 'golden_shield') || 
+                        nextActiveEffects.find(e => e.key === 'streak_shield') || 
+                        nextActiveEffects.find(e => e.key === 'balance_shield');
+
+          if (shield) {
+            if (shield.key === 'golden_shield') {
+              newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
+            }
+            // Solo consumir si no es balance_shield (que es temporal por días, no por usos)
+            if (shield.key !== 'balance_shield') {
+              nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+            }
           } else {
             const penaltyEffect = nextActiveEffects.find(e => e.key === 'reduced_penalty');
             const actualPenalty = penaltyEffect ? (penaltyEffect.value * missedCount) : totalPenalty;
