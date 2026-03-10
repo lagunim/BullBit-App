@@ -128,19 +128,19 @@ export const ITEMS = {
   /**
    * GEMA DEL MULTIPLICADOR
    * Tipo: Instantáneo
-   * Efecto: Aumenta PERMANENTEMENTE el multiplicador BASE de un hábito en +0.2.
-   * Importante: Es permanente, no se pierde al fallar.
+   * Efecto: Aumenta PERMANENTEMENTE límite del multiplicador BASE a 4.
+   * Importante: Es permanente, pero se pierde al reducir el multiplicador por debajo de 3.
    */
   multiplier_gem: {
     id: 'multiplier_gem',
     name: 'Gema del Multiplicador',
     icon: '💠',
     rarity: 'legendary',
-    desc: 'Aumenta permanentemente el multiplicador BASE de un hábito en +0.2.',
+    desc: 'Elige un hábito para elevar su tope de multiplicador a ×4. No se apila en el mismo hábito y se pierde si baja de ×3.',
     effectType: 'instant',
     effectKey: 'perm_base_mult',
-    effectValue: 0.2,
-    maxStack: 2,
+    effectValue: 1,
+    maxStack: 1,
   },
 
   /**

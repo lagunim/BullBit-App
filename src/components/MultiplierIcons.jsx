@@ -17,6 +17,7 @@
  * @returns {JSX.Element|null} Iconos de efectos o null si no hay efectos
  */
 import useGameStore from '../store/gameStore.js';
+import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../utils/gameLogic.js';
 
 /**
  * Mapeo de iconos y colores para cada tipo de efecto de multiplicador
@@ -32,6 +33,7 @@ const EFFECT_ICONS = {
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
   next_triple: { icon: '🔺', title: 'Piedra de Poder activa - 3x puntos en hábito específico', color: 'text-purple-400' },
   habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
+  perm_base_mult: { icon: '💠', title: 'Gema del Multiplicador activa - Este hábito puede llegar a ×4', color: 'text-quest-gold' },
 };
 
 /**
@@ -102,7 +104,18 @@ export function useEffectiveMultiplier(habitId, baseMultiplier = 1) {
     effectiveMultiplier += habitBoostEffect.value || 1.0;
   }
 
-  return Math.min(3.0, effectiveMultiplier);
+  const multiplierCap = getHabitMultiplierCap(habitId, activeEffects);
+  return Math.min(multiplierCap, effectiveMultiplier);
+}
+
+export function useHasMultiplierGem(habitId) {
+  const rawEffects = useGameStore(s => s.activeEffects ?? []);
+  const now = new Date();
+  const activeEffects = rawEffects.filter(e =>
+    !e.expiresAt || new Date(e.expiresAt) > now
+  );
+
+  return hasPermanentMultiplierGem(habitId, activeEffects);
 }
 
 export function HabitTargetedIcons({ habitId, className = '' }) {

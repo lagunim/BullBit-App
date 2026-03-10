@@ -362,6 +362,7 @@ export function isHabitExpired(habit, today, history) {
  * @returns {number} Puntos ganados
  */
 export function calcPoints(habit, activeEffects = []) {
+  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
   // Aplicar bonificaciones temporales al multiplicador base
   let effectiveMultiplier = habit.multiplier;
 
@@ -380,8 +381,8 @@ export function calcPoints(habit, activeEffects = []) {
     effectiveMultiplier += habitBoostEffect.value;
   }
 
-  // Puntos base = minutos * multiplicador (máx 3.0)
-  const basePoints = habit.minutes * Math.min(3.0, effectiveMultiplier);
+  // Puntos base = minutos * multiplicador (máx dinámico: 3.0 o 4.0 con gema)
+  const basePoints = habit.minutes * Math.min(multiplierCap, effectiveMultiplier);
 
   // Aplicar bonificadores de puntos
   let multiplier = 1;
@@ -408,6 +409,7 @@ export function calcPoints(habit, activeEffects = []) {
  * @returns {number} Nuevo valor del multiplicador
  */
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
+  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
 
@@ -418,8 +420,8 @@ export function calcMultiplierOnComplete(habit, activeEffects = []) {
   );
   const habitBoost = habitBoostEffect ? habitBoostEffect.value : 0;
 
-  // Nuevo multiplicador = actual + 0.2 + bonificaciones, máx 3.0
-  return Math.min(3.0, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost).toFixed(1)));
+  // Nuevo multiplicador = actual + 0.2 + bonificaciones, máx dinámico
+  return Math.min(multiplierCap, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost).toFixed(1)));
 }
 
 /**
@@ -450,6 +452,23 @@ export function calcMultiplierOnFail(habit, activeEffects = []) {
 
   // El multiplicador no puede bajar de 1.0
   return Math.max(1.0, parseFloat((habit.multiplier - penalty).toFixed(1)));
+}
+
+/**
+ * Verifica si un hábito tiene activa la gema del multiplicador.
+ */
+export function hasPermanentMultiplierGem(habitId, activeEffects = []) {
+  if (!habitId) return false;
+  return activeEffects.some(e => e.key === 'perm_base_mult' && e.targetHabitId === habitId);
+}
+
+/**
+ * Obtiene el tope de multiplicador para un hábito:
+ * - 3.0 por defecto
+ * - 4.0 si tiene efecto de Gema del Multiplicador
+ */
+export function getHabitMultiplierCap(habitId, activeEffects = []) {
+  return hasPermanentMultiplierGem(habitId, activeEffects) ? 4.0 : 3.0;
 }
 
 /**

@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom';
 import useGameStore from '../store/gameStore.js';
 import { ITEMS, RARITY_COLORS } from '../data/items.js';
 import ActiveEffectModal from './ActiveEffectModal.jsx';
-import { useEffectiveMultiplier } from './MultiplierIcons.jsx';
+import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../utils/gameLogic.js';
 
 export default function InventoryPanel() {
   const inventory = useGameStore(s => s.inventory ?? []);
@@ -30,6 +30,15 @@ export default function InventoryPanel() {
 
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
+
+  function getEffectiveMultiplierForHabit(habit) {
+    const globalBoost = activeEffects.find(e => e.key === 'global_mult_boost')?.value ?? 0;
+    const habitBoost = activeEffects.find(e =>
+      e.key === 'habit_mult_boost' && (!e.targetHabitId || e.targetHabitId === habit.id)
+    )?.value ?? 0;
+    const cap = getHabitMultiplierCap(habit.id, activeEffects);
+    return Math.min(cap, (habit.multiplier ?? 1) + globalBoost + habitBoost);
+  }
 
   const allItems = Object.values(ITEMS).sort((a, b) => {
     const invA = inventory.find(i => i.itemId === a.id);
@@ -56,12 +65,16 @@ export default function InventoryPanel() {
       // Para otros, solo hábitos con multiplicador < 3
       const eligible = item.effectKey === 'next_triple_target'
         ? habits
-        : habits.filter(h => (h?.multiplier ?? 1) < 3);
+        : item.effectKey === 'perm_base_mult'
+          ? habits.filter(h => !hasPermanentMultiplierGem(h.id, activeEffects))
+          : habits.filter(h => (h?.multiplier ?? 1) < 3);
 
       if (eligible.length === 0) {
         const message = item.effectKey === 'next_triple_target'
           ? 'No tienes hábitos disponibles.'
-          : 'Todos tus hábitos ya tienen multiplicador máximo.';
+          : item.effectKey === 'perm_base_mult'
+            ? 'Todos tus hábitos ya tienen activa la Gema del Multiplicador.'
+            : 'Todos tus hábitos ya tienen multiplicador máximo.';
         pushNotification?.('item', message);
         return;
       }
@@ -81,13 +94,17 @@ export default function InventoryPanel() {
 
   const eligibleHabits = useMemo(() => {
     if (!pendingTargetItem) return [];
-    // For Piedra de Poder, show all habits, for others filter by multiplier < 3
+    // Para Piedra de Poder se muestran todos.
+    // Para Gema, se excluyen hábitos que ya tienen este efecto (no apilable).
+    // Para otros, se mantiene la lógica existente de multiplicador < 3.
     const filtered = pendingTargetItem.effectKey === 'next_triple_target'
       ? habits
-      : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
+      : pendingTargetItem.effectKey === 'perm_base_mult'
+        ? habits.filter(habit => !hasPermanentMultiplierGem(habit.id, activeEffects))
+        : habits.filter(habit => (habit?.multiplier ?? 1) < 3);
 
     return filtered.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
-  }, [habits, pendingTargetItem]);
+  }, [habits, pendingTargetItem, activeEffects]);
 
   function handleSelectHabit(habitId) {
     if (!pendingTargetItem) return;
@@ -216,7 +233,8 @@ export default function InventoryPanel() {
 
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
               {eligibleHabits.map(habit => {
-                const effectiveMult = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
+                const effectiveMult = getEffectiveMultiplierForHabit(habit);
+                const hasGem = hasPermanentMultiplierGem(habit.id, activeEffects);
                 return (
                   <button
                     key={habit.id}
@@ -226,7 +244,10 @@ export default function InventoryPanel() {
                     <span className="text-xl">{habit.emoji}</span>
                     <div className="flex-1 truncate">
                       <div className="truncate text-quest-text">{habit.name}</div>
-                      <div className="text-[8px] text-quest-textDim">×{effectiveMult.toFixed(1)}</div>
+                      <div className="text-[8px] text-quest-textDim flex items-center gap-1">
+                        {hasGem && <span title="Gema del Multiplicador activa">💠</span>}
+                        <span>×{effectiveMult.toFixed(1)}</span>
+                      </div>
                     </div>
                   </button>
                 );
