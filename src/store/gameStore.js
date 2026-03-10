@@ -227,6 +227,9 @@ const useGameStore = create(
     // UI notifications queue
     notifications: [],
 
+    // Streak rewards
+    streakReward: null,
+
     // ── HABITS ────────────────────────────────────────────────────
     addHabit(habit) {
       const newHabit = {
@@ -1565,10 +1568,40 @@ const useGameStore = create(
     },
 
     _recalcGlobalStreak() {
-      const { habits, history } = get();
-      set({ globalStreak: calcGlobalStreak(habits, history) });
+      const { habits, history, globalStreak: oldStreak } = get();
+      const newStreak = calcGlobalStreak(habits, history);
+      
+      const oldIsMultiple = oldStreak > 0 && oldStreak % 3 === 0;
+      const newIsMultiple = newStreak > 0 && newStreak % 3 === 0;
+      
+      if (newStreak > 0 && newIsMultiple && !oldIsMultiple) {
+        const rarity = newStreak >= 12 ? 'legendary' 
+          : newStreak >= 9 ? 'epic' 
+          : newStreak >= 6 ? 'rare' 
+          : 'common';
+        
+        const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity);
+        if (itemsOfRarity.length > 0) {
+          const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
+          set({ 
+            globalStreak: newStreak,
+            streakReward: randomItem,
+          });
+          const uid = get()._userId;
+          if (uid) {
+            saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: newStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+          }
+          return;
+        }
+      }
+      
+      set({ globalStreak: newStreak });
       const uid = get()._userId;
-      if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: get().globalStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+      if (uid) saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: newStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
+    },
+
+    clearStreakReward() {
+      set({ streakReward: null });
     },
 
     // ── FUSION LOGIC ───────────────────────────────────────────────

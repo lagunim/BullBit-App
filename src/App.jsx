@@ -38,6 +38,7 @@ import Auth from './components/auth/Auth.jsx';
 import StoriesPanel from './components/journey/StoriesPanel.jsx';
 import JourneyRewardFlow from './components/journey/JourneyRewardFlow.jsx';
 import DailyRewardFlow from './components/daily-mission/DailyRewardFlow.jsx';
+import StreakRewardModal from './components/progress/StreakRewardModal.jsx';
 import DailyChoiceModal from './components/daily-mission/DailyChoiceModal.jsx';
 
 // Utilidades
@@ -433,6 +434,9 @@ export default function App() {
 
       {/* Flujo de recompensas diarias (aparece al completar daily) */}
       <DailyRewardFlow />
+
+      {/* Modal de recompensa por racha múltiplo de 3 */}
+      <StreakRewardModal />
 
       {/* Modal de elección de misión diaria (aparece al abrir app por primera vez en el día) */}
       {(() => {
