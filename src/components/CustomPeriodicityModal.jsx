@@ -67,7 +67,7 @@ export default function CustomPeriodicityModal({
       <div className="anim-fade-in card-pixel w-full max-w-[420px] flex flex-col gap-4 !p-6 border-quest-cyan shadow-[4px_4px_0_theme(colors.quest.cyan)]">
         <div className="flex justify-between items-center border-b border-quest-border pb-2">
           <h2 className="text-[11px] text-quest-cyan font-pixel uppercase tracking-widest">PERSONALIZADO</h2>
-          <button onClick={onClose} className="btn-pixel-gray !py-1 !px-2 !text-[9px]">✕</button>
+          <button onClick={onClose} className="btn-pixel-gray !py-3 !px-4 sm:!py-1 sm:!px-2 !text-sm sm:!text-xs">✕</button>
         </div>
 
         <label className="flex items-center gap-2 cursor-pointer">

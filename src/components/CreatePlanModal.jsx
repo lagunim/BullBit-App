@@ -28,7 +28,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
       id: t.id,
       name: t.name,
       durationMinutes: t.durationMinutes,
-    })) || [{ id: createUuid(), name: '', durationMinutes: 30 }]
+    })) || [{ id: createUuid(), name: '', durationMinutes: '' }]
   );
   const [error, setError] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
@@ -49,7 +49,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
   }
 
   function handleAddTask() {
-    setTasks([...tasks, { id: createUuid(), name: '', durationMinutes: 30 }]);
+    setTasks([...tasks, { id: createUuid(), name: '', durationMinutes: '' }]);
   }
 
   function handleRemoveTask(index) {
@@ -150,7 +150,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
         <div>
           <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE DEL PLAN</label>
           <input
-            className="input-pixel"
+            className="input-pixel text-xs sm:text-sm"
             value={planName}
             onChange={e => setPlanName(e.target.value)}
             placeholder="Ej: Mi día productivo..."
@@ -202,28 +202,39 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
             TAREAS — <span className="text-quest-gold">⏱️ {totalMinutes} min total</span>
           </label>
 
+          <div className="grid grid-cols-[1fr_64px_36px] gap-2 px-1 mb-1">
+            <span className="text-[10px] text-quest-textMuted font-pixel uppercase">Nombre</span>
+            <span className="text-[10px] text-quest-textMuted font-pixel uppercase text-center">min</span>
+            <span />
+          </div>
+
           <div className="flex flex-col gap-2 max-h-[250px] overflow-y-auto">
             {tasks.map((task, index) => (
-              <div key={task.id} className="flex gap-2 items-center">
+              <div key={task.id} className="grid grid-cols-[1fr_64px_36px] gap-2 items-center">
                 <input
-                  className="input-pixel flex-1 !py-2"
+                  className="input-pixel flex-1 !py-2 text-xs"
                   value={task.name}
                   onChange={e => handleTaskChange(index, 'name', e.target.value)}
-                  placeholder="Nombre de la tarea..."
+                  placeholder="Nombre tarea"
                   maxLength={40}
                 />
                 <input
-                  className="input-pixel !w-16 !py-2 text-center"
-                  type="number"
-                  min={1}
-                  max={480}
-                  value={task.durationMinutes}
-                  onChange={e => handleTaskChange(index, 'durationMinutes', parseInt(e.target.value) || 0)}
+                  className="input-pixel !py-2 text-center"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={3}
+                  placeholder="30"
+                  value={task.durationMinutes ?? ''}
+                  onChange={e => {
+                    const rawValue = e.target.value;
+                    if (!/^\d*$/.test(rawValue)) return;
+                    handleTaskChange(index, 'durationMinutes', rawValue === '' ? '' : parseInt(rawValue, 10));
+                  }}
                 />
-                <span className="text-xs text-quest-textMuted w-8">min</span>
                 <button
                   onClick={() => handleRemoveTask(index)}
-                  className="btn-pixel-red !py-2 !px-2 text-xs"
+                  className="btn-pixel-red !py-2 !px-0 text-xs w-full"
                   disabled={tasks.length === 1}
                 >
                   ✕
