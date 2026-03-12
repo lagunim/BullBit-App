@@ -20,9 +20,10 @@ import {
   getWeekCompletions,
   getHabitMultiplierCap,
   hasPermanentMultiplierGem,
+  hasDynamicMultiplierCap,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
-import { assignStoryForJourney, assignStoryForEpicAchievement, assignStoryForLegendaryAchievement } from '../data/stories.js';
+import { assignStoryForJourney, assignStoryForEpicAchievement, assignStoryForLegendaryAchievement, getStoryById } from '../data/stories.js';
 import {
   loadUserData,
   saveProfile,
@@ -142,6 +143,20 @@ function removeGemIfLostThreshold(activeEffects = [], habitId, nextMultiplier) {
   }
 
   const effects = activeEffects.filter(e => !(e.key === 'perm_base_mult' && e.targetHabitId === habitId));
+  return { effects, removed: true };
+}
+
+function removeDynamicCapIfLostThreshold(activeEffects = [], habitId, nextMultiplier) {
+  if (!habitId || nextMultiplier >= 3) {
+    return { effects: activeEffects, removed: false };
+  }
+
+  const hasDynamicCap = hasDynamicMultiplierCap(habitId, activeEffects);
+  if (!hasDynamicCap) {
+    return { effects: activeEffects, removed: false };
+  }
+
+  const effects = activeEffects.filter(e => !(e.key === 'dynamic_mult_cap' && e.targetHabitId === habitId));
   return { effects, removed: true };
 }
 
@@ -359,10 +374,17 @@ const useGameStore = create(
     },
 
     removeHabit(id) {
-      set(state => ({ habits: state.habits.filter(h => h.id !== id) }));
+      // Primero eliminar efectos activos relacionados con este hábito
+      set(state => ({
+        habits: state.habits.filter(h => h.id !== id),
+        activeEffects: state.activeEffects.filter(e => e.targetHabitId !== id)
+      }));
 
       // Persistir en BD
-      if (get()._userId) dbDeleteHabit(id).catch(() => { });
+      if (get()._userId) {
+        dbDeleteHabit(id).catch(() => { });
+        saveActiveEffects(get()._userId, get().activeEffects).catch(() => { });
+      }
     },
 
     updateHabit(id, updates) {
@@ -528,7 +550,6 @@ const useGameStore = create(
         // Procesos de inicio (siempre, independientemente del origen de datos)
         get()._processExpiredHabits();
         get()._processWeeklyHabits();
-        get()._processFusionDegradation(); // Procesar degradación de fusión al inicio
         get()._recalcGlobalStreak();
         await get()._checkAndGenerateDaily();
         get()._purgeExpiredEffects();
@@ -588,10 +609,26 @@ const useGameStore = create(
         e.key === 'next_triple' && effectAppliesTo(e, habitId)
       );
 
+      // Consume "next_point_boost" if present (global effect, consumed on any habit completion)
+      const nextPointBoostEffectComplete = state.activeEffects.find(e => e.key === 'next_point_boost');
+
+      // Consume "next_point_boost_target" if present for this specific habit
+      const nextPointBoostTargetEffectComplete = state.activeEffects.find(e => 
+        e.key === 'next_point_boost_target' && e.targetHabitId === habitId
+      );
+
       // Decrement phoenix_bonus usesRemaining if present for this habit
       let nextEffects = usedEffect
         ? state.activeEffects.filter(e => e !== usedEffect)
         : state.activeEffects;
+
+      if (nextPointBoostEffectComplete) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostEffectComplete);
+      }
+
+      if (nextPointBoostTargetEffectComplete) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectComplete);
+      }
 
       if (fusionEffectToRemove) {
         nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
@@ -678,6 +715,17 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
+      
+      // Apply next_point_boost (global effect for next completion)
+      const nextPointBoostEffect = activeEffects.find(e => e.key === 'next_point_boost');
+      if (nextPointBoostEffect) bonusMult *= nextPointBoostEffect.value;
+
+      // Apply next_point_boost_target (directed effect for specific habit)
+      const nextPointBoostTargetEffect = activeEffects.find(e => 
+        e.key === 'next_point_boost_target' && e.targetHabitId === habitId
+      );
+      if (nextPointBoostTargetEffect) bonusMult *= nextPointBoostTargetEffect.value;
+      
       let earned = Math.round(basePoints * bonusMult);
 
       // Apply phoenix_bonus to points
@@ -713,6 +761,16 @@ const useGameStore = create(
       let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      // Consume "next_point_boost" if present (global effect, consumed on any habit completion)
+      if (nextPointBoostEffect) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostEffect);
+      }
+
+      // Consume "next_point_boost_target" if present for this specific habit
+      if (nextPointBoostTargetEffectComplete) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectComplete);
+      }
 
       if (fusionEffectToRemove) {
         nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
@@ -798,6 +856,17 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
+      
+      // Apply next_point_boost (global effect for next completion)
+      const nextPointBoostEffectOvertime = activeEffects.find(e => e.key === 'next_point_boost');
+      if (nextPointBoostEffectOvertime) bonusMult *= nextPointBoostEffectOvertime.value;
+
+      // Apply next_point_boost_target (directed effect for specific habit)
+      const nextPointBoostTargetEffectOvertime = activeEffects.find(e => 
+        e.key === 'next_point_boost_target' && e.targetHabitId === habitId
+      );
+      if (nextPointBoostTargetEffectOvertime) bonusMult *= nextPointBoostTargetEffectOvertime.value;
+      
       let earned = Math.round(basePoints * bonusMult);
 
       // Apply phoenix_bonus to points
@@ -833,6 +902,16 @@ const useGameStore = create(
       let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      // Consume "next_point_boost" if present (global effect, consumed on any habit completion)
+      if (nextPointBoostEffectOvertime) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostEffectOvertime);
+      }
+
+      // Consume "next_point_boost_target" if present for this specific habit
+      if (nextPointBoostTargetEffectOvertime) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectOvertime);
+      }
 
       if (fusionEffectToRemove) {
         nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
@@ -945,6 +1024,12 @@ const useGameStore = create(
       const gemLoss = removeGemIfLostThreshold(newActiveEffects, habitId, newMult);
       newActiveEffects = gemLoss.effects;
 
+      const dynamicCapLoss = removeDynamicCapIfLostThreshold(newActiveEffects, habitId, newMult);
+      if (dynamicCapLoss.removed) {
+        newActiveEffects = dynamicCapLoss.effects;
+        get()._pushNotification('item', `⚠️ El límite dinámico del Token de Maestría se ha perdido para "${habit.name}".`);
+      }
+
       const newHistory = {
         ...state.history,
         [today]: { ...(state.history[today] ?? {}), [habitId]: 'failed' },
@@ -1051,7 +1136,7 @@ const useGameStore = create(
         get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
       }
       else if (item.effectType === 'instant') {
-        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'phoenix_restore') && !targetHabitId) {
+        if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'phoenix_restore' || item.effectKey === 'next_point_boost_target') && !targetHabitId) {
           get()._pushNotification('item', 'Debes seleccionar un hábito para usar este objeto.');
           return;
         }
@@ -1059,6 +1144,16 @@ const useGameStore = create(
         if (item.effectKey === 'fusion' && (!targetHabitId || !Array.isArray(targetHabitId) || targetHabitId.length !== 2)) {
           get()._pushNotification('item', 'Selecciona exactamente 2 hábitos para fusionar.');
           return;
+        }
+
+        if (item.effectKey === 'fusion' && Array.isArray(targetHabitId) && targetHabitId.length === 2) {
+          const alreadyFused = targetHabitId.some(hId => 
+            state.activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === hId)
+          );
+          if (alreadyFused) {
+            get()._pushNotification('item', 'Uno de los hábitos ya está fusionado.');
+            return;
+          }
         }
 
         if (item.requiresTwoTargets && (!targetHabitId || !Array.isArray(targetHabitId) || targetHabitId.length !== 2)) {
@@ -1146,12 +1241,56 @@ const useGameStore = create(
               targetHabitId,
               itemName: item.name,
             }],
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId ? { ...h, multiplier: 4.0 } : h
+            ),
           }));
           const uid = get()._userId;
           if (uid) {
             queueInventorySave(uid, () => get().inventory);
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
+          const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
+          get()._pushNotification('item', `${item.icon} ${item.name} activado en "${habitName}"! Límite de multiplicador aumentado a ×4.`);
+        } else if (item.effectKey === 'dynamic_mult_cap' && targetHabitId) {
+          const targetHabit = state.habits.find(h => h.id === targetHabitId);
+          if (!targetHabit) {
+            get()._pushNotification('item', 'Hábito no encontrado.');
+            return;
+          }
+          const newMultiplier = parseFloat((targetHabit.multiplier + item.effectValue).toFixed(1));
+          const hasExistingDynamicCap = hasDynamicMultiplierCap(targetHabitId, state.activeEffects);
+          const existingCapValue = hasExistingDynamicCap ? getHabitMultiplierCap(targetHabitId, state.activeEffects) : 3.0;
+          const finalMultiplier = Math.min(Math.max(newMultiplier, existingCapValue), newMultiplier);
+          
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId ? { ...h, multiplier: finalMultiplier } : h
+            ),
+            activeEffects: newMultiplier > 3.0
+              ? [...state2.activeEffects.filter(e => !(e.key === 'dynamic_mult_cap' && e.targetHabitId === targetHabitId)), {
+                  key: 'dynamic_mult_cap',
+                  value: newMultiplier,
+                  targetHabitId,
+                  itemName: item.name,
+                }]
+              : state2.activeEffects,
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            queueInventorySave(uid, () => get().inventory);
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+          }
+          const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
+          const message = newMultiplier > 3.0
+            ? `${item.icon} ${item.name} activado en "${habitName}"! Multiplicador: ×${finalMultiplier}, nuevo límite: ×${newMultiplier}`
+            : `${item.icon} ${item.name} activado en "${habitName}"! Multiplicador: ×${finalMultiplier}`;
+          get()._pushNotification('item', message);
         } else if ((item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target') && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
@@ -1170,6 +1309,44 @@ const useGameStore = create(
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
+        } else if (item.effectKey === 'small_mult_boost_target' && targetHabitId) {
+          const targetHabit = state.habits.find(h => h.id === targetHabitId);
+          if (!targetHabit) {
+            get()._pushNotification('item', 'Hábito no encontrado.');
+            return;
+          }
+
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + item.durationDays);
+
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h =>
+              h.id === targetHabitId
+                ? (() => {
+                    const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                    return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
+                  })()
+                : h
+            ),
+            activeEffects: [...state2.activeEffects, {
+              key: 'small_mult_boost_target',
+              value: item.effectValue,
+              targetHabitId,
+              expiresAt: expiresAt.toISOString(),
+              itemName: item.name,
+            }],
+          }));
+
+          const uid = get()._userId;
+          if (uid) {
+            queueInventorySave(uid, () => get().inventory);
+            const updatedHabit = get().habits.find(h => h.id === targetHabitId);
+            if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+          }
+          get()._pushNotification('item', `🌱 ¡Semilla de Hábito plantada! +${item.effectValue} durante ${item.durationDays} día.`);
+          return;
         } else if (item.effectKey === 'fusion' && Array.isArray(targetHabitId) && targetHabitId.length === 2) {
           const [h1Id, h2Id] = targetHabitId;
           const h1 = state.habits.find(h => h.id === h1Id);
@@ -1295,6 +1472,40 @@ const useGameStore = create(
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
+        } else if (item.effectKey === 'next_point_boost') {
+          // Efecto global: se aplica al próximo hábito completado
+          set(state2 => ({
+            inventory: newInventory,
+            activeEffects: [...state2.activeEffects, {
+              key: 'next_point_boost',
+              value: item.effectValue,
+              itemName: item.name,
+            }],
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            queueInventorySave(uid, () => get().inventory);
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+          }
+          get()._pushNotification('item', `${item.icon} ${item.name} activado! Se multiplicarán los puntos de tu próxima completación.`);
+        } else if (item.effectKey === 'next_point_boost_target' && targetHabitId) {
+          // Efecto dirigido: se aplica solo al hábito seleccionado
+          set(state2 => ({
+            inventory: newInventory,
+            activeEffects: [...state2.activeEffects.filter(e => !(e.key === 'next_point_boost_target' && e.targetHabitId === targetHabitId)), {
+              key: 'next_point_boost_target',
+              value: item.effectValue,
+              targetHabitId,
+              itemName: item.name,
+            }],
+          }));
+          const uid = get()._userId;
+          if (uid) {
+            queueInventorySave(uid, () => get().inventory);
+            saveActiveEffects(uid, get().activeEffects).catch(() => { });
+          }
+          const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
+          get()._pushNotification('item', `${item.icon} ${item.name} activado en "${habitName}"! Los puntos de la próxima completación se multiplicarán por 1.5.`);
         } else if (item.effectKey === 'void_exchange') {
           const currentQty = (state.inventory.find(i => i.itemId === itemId)?.qty ?? 0) + 1;
           if (quantity > currentQty) {
@@ -1554,10 +1765,17 @@ const useGameStore = create(
                   }
                 }
 
-                const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
-                nextActiveEffects = gemLoss.effects;
-                if (gemLoss.removed) removedGemCount += 1;
-                updatedHabits[habitIndex] = {
+                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  nextActiveEffects = gemLoss.effects;
+                  if (gemLoss.removed) removedGemCount += 1;
+
+                  const dynamicCapLoss = removeDynamicCapIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  if (dynamicCapLoss.removed) {
+                    nextActiveEffects = dynamicCapLoss.effects;
+                    get()._pushNotification('item', `⚠️ El límite dinámico del Token de Maestría se ha perdido para "${habit.name}".`);
+                  }
+
+                  updatedHabits[habitIndex] = {
                   ...updatedHabits[habitIndex],
                   multiplier: newMult,
                   streak: 0
@@ -1765,6 +1983,12 @@ const useGameStore = create(
           nextActiveEffects = gemLoss.effects;
           if (gemLoss.removed) removedGemCount += 1;
 
+          const dynamicCapLoss = removeDynamicCapIfLostThreshold(nextActiveEffects, habit.id, newMult);
+          if (dynamicCapLoss.removed) {
+            nextActiveEffects = dynamicCapLoss.effects;
+            get()._pushNotification('item', `⚠️ El límite dinámico del Token de Maestría se ha perdido para "${habit.name}".`);
+          }
+
           // Marcar todos los días de la semana pasada como failed (para registro)
           for (let i = 0; i < 7; i++) {
             const d = new Date(lastWeekStart + 'T12:00:00');
@@ -1866,6 +2090,8 @@ const useGameStore = create(
     // ── FUSION LOGIC ───────────────────────────────────────────────
     _shouldDegradeFusionToday(habit, fusionEffect, dateObj) {
       const info = fusionEffect.habitPeriodicityInfo;
+      if (!info) return false;
+      
       const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun...
 
       switch (info.periodicity) {
@@ -1911,44 +2137,7 @@ const useGameStore = create(
     },
 
     _processFusionDegradation() {
-      const state = get();
-      const activeEffects = state._getActiveEffects();
-      const fusionEffects = activeEffects.filter(e => e.key === 'fusion_degradation');
-      if (fusionEffects.length === 0) return;
-
-      const today = new Date();
-      let hasChanges = false;
-      let nextHabits = [...state.habits];
-      let nextEffects = [...state.activeEffects];
-
-      fusionEffects.forEach(effect => {
-        const habit = nextHabits.find(h => h.id === effect.targetHabitId);
-        if (!habit) return;
-
-        if (get()._shouldDegradeFusionToday(habit, effect, today)) {
-          hasChanges = true;
-          // Degradación de -0.4 hasta un mínimo de 3.0
-          const currentMult = habit.multiplier ?? 1.0;
-          const nextMult = parseFloat(Math.max(3.0, currentMult - (effect.degradationAmount || 0.4)).toFixed(1));
-
-          nextHabits = nextHabits.map(h => h.id === habit.id ? { ...h, multiplier: nextMult } : h);
-
-          // Si llegamos a 3.0, el efecto termina
-          if (nextMult <= 3.0) {
-            nextEffects = nextEffects.filter(e => e !== effect);
-            get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
-          }
-        }
-      });
-
-      if (hasChanges) {
-        set({ habits: nextHabits, activeEffects: nextEffects });
-        const uid = get()._userId;
-        if (uid) {
-          saveHabits(uid, nextHabits).catch(() => { });
-          saveActiveEffects(uid, nextEffects).catch(() => { });
-        }
-      }
+      return;
     },
 
     // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===

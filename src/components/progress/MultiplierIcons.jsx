@@ -34,7 +34,12 @@ const EFFECT_ICONS = {
   next_triple: { icon: '🔺', title: 'Piedra de Poder activa - 3x puntos en hábito específico', color: 'text-purple-400' },
   habit_mult_boost: { icon: '🎯', title: 'Elixir de Enfoque activo - +1.0 al multiplicador de este hábito', color: 'text-quest-green' },
   perm_base_mult: { icon: '💠', title: 'Gema del Multiplicador activa - Este hábito puede llegar a ×4', color: 'text-quest-gold' },
+  dynamic_mult_cap: { icon: '🎖️', title: 'Token de Maestría activo - Límite personalizado de multiplicador', color: 'text-purple-400' },
   phoenix_bonus: { icon: '🪶', title: 'Pluma de Fénix activa - Los próximos completados otorgan el doble de puntos', color: 'text-quest-gold' },
+  fusion_degradation: { icon: '🧪', title: 'Fusión activa - Sin límite temporal, pero pierde -0.4 por resolución hasta ×3', color: 'text-quest-cyan' },
+  next_point_boost_target: { icon: '🔹', title: 'Fragmento de Punto activo - 1.5x puntos en próxima completación', color: 'text-purple-400' },
+  small_mult_boost_target: { icon: '🌱', title: 'Semilla de Hábito activa - +0.5 al multiplicador', color: 'text-quest-green' },
+  small_mult_boost: { icon: '🌱', title: 'Semilla de Hábito activa - +0.5 al multiplicador', color: 'text-quest-green' },
 };
 
 /**
@@ -89,6 +94,11 @@ export function useEffectiveMultiplier(habitId, baseMultiplier = 1) {
   const activeEffects = rawEffects.filter(e =>
     !e.expiresAt || new Date(e.expiresAt) > now
   );
+
+  const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habitId);
+  if (hasFusion) {
+    return baseMultiplier;
+  }
 
   let effectiveMultiplier = baseMultiplier;
 

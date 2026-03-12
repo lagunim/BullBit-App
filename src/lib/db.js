@@ -114,6 +114,7 @@ function rowToEffect(row) {
     itemName: row.item_name ?? undefined,
     targetHabitId: row.target_habit_id ?? undefined,
     usesRemaining: row.uses_remaining ?? undefined,
+    createdAt: row.created_at ?? undefined,
   };
 }
 
@@ -362,6 +363,7 @@ export async function saveHabits(userId, habits) {
  * @param {string} habitId - ID del hábito a eliminar
  */
 export async function deleteHabit(habitId) {
+  await supabase.from('active_effects').delete().eq('target_habit_id', habitId);
   await supabase.from('habit_history').delete().eq('habit_id', habitId);
   const { error } = await supabase.from('habits').delete().eq('id', habitId);
   if (error) console.error('[db] deleteHabit:', error.message);
@@ -510,6 +512,7 @@ export async function saveActiveEffects(userId, effects) {
     item_name: e.itemName ?? null,
     target_habit_id: e.targetHabitId ?? null,
     uses_remaining: e.usesRemaining ?? null,
+    created_at: e.createdAt ?? new Date().toISOString(),
   }));
   const { error } = await supabase.from('active_effects').insert(rows);
   if (error) console.error('[db] saveActiveEffects:', error.message);

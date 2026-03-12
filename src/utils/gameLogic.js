@@ -362,26 +362,28 @@ export function isHabitExpired(habit, today, history) {
  * @returns {number} Puntos ganados
  */
 export function calcPoints(habit, activeEffects = []) {
+  const hasFusion = activeEffects.some(e => 
+    e.key === 'fusion_degradation' && e.targetHabitId === habit.id
+  );
+
   const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
-  // Aplicar bonificaciones temporales al multiplicador base
   let effectiveMultiplier = habit.multiplier;
 
-  // Bonificaciones globales (afectan a todos los hábitos)
-  const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
-  if (globalBoostEffect) {
-    effectiveMultiplier += globalBoostEffect.value;
+  if (!hasFusion) {
+    const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
+    if (globalBoostEffect) {
+      effectiveMultiplier += globalBoostEffect.value;
+    }
+
+    const habitBoostEffect = activeEffects.find(e =>
+      e.key === 'habit_mult_boost' &&
+      (!e.targetHabitId || e.targetHabitId === habit.id)
+    );
+    if (habitBoostEffect) {
+      effectiveMultiplier += habitBoostEffect.value;
+    }
   }
 
-  // Bonificaciones dirigidas (solo a un hábito específico)
-  const habitBoostEffect = activeEffects.find(e =>
-    e.key === 'habit_mult_boost' &&
-    (!e.targetHabitId || e.targetHabitId === habit.id)
-  );
-  if (habitBoostEffect) {
-    effectiveMultiplier += habitBoostEffect.value;
-  }
-
-  // Puntos base = minutos * multiplicador (máx dinámico: 3.0 o 4.0 con gema)
   const basePoints = habit.minutes * Math.min(multiplierCap, effectiveMultiplier);
 
   // Aplicar bonificadores de puntos
@@ -392,6 +394,16 @@ export function calcPoints(habit, activeEffects = []) {
   if (activeEffects.some(e => e.key === 'next_triple' && e.targetHabitId === habit.id)) multiplier *= 3;
   // Verificar efecto next_triple global (legacy)
   if (activeEffects.some(e => e.key === 'next_triple' && !e.targetHabitId)) multiplier *= 3;
+
+  // Verificar efecto next_point_boost (global: próximo hábito completado)
+  const nextPointBoost = activeEffects.find(e => e.key === 'next_point_boost');
+  if (nextPointBoost) multiplier *= nextPointBoost.value;
+
+  // Verificar efecto next_point_boost_target dirigido a este hábito
+  const nextPointBoostTarget = activeEffects.find(e => 
+    e.key === 'next_point_boost_target' && e.targetHabitId === habit.id
+  );
+  if (nextPointBoostTarget) multiplier *= nextPointBoostTarget.value;
 
   // Verificar efecto phoenix_bonus dirigido a este hábito
   const phoenixEffect = activeEffects.find(e => 
@@ -417,19 +429,32 @@ export function calcPoints(habit, activeEffects = []) {
  * @returns {number} Nuevo valor del multiplicador
  */
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
+  const hasFusion = activeEffects.some(e => 
+    e.key === 'fusion_degradation' && e.targetHabitId === habit.id
+  );
+  
+  if (hasFusion) {
+    return habit.multiplier;
+  }
+
   const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
+  
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
 
-  // Verificar bonificaciones dirigidas al hábito
   const habitBoostEffect = activeEffects.find(e =>
     e.key === 'habit_mult_boost' &&
     (!e.targetHabitId || e.targetHabitId === habit.id)
   );
   const habitBoost = habitBoostEffect ? habitBoostEffect.value : 0;
 
-  // Nuevo multiplicador = actual + 0.2 + bonificaciones, máx dinámico
-  return Math.min(multiplierCap, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost).toFixed(1)));
+  const smallBoostEffect = activeEffects.find(e =>
+    e.key === 'small_mult_boost' &&
+    (!e.targetHabitId || e.targetHabitId === habit.id)
+  );
+  const smallBoost = smallBoostEffect ? smallBoostEffect.value : 0;
+
+  return Math.min(multiplierCap, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost + smallBoost).toFixed(1)));
 }
 
 /**
@@ -481,12 +506,44 @@ export function hasPermanentMultiplierGem(habitId, activeEffects = []) {
 }
 
 /**
+ * Obtiene el límite de multiplicador dinámico del Token de Maestría.
+ * Si no tiene efecto, retorna null.
+ */
+export function getDynamicMultiplierCap(habitId, activeEffects = []) {
+  if (!habitId) return null;
+  const effect = activeEffects.find(e => e.key === 'dynamic_mult_cap' && e.targetHabitId === habitId);
+  return effect ? effect.value : null;
+}
+
+/**
+ * Verifica si un hábito tiene un límite de multiplicador dinámico activo.
+ */
+export function hasDynamicMultiplierCap(habitId, activeEffects = []) {
+  if (!habitId) return false;
+  return activeEffects.some(e => e.key === 'dynamic_mult_cap' && e.targetHabitId === habitId);
+}
+
+/**
  * Obtiene el tope de multiplicador para un hábito:
  * - 3.0 por defecto
  * - 4.0 si tiene efecto de Gema del Multiplicador
+ * - Valor dinámico si tiene efecto de Token de Maestría (mayor que 3.0)
  */
 export function getHabitMultiplierCap(habitId, activeEffects = []) {
-  return hasPermanentMultiplierGem(habitId, activeEffects) ? 4.0 : 3.0;
+  if (!habitId) return 3.0;
+  
+  // Si el hábito tiene una fusión activa, no hay límite temporalmente
+  const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habitId);
+  if (hasFusion) return Number.POSITIVE_INFINITY;
+  
+  // Gema del multiplicador tiene prioridad (límite fijo de 4.0)
+  if (hasPermanentMultiplierGem(habitId, activeEffects)) return 4.0;
+  
+  // Límite dinámico del Token de Maestría
+  const dynamicCap = getDynamicMultiplierCap(habitId, activeEffects);
+  if (dynamicCap !== null) return dynamicCap;
+  
+  return 3.0;
 }
 
 /**

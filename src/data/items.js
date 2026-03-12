@@ -72,17 +72,17 @@ export const ITEMS = {
 
   /**
    * SEMILLA DE HÁBITO
-   * Tipo: Temporal
-   * Efecto: Añade +0.5 al multiplicador durante 1 día.
+   * Tipo: Instantáneo + Temporal
+   * Efecto: Añade +0.5 al multiplicador del hábito seleccionado durante 1 día.
    */
   habit_seed: {
     id: 'habit_seed',
     name: 'Semilla de Hábito',
     icon: '🌱',
     rarity: 'common',
-    desc: 'Añade +0.5 al multiplicador durante 1 día.',
-    effectType: 'timed',
-    effectKey: 'small_mult_boost',
+    desc: 'Selecciona un hábito para añadirle +0.5 al multiplicador durante 1 día.',
+    effectType: 'instant',
+    effectKey: 'small_mult_boost_target',
     effectValue: 0.5,
     durationDays: 1,
     maxStack: 5,
@@ -91,16 +91,17 @@ export const ITEMS = {
   /**
    * FRAGMENTO DE PUNTO
    * Tipo: Instantáneo
-   * Efecto: Multiplica por 1.5 los puntos de la próxima completación.
+   * Efecto: Multiplica por 1.5 los puntos de la próxima completación de un hábito específico.
+   * Requiere selección de hábito.
    */
   point_fragment: {
     id: 'point_fragment',
     name: 'Fragmento de Punto',
     icon: '🔹',
     rarity: 'common',
-    desc: 'Multiplica por 1.5 los puntos de la próxima completación.',
+    desc: 'Selecciona un hábito para multiplicar por 1.5 los puntos de su próxima completación.',
     effectType: 'instant',
-    effectKey: 'next_point_boost',
+    effectKey: 'next_point_boost_target',
     effectValue: 1.5,
     maxStack: 5,
   },
@@ -326,7 +327,8 @@ export const ITEMS = {
   /**
    * TOKEN DE MAESTRÍA
    * Tipo: Instantáneo
-   * Efecto: Añade +0.4 al multiplicador de un hábito específico.
+   * Efecto: Añade +0.4 al multiplicador. Si supera 3.0, el límite se ajusta al nuevo valor.
+   * El límite personalizado se pierde cuando el multiplicador baja de 3.0.
    * Requiere selección de hábito.
    */
   mastery_token: {
@@ -334,9 +336,9 @@ export const ITEMS = {
     name: 'Token de Maestría',
     icon: '🎖️',
     rarity: 'epic',
-    desc: 'Selecciona un hábito para añadirle +0.4 al multiplicador (máx 3.0).',
+    desc: 'Selecciona un hábito para añadirle +0.4 al multiplicador. Si supera 3.0, el límite se ajusta al nuevo valor.',
     effectType: 'instant',
-    effectKey: 'mult_boost_target',
+    effectKey: 'dynamic_mult_cap',
     effectValue: 0.4,
     maxStack: 3,
   },
