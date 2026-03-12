@@ -1061,6 +1061,11 @@ const useGameStore = create(
           return;
         }
 
+        if (item.requiresTwoTargets && (!targetHabitId || !Array.isArray(targetHabitId) || targetHabitId.length !== 2)) {
+          get()._pushNotification('item', 'Selecciona exactamente 2 hábitos para usar este objeto.');
+          return;
+        }
+
         if (item.effectKey === 'perm_base_mult' && targetHabitId && hasPermanentMultiplierGem(targetHabitId, state.activeEffects)) {
           get()._pushNotification('item', 'Ese hábito ya tiene activa la Gema del Multiplicador.');
           return;
@@ -1225,6 +1230,36 @@ const useGameStore = create(
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
           get()._pushNotification('item', `🧪 ¡Fusión exitosa! Multiplicador: ×${fusedMult.toFixed(1)}`);
+          return;
+        } else if (item.effectKey === 'mult_boost_two' && Array.isArray(targetHabitId) && targetHabitId.length === 2) {
+          const [h1Id, h2Id] = targetHabitId;
+          const h1 = state.habits.find(h => h.id === h1Id);
+          const h2 = state.habits.find(h => h.id === h2Id);
+
+          if (!h1 || !h2) {
+            get()._pushNotification('item', 'Error: Hábitos no encontrados.');
+            return;
+          }
+
+          set(state2 => ({
+            inventory: newInventory,
+            habits: state2.habits.map(h => {
+              if (h.id === h1Id || h.id === h2Id) {
+                const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                const newMult = Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1)));
+                return { ...h, multiplier: newMult };
+              }
+              return h;
+            }),
+          }));
+
+          const uid = get()._userId;
+          if (uid) {
+            queueInventorySave(uid, () => get().inventory);
+            saveHabits(uid, get().habits).catch(() => { });
+          }
+          get()._pushNotification('item', `💧 ¡Gota de Esfuerzo aplicada! +${item.effectValue} a 2 hábitos.`);
+          return;
         } else if (item.effectKey === 'phoenix_restore' && targetHabitId) {
           const targetHabit = state.habits.find(h => h.id === targetHabitId);
 

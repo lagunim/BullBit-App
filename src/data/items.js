@@ -64,9 +64,10 @@ export const ITEMS = {
     rarity: 'common',
     desc: 'Añade +0.2 al multiplicador de DOS hábitos seleccionados (máx 3.0).',
     effectType: 'instant',
-    effectKey: 'mult_boost_target_two',
+    effectKey: 'mult_boost_two',
     effectValue: 0.2,
     maxStack: 5,
+    requiresTwoTargets: true,
   },
 
   /**
