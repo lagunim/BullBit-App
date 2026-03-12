@@ -19,7 +19,7 @@ import AddHabitModal from './AddHabitModal.jsx';
 import EditHabitModal from './EditHabitModal.jsx';
 import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons } from '../progress/MultiplierIcons.jsx';
 import CreatePlanModal from '../plans/CreatePlanModal.jsx';
-import { ITEMS } from '../../data/items.js';
+import { findItemByEffect } from '../../lib/itemsCatalog.js';
 import { getTodayKey, isHabitDueOnDate, getWeekCompletions, getProgressColor, PERIODICITY_LABELS } from '../../utils/gameLogic.js';
 
 function parseCustomDays(customDays) {
@@ -61,6 +61,7 @@ export default function HabitList() {
   const habits = useGameStore(s => s.habits ?? []);
   const history = useGameStore(s => s.history ?? {});
   const activeEffects = useGameStore(s => s.activeEffects ?? []);
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
   const removeHabit = useGameStore(s => s.removeHabit);
   const completeHabit = useGameStore(s => s.completeHabit);
   const completeHabitPartial = useGameStore(s => s.completeHabitPartial);
@@ -326,12 +327,7 @@ export default function HabitList() {
                   <div className="grid gap-2">
                     {habitEffects.map((effect, idx) => {
                       // Buscar el item original para obtener metadatos (icono, desc, rareza)
-                      const item = Object.values(ITEMS).find(i =>
-                        i.effectKey === effect.key ||
-                        i.name === effect.itemName ||
-                        (i.effectKey + '_target') === effect.key ||
-                        (i.effectKey === 'phoenix_restore' && effect.key === 'phoenix_bonus')
-                      );
+                      const item = findItemByEffect(itemsCatalog, effect);
 
                       const isTimed = item?.effectType === 'timed' || effect.expiresAt;
                       const isUsable = item?.effectType === 'instant' && item.maxStack > 1;

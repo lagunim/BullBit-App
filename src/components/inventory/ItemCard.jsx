@@ -1,4 +1,4 @@
-import { RARITY_COLORS } from '../../data/items.js';
+import { RARITY_COLORS } from '../../lib/itemsCatalog.js';
 
 export default function ItemCard({ item, qty, onUse, actionText = "▶ USAR" }) {
   const rarityKey = item.rarity === 'uncommon' ? 'rare' : item.rarity;

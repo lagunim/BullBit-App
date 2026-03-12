@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ACHIEVEMENTS } from '../data/achievements.js';
-import { ITEMS } from '../data/items.js';
 import { DAILY_CHALLENGES, checkDailyProgress, hydrateDailyChallenges } from '../data/dailies.js';
+import { FALLBACK_ITEMS, getAllItems, getItemById } from '../lib/itemsCatalog.js';
 import {
   getTodayKey,
   getYesterdayKey,
@@ -43,6 +43,7 @@ import {
   applyTripleBonus,
   checkDailyForToday,
   loadDailyChallengesCatalog,
+  loadItemsCatalog,
   incrementItemChosen,
   incrementDailyChosen,
 } from '../lib/db.js';
@@ -228,6 +229,12 @@ function clearQueuedInventorySaves(exceptUserId) {
   }
 }
 
+function getItemsState(state) {
+  return state?.itemsCatalog && Object.keys(state.itemsCatalog).length
+    ? state.itemsCatalog
+    : FALLBACK_ITEMS;
+}
+
 function flushInventorySave(userId) {
   const entry = inventorySaveQueue.get(userId);
   if (!entry) return;
@@ -315,6 +322,7 @@ const useGameStore = create(
     dailySelectionMade: false, // Si el usuario ya eligió su daily
     lastDailyDate: null,  // 'YYYY-MM-DD'
     dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+    itemsCatalog: FALLBACK_ITEMS,
 
     // Gamification
     unlockedAchievements: [],
@@ -446,6 +454,9 @@ const useGameStore = create(
               dailySelectionMade: remoteData.dailySelectionMade ?? false,
               lastDailyDate: remoteData.lastDailyDate,
               dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+              itemsCatalog: remoteData.itemsCatalog && Object.keys(remoteData.itemsCatalog).length
+                ? remoteData.itemsCatalog
+                : FALLBACK_ITEMS,
               lastWeeklyProcessDate: remoteData.lastWeeklyProcessDate,
               plans: remoteData.plans ?? {},
             });
@@ -470,6 +481,7 @@ const useGameStore = create(
                 activeEffects: normalizedEffects,
                 currentDaily: localState.currentDaily ?? null,
                 dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+                itemsCatalog: FALLBACK_ITEMS,
                 lastDailyDate: localState.lastDailyDate ?? null,
                 lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
               });
@@ -520,6 +532,7 @@ const useGameStore = create(
                 activeEffects: [],
                 currentDaily: null,
                 dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+                itemsCatalog: FALLBACK_ITEMS,
                 lastDailyDate: null,
                 lastWeeklyProcessDate: null,
                 plans: {},
@@ -536,6 +549,15 @@ const useGameStore = create(
         } catch (err) {
           // Si Supabase falla, seguir con el estado local sin interrumpir
           console.error('[store] Error cargando datos de BD, usando estado local:', err);
+        }
+
+        try {
+          const itemsCatalog = await loadItemsCatalog();
+          if (Object.keys(itemsCatalog).length) {
+            set({ itemsCatalog });
+          }
+        } catch (error) {
+          console.error('[store] Error cargando catálogo de items:', error);
         }
 
         try {
@@ -1064,7 +1086,8 @@ const useGameStore = create(
     // ── ITEMS ──────────────────────────────────────────────────────
     useItem(itemId, targetHabitId = null, quantity = 1) {
       const state = get();
-      const item = ITEMS[itemId];
+      const itemsCatalog = getItemsState(state);
+      const item = getItemById(itemsCatalog, itemId);
       if (!item) return;
       const invEntry = state.inventory.find(i => i.itemId === itemId);
       if (!invEntry || invEntry.qty < 1) return;
@@ -1516,7 +1539,7 @@ const useGameStore = create(
           const rarityMap = { 2: 'common', 4: 'rare', 6: 'epic', 10: 'legendary' };
           const rarity = rarityMap[quantity] || 'common';
 
-          const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity && i.id !== 'void_stone');
+          const itemsOfRarity = getAllItems(itemsCatalog).filter(i => i.rarity === rarity && i.id !== 'void_stone');
           if (itemsOfRarity.length === 0) {
             get()._pushNotification('item', 'No hay objetos de esta rareza disponibles.');
             return;
@@ -1566,7 +1589,7 @@ const useGameStore = create(
     },
 
     grantItem(itemId) {
-      const item = ITEMS[itemId];
+      const item = getItemById(getItemsState(get()), itemId);
       if (!item) return;
       set(state => {
         const existing = state.inventory.find(i => i.itemId === itemId);
@@ -1622,7 +1645,7 @@ const useGameStore = create(
 
       // Get item names for notification
       const itemNames = reward.itemChoices
-        ? reward.itemChoices.map(id => ITEMS[id]?.name || id).join(', ')
+        ? reward.itemChoices.map(id => getItemById(getItemsState(get()), id)?.name || id).join(', ')
         : '';
 
       get()._pushNotification('journey', `¡VIAJE ${reward.journeyNumber} COMPLETADO! +${reward.itemChoices?.length || 0} objetos${itemNames ? `: ${itemNames}` : ''}`, reward.journeyNumber);
@@ -1635,7 +1658,8 @@ const useGameStore = create(
      * - 1 item: 70% epic, 30% legendary
      */
     _pickJourneyRewards(journeyNumber) {
-      const allItemIds = Object.keys(ITEMS);
+      const itemsCatalog = getItemsState(get());
+      const allItemIds = Object.keys(itemsCatalog);
       const chosen = [];
       const usedIds = new Set();
 
@@ -1646,7 +1670,7 @@ const useGameStore = create(
       const rarities = [rarity1, rarity2, rarity3];
 
       for (const rarity of rarities) {
-        let pool = allItemIds.filter(id => ITEMS[id].rarity === rarity && !usedIds.has(id));
+          let pool = allItemIds.filter(id => itemsCatalog[id].rarity === rarity && !usedIds.has(id));
         if (pool.length === 0) {
           pool = allItemIds.filter(id => !usedIds.has(id));
         }
@@ -1668,7 +1692,7 @@ const useGameStore = create(
     _pickDailyItemChoices(daily) {
       if (!daily) return [];
       const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
-      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(ITEMS)));
+      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(getItemsState(get()))));
       const availablePool = [...basePool];
       const pickCount = 3;
       const choices = [];
@@ -1680,7 +1704,7 @@ const useGameStore = create(
       }
 
       if (choices.length < pickCount) {
-        const fallback = Object.keys(ITEMS).filter(id => !choices.includes(id));
+        const fallback = Object.keys(getItemsState(get())).filter(id => !choices.includes(id));
         while (choices.length < pickCount && fallback.length) {
           const idx = Math.floor(Math.random() * fallback.length);
           choices.push(fallback[idx]);
@@ -2063,13 +2087,13 @@ const useGameStore = create(
             : newStreak >= 6 ? 'rare'
               : 'common';
 
-        const itemsOfRarity = Object.values(ITEMS).filter(i => i.rarity === rarity);
-        if (itemsOfRarity.length > 0) {
-          const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
-          set({
-            globalStreak: newStreak,
-            streakReward: randomItem,
-          });
+        const itemsOfRarity = getAllItems(getItemsState(get())).filter(i => i.rarity === rarity);
+          if (itemsOfRarity.length > 0) {
+            const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
+            set({
+              globalStreak: newStreak,
+              streakReward: { id: randomItem.id },
+            });
           const uid = get()._userId;
           if (uid) {
             saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: newStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
@@ -2142,7 +2166,7 @@ const useGameStore = create(
 
     // === SELECCIÓN ALEATORIA DE RECOMPENSAS ===
     _getItemsByRarity(rarity) {
-      return Object.values(ITEMS).filter(item => item.rarity === rarity).map(item => item.id);
+      return getAllItems(getItemsState(get())).filter(item => item.rarity === rarity).map(item => item.id);
     },
 
     _selectRandomReward(rarity) {
@@ -2513,7 +2537,7 @@ const useGameStore = create(
         incrementItemChosen(chosenItemId).catch(() => { });
       }
 
-      const itemName = chosenItemId ? ITEMS[chosenItemId]?.name : 'un objeto';
+      const itemName = chosenItemId ? getItemById(getItemsState(get()), chosenItemId)?.name : 'un objeto';
       get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
 
       set({ pendingDailyReward: null });

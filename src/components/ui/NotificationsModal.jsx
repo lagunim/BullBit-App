@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import useGameStore from '../../store/gameStore.js';
 import { getStoryById } from '../../data/stories.js';
 import { ACHIEVEMENTS } from '../../data/achievements.js';
-import { ITEMS } from '../../data/items.js';
+import { getItemById } from '../../lib/itemsCatalog.js';
 import StoryScrollModal from '../journey/StoryScrollModal.jsx';
 import ItemDetailModal from '../inventory/ItemDetailModal.jsx';
 import { createPortal } from 'react-dom';
@@ -11,6 +11,7 @@ export default function NotificationsModal({ onClose, onNavigateTab }) {
   const savedNotifications = useGameStore(s => s.savedNotifications || []);
   const removeSavedNotification = useGameStore(s => s.removeSavedNotification);
   const clearSavedNotifications = useGameStore(s => s.clearSavedNotifications);
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
   
   const [selectedStory, setSelectedStory] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -30,8 +31,9 @@ export default function NotificationsModal({ onClose, onNavigateTab }) {
       if (story) setSelectedStory(story);
     } else if (notif.type === 'item') {
       // If it has refId, show item detail, otherwise go to inventory
-      if (notif.refId && ITEMS[notif.refId]) {
-        setSelectedItem(ITEMS[notif.refId]);
+      const item = getItemById(itemsCatalog, notif.refId);
+      if (notif.refId && item) {
+        setSelectedItem(item);
       } else {
         onNavigateTab('items');
         onClose();

@@ -14,7 +14,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import useGameStore from '../../store/gameStore.js';
-import { ITEMS } from '../../data/items.js';
+import { getItemById } from '../../lib/itemsCatalog.js';
 
 /**
  * DailyItemChoiceModal - Modal de selección de objeto para recompensas diarias
@@ -30,6 +30,7 @@ import { ITEMS } from '../../data/items.js';
  * @returns {JSX.Element} Modal de selección de objeto
  */
 function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
   const [chosen, setChosen] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
@@ -47,7 +48,7 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
   }
 
   // Obtiene los objetos del catálogo
-  const items = itemChoices.map(id => ITEMS[id]).filter(Boolean);
+  const items = itemChoices.map(id => getItemById(itemsCatalog, id)).filter(Boolean);
 
   const rarityLabel = {
     common: 'Común',

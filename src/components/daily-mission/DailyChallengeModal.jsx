@@ -15,11 +15,13 @@
  * @returns {JSX.Element|null} Modal de misión diaria o null si no hay misión
  */
 import { createPortal } from 'react-dom';
-import { ITEMS } from '../../data/items.js';
+import useGameStore from '../../store/gameStore.js';
+import { getItemById } from '../../lib/itemsCatalog.js';
 import { getProgressColor } from '../../utils/gameLogic.js';
 
 export default function DailyChallengeModal({ daily, onClose }) {
   if (!daily) return null;
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
 
   const { name, description, icon, progress, completed, difficulty, rewards } = daily;
   const progressPercentage = Math.min(100, Math.round((progress.current / progress.target) * 100));
@@ -114,7 +116,7 @@ export default function DailyChallengeModal({ daily, onClose }) {
             {rewards.items && rewards.items.length > 0 && (
               <div className="flex items-center gap-2">
                 {rewards.items.map((itemId, idx) => {
-                  const item = ITEMS[itemId];
+                  const item = getItemById(itemsCatalog, itemId);
                   return (
                     <div
                       key={idx}

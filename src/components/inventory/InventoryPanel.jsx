@@ -15,7 +15,7 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../../store/gameStore.js';
-import { ITEMS, RARITY_COLORS } from '../../data/items.js';
+import { getAllItems, getItemById, RARITY_COLORS } from '../../lib/itemsCatalog.js';
 import ActiveEffectModal from './ActiveEffectModal.jsx';
 import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../../utils/gameLogic.js';
 
@@ -24,6 +24,7 @@ export default function InventoryPanel() {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   const useItem = useGameStore(s => s.useItem);
   const habits = useGameStore(s => s.habits ?? []);
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
   const pushNotification = useGameStore(s => s._pushNotification);
   const [selectedEffect, setSelectedEffect] = useState(null);
   const [pendingTargetItem, setPendingTargetItem] = useState(null);
@@ -57,7 +58,7 @@ export default function InventoryPanel() {
     return Math.min(cap, (habit.multiplier ?? 1) + globalBoost + habitBoost);
   }
 
-  const allItems = Object.values(ITEMS).sort((a, b) => {
+  const allItems = getAllItems(itemsCatalog).sort((a, b) => {
     const invA = inventory.find(i => i.itemId === a.id);
     const invB = inventory.find(i => i.itemId === b.id);
     const qtyA = invA?.qty ?? 0;
@@ -83,7 +84,7 @@ export default function InventoryPanel() {
   // Maneja el uso de un objeto del inventario
   // Algunos objetos requieren seleccionar un hábito objetivo primero
   function handleUse(itemId) {
-    const item = ITEMS[itemId];
+    const item = getItemById(itemsCatalog, itemId);
     // Si el efecto requiere cantidad (Piedra del Vacío)
     if (quantitySelectEffects.includes(item?.effectKey)) {
       const invEntry = inventory.find(i => i.itemId === itemId);

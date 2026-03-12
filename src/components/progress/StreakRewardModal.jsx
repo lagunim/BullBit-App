@@ -14,7 +14,7 @@
 import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import useGameStore from '../../store/gameStore.js';
-import { RARITY_COLORS } from '../../data/items.js';
+import { getItemById, RARITY_COLORS } from '../../lib/itemsCatalog.js';
 
 const rarityLabel = {
   common: 'COMÚN',
@@ -25,6 +25,7 @@ const rarityLabel = {
 
 export default function StreakRewardModal() {
   const streakReward = useGameStore(s => s.streakReward);
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
   const globalStreak = useGameStore(s => s.globalStreak);
   const clearStreakReward = useGameStore(s => s.clearStreakReward);
   const grantItem = useGameStore(s => s.grantItem);
@@ -33,14 +34,17 @@ export default function StreakRewardModal() {
 
   if (!streakReward) return null;
 
-  const rarity = streakReward.rarity || 'common';
+  const rewardItem = getItemById(itemsCatalog, streakReward.id);
+  if (!rewardItem) return null;
+
+  const rarity = rewardItem.rarity || 'common';
   const rarityStyle = RARITY_COLORS[rarity] || RARITY_COLORS.common;
 
   function handleClaim() {
     if (claiming) return;
     setClaiming(true);
     
-    grantItem(streakReward.id);
+    grantItem(rewardItem.id);
     
     setTimeout(() => {
       clearStreakReward();
@@ -67,11 +71,11 @@ export default function StreakRewardModal() {
               boxShadow: rarityStyle.glow
             }}
           >
-            <span className="text-5xl animate-bounce">{streakReward.icon}</span>
+            <span className="text-5xl animate-bounce">{rewardItem.icon}</span>
           </div>
 
           <h3 className="font-bold text-white text-lg font-pixel mb-2" style={{ color: rarityStyle.color, textShadow: rarityStyle.glow }}>
-            {streakReward.name}
+            {rewardItem.name}
           </h3>
 
           <span 
@@ -86,7 +90,7 @@ export default function StreakRewardModal() {
           </span>
 
           <p className="text-gray-300 text-xs text-center leading-relaxed px-2">
-            {streakReward.desc}
+            {rewardItem.desc}
           </p>
         </div>
 

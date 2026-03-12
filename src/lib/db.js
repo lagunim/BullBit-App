@@ -27,6 +27,22 @@ import { supabase } from './supabase.js';
 import { attachThemeToHabit } from '../data/habitThemes.js';
 import { hydrateDailyChallenge, hydrateDailyChallenges } from '../data/dailies.js';
 
+function rowToItem(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    rarity: row.rarity,
+    desc: row.description,
+    effectType: row.effect_type,
+    effectKey: row.effect_key,
+    effectValue: row.effect_value !== null ? parseFloat(row.effect_value) : 0,
+    durationDays: row.duration_days ?? undefined,
+    maxStack: row.max_stack ?? 99,
+    ...(row.requires_two_targets ? { requiresTwoTargets: true } : {}),
+  };
+}
+
 /**
  * ID de placeholder usado cuando no se tiene un ID válido de servidor.
  * Se usa para identificar hábitos que aún no se han persistido.
@@ -149,6 +165,7 @@ export async function loadUserData(userId) {
     achievementsRes,
     storiesRes,
     plansRes,
+    itemsRes,
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('habits').select('*').eq('user_id', userId),
@@ -158,6 +175,7 @@ export async function loadUserData(userId) {
     supabase.from('user_achievements').select('achievement_id, unlocked_at').eq('user_id', userId),
     supabase.from('user_stories').select('journey_id, story_id, unlocked_at').eq('user_id', userId).order('journey_id', { ascending: true }),
     supabase.from('user_plans').select('*').eq('user_id', userId),
+    supabase.from('items').select('*').order('id', { ascending: true }),
   ]);
 
   // Si el perfil no existe → usuario nuevo, sin datos en BD
@@ -180,6 +198,7 @@ export async function loadUserData(userId) {
 
   const activeEffects = (effectsRes.data ?? []).map(rowToEffect);
   const unlockedAchievements = (achievementsRes.data ?? []).map(r => r.achievement_id);
+  const itemsCatalog = Object.fromEntries((itemsRes.data ?? []).map(row => [row.id, rowToItem(row)]));
 
   const unlockedStories = (storiesRes.data ?? []).map(row => ({
     journeyId: row.journey_id,
@@ -243,6 +262,7 @@ export async function loadUserData(userId) {
     activeEffects,
     unlockedAchievements,
     unlockedStories,
+    itemsCatalog,
     currentDaily,
     dailyOptions,
     dailySelectionMade,
@@ -640,6 +660,20 @@ export async function loadDailyChallengesCatalog() {
   }
 
   return hydrateDailyChallenges(data ?? []);
+}
+
+export async function loadItemsCatalog() {
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('[db] loadItemsCatalog:', error.message);
+    return {};
+  }
+
+  return Object.fromEntries((data ?? []).map(row => [row.id, rowToItem(row)]));
 }
 
 export async function incrementItemChosen(itemId) {

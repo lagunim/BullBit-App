@@ -16,7 +16,8 @@
  * @returns {JSX.Element|null} Modal de efecto activo o null si no hay efecto
  */
 import { createPortal } from 'react-dom';
-import { ITEMS, RARITY_COLORS } from '../../data/items.js';
+import useGameStore from '../../store/gameStore.js';
+import { findItemByEffect, getItemById, RARITY_COLORS } from '../../lib/itemsCatalog.js';
 
 /**
  * Obtiene el objeto ITEMS correspondiente a un efecto activo
@@ -25,12 +26,13 @@ import { ITEMS, RARITY_COLORS } from '../../data/items.js';
  * @param {Object} effect - Objeto del efecto activo
  * @returns {Object|null} Objeto del catálogo o null si no se encuentra
  */
-function getItemFromEffect(effect) {
-  if (effect.itemId && ITEMS[effect.itemId]) {
-    return ITEMS[effect.itemId];
+function getItemFromEffect(itemsCatalog, effect) {
+  if (effect.itemId) {
+    const item = getItemById(itemsCatalog, effect.itemId);
+    if (item) return item;
   }
-  const itemByKey = Object.values(ITEMS).find(item => item.effectKey === effect.key);
-  return itemByKey || null;
+
+  return findItemByEffect(itemsCatalog, effect);
 }
 
 /**
@@ -40,8 +42,8 @@ function getItemFromEffect(effect) {
  * @param {Object} effect - Objeto del efecto activo
  * @returns {string} Descripción del efecto
  */
-function getEffectDescription(effect) {
-  const item = getItemFromEffect(effect);
+function getEffectDescription(itemsCatalog, effect) {
+  const item = getItemFromEffect(itemsCatalog, effect);
   if (item) return item.desc;
 
   switch (effect.key) {
@@ -74,9 +76,10 @@ function getEffectTypeLabel(effectType) {
 
 export default function ActiveEffectModal({ effect, onClose }) {
   if (!effect) return null;
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
 
   // Obtiene el objeto del catálogo y la rareza
-  const item = getItemFromEffect(effect);
+  const item = getItemFromEffect(itemsCatalog, effect);
   const rarity = item ? RARITY_COLORS[item.rarity] : { color: '#888', label: 'UNKNOWN' };
   const effectType = item?.effectType || 'unknown';
 
@@ -125,7 +128,7 @@ export default function ActiveEffectModal({ effect, onClose }) {
         {/* Description */}
         <div className="bg-quest-bg/50 p-3 rounded-lg border border-quest-border">
           <p className="text-xs text-gray-300 font-pixel leading-relaxed">
-            {getEffectDescription(effect)}
+            {getEffectDescription(itemsCatalog, effect)}
           </p>
         </div>
 
