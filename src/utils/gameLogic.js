@@ -447,19 +447,29 @@ export function calcMultiplierOnComplete(habit, activeEffects = []) {
  * @returns {number} Nuevo valor del multiplicador
  */
 export function calcMultiplierOnFail(habit, activeEffects = []) {
-  // Verificar si hay escudo (protege el multiplicador)
-  if (activeEffects.some(e => e.key === 'streak_shield')) return habit.multiplier;
-  // Amuleto de equilibrio: no baja el multiplicador al fallar
-  if (activeEffects.some(e => e.key === 'balance_shield')) return habit.multiplier;
-  // Escudo dorado: protege Y aumenta +0.2
-  if (activeEffects.some(e => e.key === 'golden_shield')) return parseFloat((habit.multiplier + 0.2).toFixed(1));
-
-  // Verificar reducción de penalización
-  const penaltyEffect = activeEffects.find(e => e.key === 'reduced_penalty');
-  const penalty = penaltyEffect ? penaltyEffect.value : 0.4;
-
-  // El multiplicador no puede bajar de 1.0
-  return Math.max(1.0, parseFloat((habit.multiplier - penalty).toFixed(1)));
+  // 1. golden_shield
+  if (activeEffects.some(e => e.key === 'golden_shield')) {
+    return { newMult: parseFloat((habit.multiplier + 0.2).toFixed(1)), consumedKey: 'golden_shield', appliedKey: 'golden_shield' };
+  }
+  // 2. balance_shield
+  if (activeEffects.some(e => e.key === 'balance_shield')) {
+    return { newMult: habit.multiplier, consumedKey: null, appliedKey: 'balance_shield' };
+  }
+  // 3. streak_shield
+  if (activeEffects.some(e => e.key === 'streak_shield')) {
+    return { newMult: habit.multiplier, consumedKey: 'streak_shield', appliedKey: 'streak_shield' };
+  }
+  // 4. reduced_penalty
+  if (activeEffects.some(e => e.key === 'reduced_penalty')) {
+    return { newMult: Math.max(1.0, parseFloat((habit.multiplier - 0.2).toFixed(1))), consumedKey: null, appliedKey: 'reduced_penalty' };
+  }
+  // 5. reduced_fail
+  if (activeEffects.some(e => e.key === 'reduced_fail')) {
+    return { newMult: Math.max(1.0, parseFloat((habit.multiplier - 0.2).toFixed(1))), consumedKey: 'reduced_fail', appliedKey: 'reduced_fail' };
+  }
+  
+  // 6. Normal penalty
+  return { newMult: Math.max(1.0, parseFloat((habit.multiplier - 0.4).toFixed(1))), consumedKey: null, appliedKey: null };
 }
 
 /**

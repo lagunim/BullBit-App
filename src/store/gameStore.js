@@ -564,13 +564,20 @@ const useGameStore = create(
       // Lógica de multiplicador para completar
       let newMult = calcMultiplierOnComplete(habit, activeEffects);
 
+      let fusionEffectToRemove = null;
       // DEGRADACIÓN DE FUSIÓN: -0.4 incluso al completar
       const fusionEffect = activeEffects.find(e =>
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
-      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date())) {
-        newMult = parseFloat(Math.max(3.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-        get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación diaria (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+        if (newMult <= 3.0) {
+          newMult = 3.0;
+          fusionEffectToRemove = fusionEffect;
+          get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+        } else {
+          get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación de fusión (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+        }
       }
 
       const newPoints = state.points + earned;
@@ -585,6 +592,10 @@ const useGameStore = create(
       let nextEffects = usedEffect
         ? state.activeEffects.filter(e => e !== usedEffect)
         : state.activeEffects;
+
+      if (fusionEffectToRemove) {
+        nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
+      }
 
       nextEffects = nextEffects.map(e => {
         if (e.key === 'phoenix_bonus' && e.targetHabitId === habitId && (e.usesRemaining ?? 0) > 0) {
@@ -677,7 +688,24 @@ const useGameStore = create(
       );
       if (phoenixEffectPartial) earned = earned * phoenixEffectPartial.value;
 
-      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      let newMult = calcMultiplierOnComplete(habit, activeEffects);
+      let fusionEffectToRemove = null;
+
+      // DEGRADACIÓN DE FUSIÓN: -0.4 incluso al completar
+      const fusionEffect = activeEffects.find(e =>
+        e.key === 'fusion_degradation' && e.targetHabitId === habitId
+      );
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+        if (newMult <= 3.0) {
+          newMult = 3.0;
+          fusionEffectToRemove = fusionEffect;
+          get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+        } else {
+          get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación de fusión (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+        }
+      }
+
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
@@ -685,6 +713,10 @@ const useGameStore = create(
       let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      if (fusionEffectToRemove) {
+        nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
+      }
 
       // Decrement phoenix_bonus usesRemaining if present for this habit
       nextEffects = nextEffects.map(e => {
@@ -776,7 +808,24 @@ const useGameStore = create(
       );
       if (phoenixEffectOvertime) earned = earned * phoenixEffectOvertime.value;
 
-      const newMult = calcMultiplierOnComplete(habit, activeEffects);
+      let newMult = calcMultiplierOnComplete(habit, activeEffects);
+      let fusionEffectToRemove = null;
+
+      // DEGRADACIÓN DE FUSIÓN: -0.4 incluso al completar
+      const fusionEffect = activeEffects.find(e =>
+        e.key === 'fusion_degradation' && e.targetHabitId === habitId
+      );
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+        if (newMult <= 3.0) {
+          newMult = 3.0;
+          fusionEffectToRemove = fusionEffect;
+          get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+        } else {
+          get()._pushNotification('item', `🧪 Hábito fusionado: se aplica degradación de fusión (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+        }
+      }
+
       const newPoints = state.points + earned;
       const newLifetime = state.lifetimePoints + earned;
 
@@ -784,6 +833,10 @@ const useGameStore = create(
       let nextEffects = nextTripleEffect
         ? state.activeEffects.filter(e => e !== nextTripleEffect)
         : state.activeEffects;
+
+      if (fusionEffectToRemove) {
+        nextEffects = nextEffects.filter(e => e !== fusionEffectToRemove);
+      }
 
       // Decrement phoenix_bonus usesRemaining if present for this habit
       nextEffects = nextEffects.map(e => {
@@ -852,32 +905,41 @@ const useGameStore = create(
 
       // Lógica de multiplicador para fallo
       const activeEffects = state._getActiveEffects();
-      let newMult = calcMultiplierOnFail(habit, activeEffects);
+      let { newMult, consumedKey, appliedKey } = calcMultiplierOnFail(habit, activeEffects);
 
       // Consume shield if used
       let newActiveEffects = [...state.activeEffects];
-      const shield = newActiveEffects.find(e => e.key === 'golden_shield') || newActiveEffects.find(e => e.key === 'streak_shield');
-      if (shield) {
-        newActiveEffects = newActiveEffects.filter(e => e !== shield);
-        const msg = shield.key === 'golden_shield'
-          ? `⭐ Racha Dorada consumida: ¡Protección y +0.2 al multiplicador!`
-          : `🛡️ ${shield.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`;
-        get()._pushNotification('item', msg);
+      if (consumedKey) {
+        const effectToConsume = newActiveEffects.find(e => e.key === consumedKey);
+        if (effectToConsume) {
+          newActiveEffects = newActiveEffects.filter(e => e !== effectToConsume);
+          let msg = 'Efecto consumido';
+          if (consumedKey === 'golden_shield') msg = '⭐ Racha Dorada consumida: ¡Protección y +0.2 al multiplicador!';
+          else if (consumedKey === 'streak_shield') msg = `🛡️ ${effectToConsume.itemName || 'Escudo'} consumido: ¡Multiplicador protegido!`;
+          else if (consumedKey === 'reduced_fail') msg = '⭕ Marca de Protección consumida: Penalización reducida a -0.2.';
+          get()._pushNotification('item', msg);
+        }
+      } else if (appliedKey === 'balance_shield') {
+        get()._pushNotification('item', '⚖️ Amuleto de Equilibrio te protegió de la penalización.');
+      } else if (appliedKey === 'reduced_penalty') {
+        get()._pushNotification('item', '📿 Amuleto de Constancia redujo la penalización a -0.2.');
       }
 
-      // DOBLE PENALIZACIÓN: fallo normal + degradación de fusión
+      // DEGRADACIÓN DE FUSIÓN
       const fusionEffect = activeEffects.find(e =>
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
-      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, today)) {
-        newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-        get()._pushNotification('fail', `🧪 Hábito fusionado: ¡DOBLE PENALIZACIÓN POR FALLAR!`);
-      }
-
-      // Si baja de 3.0, el efecto de fusión termina
-      if (newMult <= 3.0 && fusionEffect) {
-        newActiveEffects = newActiveEffects.filter(e => e !== fusionEffect);
-        get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+      if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        if (newMult > 3.0) {
+          newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+          if (newMult <= 3.0) {
+            newMult = 3.0;
+            newActiveEffects = newActiveEffects.filter(e => e !== fusionEffect);
+            get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
+          } else {
+            get()._pushNotification('fail', `🧪 Hábito fusionado: se aplica degradación de fusión (-0.4). Nuevo: ×${newMult.toFixed(1)}`);
+          }
+        }
       }
 
       const gemLoss = removeGemIfLostThreshold(newActiveEffects, habitId, newMult);
@@ -1436,19 +1498,24 @@ const useGameStore = create(
               const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
               if (habitIndex !== -1) {
                 // DOBLE PENALIZACIÓN EN PROCESO AUTOMÁTICO
-                let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
 
                 // Consume shield if used
-                const shield = nextActiveEffects.find(e => e.key === 'golden_shield') || nextActiveEffects.find(e => e.key === 'streak_shield');
-                if (shield) {
-                  nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                if (consumedKey) {
+                  const effectToConsume = nextActiveEffects.find(e => e.key === consumedKey);
+                  if (effectToConsume) {
+                    nextActiveEffects = nextActiveEffects.filter(e => e !== effectToConsume);
+                  }
                 }
 
                 const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
                 if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
-                  newMult = parseFloat(Math.max(1.0, newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-                  if (newMult <= 3.0) {
-                    nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
+                  if (newMult > 3.0) {
+                    newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+                    if (newMult <= 3.0) {
+                      newMult = 3.0;
+                      nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
+                    }
                   }
                 }
 
@@ -1483,12 +1550,25 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
 
                   // Consume shield if used
-                  const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
-                  if (shield) {
-                    nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                  if (consumedKey) {
+                    const effectToConsume = nextActiveEffects.find(e => e.key === consumedKey);
+                    if (effectToConsume) {
+                      nextActiveEffects = nextActiveEffects.filter(e => e !== effectToConsume);
+                    }
+                  }
+
+                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
+                  if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, weekEndDate)) {
+                    if (newMult > 3.0) {
+                      newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+                      if (newMult <= 3.0) {
+                        newMult = 3.0;
+                        nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
+                      }
+                    }
                   }
 
                   const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
@@ -1526,12 +1606,25 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  let newMult = calcMultiplierOnFail(habit, nextActiveEffects);
+                  let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
 
                   // Consume shield if used
-                  const shield = nextActiveEffects.find(e => e.key === 'streak_shield' || e.key === 'golden_shield');
-                  if (shield) {
-                    nextActiveEffects = nextActiveEffects.filter(e => e !== shield);
+                  if (consumedKey) {
+                    const effectToConsume = nextActiveEffects.find(e => e.key === consumedKey);
+                    if (effectToConsume) {
+                      nextActiveEffects = nextActiveEffects.filter(e => e !== effectToConsume);
+                    }
+                  }
+
+                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
+                  if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, monthEndDate)) {
+                    if (newMult > 3.0) {
+                      newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
+                      if (newMult <= 3.0) {
+                        newMult = 3.0;
+                        nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
+                      }
+                    }
                   }
 
                   const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
