@@ -1756,7 +1756,10 @@ const useGameStore = create(
         const todayDate = new Date(today + 'T12:00:00');
 
         if (habit.periodicity === 'daily') {
-          for (let d = new Date(habitCreatedDate); d <= todayDate; d.setDate(d.getDate() + 1)) {
+          const yesterday = new Date(todayDate);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          for (let d = new Date(habitCreatedDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             const dayStatus = newHistory[dateStr]?.[habit.id];
 
