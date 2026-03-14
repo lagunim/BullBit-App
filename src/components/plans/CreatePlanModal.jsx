@@ -150,7 +150,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
         <div>
           <label className="text-sm sm:text-[9px] text-quest-textDim block mb-2 font-pixel">NOMBRE DEL PLAN</label>
           <input
-            className="input-pixel text-xs sm:text-sm"
+            className="input-pixel text-base sm:text-sm"
             value={planName}
             onChange={e => setPlanName(e.target.value)}
             placeholder="Ej: Mi día productivo..."
@@ -212,7 +212,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
             {tasks.map((task, index) => (
               <div key={task.id} className="grid grid-cols-[1fr_64px_36px] gap-2 items-center">
                 <input
-                  className="input-pixel flex-1 !py-2 text-xs"
+                  className="input-pixel flex-1 !py-2 text-base sm:text-sm"
                   value={task.name}
                   onChange={e => handleTaskChange(index, 'name', e.target.value)}
                   placeholder="Nombre tarea"
