@@ -28,6 +28,7 @@ const EFFECT_ICONS = {
   golden_shield: { icon: '⭐', title: 'Racha Dorada activa - El próximo fallo no te penaliza y suma +0.2', color: 'text-quest-gold' },
   balance_shield: { icon: '⚖️', title: 'Amuleto de Equilibrio activo - El multiplicador no baja al fallar', color: 'text-quest-cyan' },
   global_mult_boost: { icon: '⚗️', title: 'Poción de Impulso activa - +1.0 a todos los multiplicadores', color: 'text-quest-green' },
+  reduced_fail: { icon: '⭕', title: 'Marca de Protección activa - Fallos solo penalizan -0.2', color: 'text-quest-green' },
   reduced_penalty: { icon: '🛡️', title: 'Amuleto de Constancia activo - Fallos solo penalizan -0.2', color: 'text-quest-green' },
   double_points: { icon: '✨', title: 'Elixir del Doble activo - Puntos duplicados', color: 'text-purple-400' },
   triple_points: { icon: '🌟', title: 'Pergamino de XP activo - Puntos triplicados', color: 'text-purple-400' },
@@ -63,7 +64,8 @@ function hasActiveMultiplierEffect(rawEffects) {
     e.key === 'golden_shield' ||
     e.key === 'balance_shield' ||
     e.key === 'global_mult_boost' ||
-    e.key === 'reduced_penalty'
+    e.key === 'reduced_penalty' ||
+    e.key === 'reduced_fail'
   );
 }
 
@@ -159,7 +161,7 @@ export function HabitTargetedIcons({ habitId, className = '' }) {
   );
 }
 
-export default function MultiplierIcons({ className = '' }) {
+export default function MultiplierIcons({ habitId, className = '' }) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
 
   const now = new Date();
@@ -170,31 +172,61 @@ export default function MultiplierIcons({ className = '' }) {
   if (activeEffects.length === 0) return null;
 
   const icons = [];
+  const addedKeys = new Set();
+
+  // Helper para agregar icono sin duplicados
+  const addIcon = (effect) => {
+    if (effect && !addedKeys.has(effect.key)) {
+      icons.push(effect);
+      addedKeys.add(effect.key);
+    }
+  };
 
   // 1. Escudos y Protecciones (Prioridad 1)
   const shieldKeys = ['golden_shield', 'balance_shield', 'streak_shield'];
   shieldKeys.forEach(key => {
-    if (activeEffects.some(e => e.key === key)) {
-      icons.push(EFFECT_ICONS[key]);
+    const effect = activeEffects.find(e => e.key === key && (!habitId || !e.targetHabitId));
+    if (effect && EFFECT_ICONS[key]) {
+      addIcon({ key, ...EFFECT_ICONS[key] });
     }
   });
 
   // 2. Impulsos de Multiplicador (Prioridad 2)
-  if (activeEffects.some(e => e.key === 'global_mult_boost')) {
-    icons.push(EFFECT_ICONS['global_mult_boost']);
+  const globalMultBoost = activeEffects.find(e => e.key === 'global_mult_boost' && (!habitId || !e.targetHabitId));
+  if (globalMultBoost && EFFECT_ICONS['global_mult_boost']) {
+    addIcon({ key: 'global_mult_boost', ...EFFECT_ICONS['global_mult_boost'] });
   }
 
-  if (activeEffects.some(e => e.key === 'reduced_penalty')) {
-    icons.push(EFFECT_ICONS['reduced_penalty']);
+  const reducedPenalty = activeEffects.find(e => e.key === 'reduced_penalty' && (!habitId || !e.targetHabitId));
+  if (reducedPenalty && EFFECT_ICONS['reduced_penalty']) {
+    addIcon({ key: 'reduced_penalty', ...EFFECT_ICONS['reduced_penalty'] });
   }
 
-  // 3. Impulsos de Puntos (Prioridad 3)
-  const pointBoostKeys = ['triple_points', 'double_points', 'next_triple'];
-  pointBoostKeys.forEach(key => {
-    if (activeEffects.some(e => e.key === key && !e.targetHabitId)) {
-      icons.push(EFFECT_ICONS[key]);
-    }
-  });
+  const reducedFail = activeEffects.find(e => e.key === 'reduced_fail' && (!habitId || !e.targetHabitId));
+  if (reducedFail && EFFECT_ICONS['reduced_fail']) {
+    addIcon({ key: 'reduced_fail', ...EFFECT_ICONS['reduced_fail'] });
+  }
+
+  // 3. Efectos específicos del hábito (cuando se pasa habitId)
+  if (habitId) {
+    const targetedEffects = activeEffects.filter(e => e.targetHabitId === habitId);
+    targetedEffects.forEach(effect => {
+      if (EFFECT_ICONS[effect.key]) {
+        addIcon({ key: effect.key, ...EFFECT_ICONS[effect.key] });
+      }
+    });
+  }
+
+  // 4. Impulsos de Puntos (Prioridad 3) - solo globales si no hay habitId
+  if (!habitId) {
+    const pointBoostKeys = ['triple_points', 'double_points', 'next_triple'];
+    pointBoostKeys.forEach(key => {
+      const effect = activeEffects.find(e => e.key === key && !e.targetHabitId);
+      if (effect && EFFECT_ICONS[key]) {
+        addIcon({ key, ...EFFECT_ICONS[key] });
+      }
+    });
+  }
 
   if (icons.length === 0) return null;
 
@@ -202,7 +234,7 @@ export default function MultiplierIcons({ className = '' }) {
     <div className={`flex items-center gap-1 ${className}`}>
       {icons.map((effect, index) => (
         <span
-          key={`${effect.icon}-${index}`}
+          key={`${effect.key}-${index}`}
           className={`text-[11px] ${effect.color} animate-pulse drop-shadow-sm`}
           title={effect.title}
         >

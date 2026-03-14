@@ -15,7 +15,7 @@
  */
 import useGameStore from '../../store/gameStore.js';
 import { getTodayKey, isHabitExpired, getWeekCompletions, PERIODICITY_LABELS, getHabitStreak } from '../../utils/gameLogic.js';
-import MultiplierIcons, { useHasActiveMultiplierEffect, HabitTargetedIcons, useEffectiveMultiplier } from '../progress/MultiplierIcons.jsx';
+import MultiplierIcons, { useHasActiveMultiplierEffect, useEffectiveMultiplier } from '../progress/MultiplierIcons.jsx';
 
 function parseCustomDays(customDays) {
   if (Array.isArray(customDays)) {
@@ -138,7 +138,6 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
           </span>
           <div className="flex flex-wrap justify-end gap-0.5">
             <MultiplierIcons habitId={habit.id} />
-            <HabitTargetedIcons habitId={habit.id} />
           </div>
         </div>
       </div>
