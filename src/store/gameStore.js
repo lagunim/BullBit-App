@@ -2290,11 +2290,6 @@ const useGameStore = create(
         return nextState;
       });
 
-      setTimeout(() => {
-        set(state => ({
-          notifications: state.notifications.filter(n => n.id !== id),
-        }));
-      }, 10000);
     },
 
     removeSavedNotification(id) {
