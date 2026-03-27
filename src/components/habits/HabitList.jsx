@@ -148,15 +148,10 @@ export default function HabitList() {
   const isSelectedHabitDoneToday = isCompletedStatus(selectedHabitTodayStatus);
   const isSelectedHabitFailedToday = selectedHabitTodayStatus === 'failed';
 
-  const hasActiveEffect = useHasActiveMultiplierEffect();
+  const hasActiveEffect = useHasActiveMultiplierEffect(selectedHabit?.id);
 
-  function getMultColor(mult) {
-    return hasActiveEffect
-      ? 'text-yellow-400'
-      : mult >= 3 ? 'text-quest-gold'
-        : mult >= 2 ? 'text-quest-cyan'
-          : mult >= 1.5 ? 'text-quest-green'
-            : 'text-quest-text';
+  function getMultColor() {
+    return hasActiveEffect ? 'text-yellow-400' : 'text-white';
   }
 
   const habitEffects = activeEffects.filter(e =>

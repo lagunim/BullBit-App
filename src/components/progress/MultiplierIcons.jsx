@@ -50,7 +50,7 @@ const EFFECT_ICONS = {
  * @param {Array} rawEffects - Array de efectos crudos del store
  * @returns {boolean} True si hay algún efecto de multiplicador activo
  */
-function hasActiveMultiplierEffect(rawEffects) {
+function hasActiveMultiplierEffect(rawEffects, habitId = null) {
   const now = new Date();
   const activeEffects = rawEffects.filter(e =>
     !e.expiresAt || new Date(e.expiresAt) > now
@@ -59,14 +59,38 @@ function hasActiveMultiplierEffect(rawEffects) {
   if (activeEffects.length === 0) return false;
 
   // Efectos que afectan al multiplicador globalmente
-  return activeEffects.some(e =>
-    e.key === 'streak_shield' ||
-    e.key === 'golden_shield' ||
-    e.key === 'balance_shield' ||
-    e.key === 'global_mult_boost' ||
-    e.key === 'reduced_penalty' ||
-    e.key === 'reduced_fail'
-  );
+  return activeEffects.some((e) => {
+    const isGlobalMultiplierEffect =
+      e.key === 'streak_shield' ||
+      e.key === 'golden_shield' ||
+      e.key === 'balance_shield' ||
+      e.key === 'global_mult_boost' ||
+      e.key === 'reduced_penalty' ||
+      e.key === 'reduced_fail';
+
+    if (isGlobalMultiplierEffect && !e.targetHabitId) return true;
+
+    // Efectos que modifican multiplicador en un hábito concreto
+    if (!habitId) return false;
+    const isTargetedMultiplierEffect = [
+      'habit_mult_boost',
+      'small_mult_boost',
+      'small_mult_boost_target',
+      'fusion_degradation',
+      'dynamic_mult_cap',
+      'perm_base_mult'
+    ].includes(e.key);
+
+    if (isTargetedMultiplierEffect && e.targetHabitId === habitId) {
+      // Si es Token de Maestría, solo cuenta si el límite actual es > 3.0
+      if (e.key === 'dynamic_mult_cap') {
+        return e.value > 3.0;
+      }
+      return true;
+    }
+
+    return false;
+  });
 }
 
 /**
@@ -75,9 +99,9 @@ function hasActiveMultiplierEffect(rawEffects) {
  * 
  * @returns {boolean} True si hay efectos de multiplicador activos
  */
-export function useHasActiveMultiplierEffect() {
+export function useHasActiveMultiplierEffect(habitId = null) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
-  return hasActiveMultiplierEffect(rawEffects);
+  return hasActiveMultiplierEffect(rawEffects, habitId);
 }
 
 export function useHabitTargetedEffects(habitId) {

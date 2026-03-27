@@ -54,7 +54,7 @@ function getPeriodicityLabel(habit) {
 
 export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const history = useGameStore(s => s.history ?? {});
-  const hasActiveEffect = useHasActiveMultiplierEffect();
+  const hasActiveEffect = useHasActiveMultiplierEffect(habit.id);
   const effectiveMultiplier = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
 
   const today = getTodayKey();
@@ -80,14 +80,7 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const weeklyTargetMet = isWeeklyTimes && weeklyCompletions >= habit.weeklyTimesTarget;
   const isWeeklyDone = isWeeklyTimes && weeklyTargetMet;
 
-  const multColorClass = !isAvailableToday
-    ? 'text-quest-textMuted'
-    : hasActiveEffect
-      ? 'text-yellow-400'
-      : effectiveMultiplier >= 3 ? 'text-quest-gold'
-        : effectiveMultiplier >= 2 ? 'text-quest-cyan'
-          : effectiveMultiplier >= 1.5 ? 'text-quest-green'
-            : 'text-quest-text';
+  const multColorClass = hasActiveEffect ? 'text-yellow-400' : 'text-white';
 
   // Selecciona el color del borde según el estado del hábito
   const borderColorClass = isDone ? 'border-quest-green'
