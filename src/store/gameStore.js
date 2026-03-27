@@ -2666,18 +2666,42 @@ const useGameStore = create(
       const existingPlan = state.plans[date];
       if (!userId || !existingPlan) return;
 
+      const targetDate = updates.date || date;
+      const hasDateCollision = targetDate !== date && Boolean(state.plans[targetDate]);
+      if (hasDateCollision) {
+        get()._pushNotification('item', 'Ya existe un plan en esa fecha.');
+        return;
+      }
+
+      const updatedTasks = Array.isArray(updates.tasks)
+        ? updates.tasks.map(task => {
+          const previousTask = existingPlan.tasks.find(existingTask => existingTask.id === task.id);
+          return {
+            id: task.id || createUuid(),
+            name: task.name,
+            durationMinutes: task.durationMinutes,
+            completed: previousTask?.completed ?? false,
+            completedAt: previousTask?.completedAt ?? null,
+            deleted: previousTask?.deleted ?? false,
+          };
+        })
+        : existingPlan.tasks;
+
       const updatedPlan = {
         ...existingPlan,
         ...updates,
-        tasks: updates.tasks || existingPlan.tasks,
+        date: targetDate,
+        tasks: updatedTasks,
       };
 
-      set(state2 => ({
-        plans: {
-          ...state2.plans,
-          [date]: updatedPlan,
-        },
-      }));
+      set(state2 => {
+        const nextPlans = { ...state2.plans };
+        if (targetDate !== date) {
+          delete nextPlans[date];
+        }
+        nextPlans[targetDate] = updatedPlan;
+        return { plans: nextPlans };
+      });
 
       savePlan(userId, updatedPlan, existingPlan.id).catch(() => { });
     },

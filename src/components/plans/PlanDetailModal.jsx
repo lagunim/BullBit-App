@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../../store/gameStore.js';
+import CreatePlanModal from './CreatePlanModal.jsx';
 
 export default function PlanDetailModal({ date, onClose }) {
   const { plans, completePlanTask, deletePlanTask, removePlan } = useGameStore();
@@ -9,10 +10,23 @@ export default function PlanDetailModal({ date, onClose }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [actualMinutes, setActualMinutes] = useState(30);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   if (!plan) {
     onClose();
     return null;
+  }
+
+  if (showEditModal) {
+    return (
+      <CreatePlanModal
+        editDate={date}
+        onClose={() => {
+          setShowEditModal(false);
+          onClose();
+        }}
+      />
+    );
   }
 
   const activeTasks = plan.tasks.filter(t => !t.deleted);
@@ -143,13 +157,20 @@ export default function PlanDetailModal({ date, onClose }) {
           </div>
         )}
 
-        {/* Delete Plan Button */}
-        <button
-          onClick={() => setShowConfirmDelete(true)}
-          className="btn-pixel-red w-full uppercase text-xs py-2"
-        >
-          🗑️ Eliminar Plan
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setShowEditModal(true)}
+            className="btn-pixel-cyan w-full uppercase text-xs py-2"
+          >
+            ✏️ Editar Plan
+          </button>
+          <button
+            onClick={() => setShowConfirmDelete(true)}
+            className="btn-pixel-red w-full uppercase text-xs py-2"
+          >
+            🗑️ Eliminar Plan
+          </button>
+        </div>
 
         {/* Confirm Delete Modal */}
         {showConfirmDelete && (
