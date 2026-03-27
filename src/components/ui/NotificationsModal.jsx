@@ -79,187 +79,188 @@ export default function NotificationsModal({ onClose, onNavigateTab }) {
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 anim-fade-in"
-      onClick={onClose}
-    >
-      <div 
-        className="w-full max-w-lg bg-quest-bg border-2 border-quest-border flex flex-col relative h-[80vh] anim-scale-in"
-        onClick={(e) => e.stopPropagation()}
+    return createPortal(
+      <div
+        className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[20000] p-4 anim-fade-in"
+        onClick={onClose}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b-2 border-quest-border bg-quest-panel">
-          <h2 className="font-pixel text-quest-gold text-sm sm:text-base">🔔 NOTIFICACIONES</h2>
-          <button
-            onClick={onClose}
-            className="text-quest-text hover:text-quest-gold transition-colors text-xl font-bold"
-          >
-            ✕
-          </button>
-        </div>
+        <div 
+          className="w-full max-w-lg bg-quest-bg border-2 border-quest-border flex flex-col relative h-[80vh] anim-scale-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b-2 border-quest-border bg-quest-panel">
+            <h2 className="font-pixel text-quest-gold text-sm sm:text-base">🔔 NOTIFICACIONES</h2>
+            <button
+              onClick={onClose}
+              className="text-quest-text hover:text-quest-gold transition-colors text-xl font-bold"
+            >
+              ✕
+            </button>
+          </div>
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          {savedNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-quest-textMuted opacity-50">
-              <span className="text-4xl mb-4">📭</span>
-              <p className="font-pixel text-[10px]">NO HAY NOTIFICACIONES</p>
-            </div>
-          ) : (
-            savedNotifications.map(notif => (
-              <div key={notif.id} className="card-pixel p-3 flex flex-col sm:flex-row gap-3 border-quest-borderLight hover:border-quest-gold transition-colors bg-quest-panel">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="text-2xl shrink-0">{getIcon(notif.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start gap-2 mb-1">
-                      <div className="font-pixel text-[8px] text-quest-textDim uppercase">
-                        {notif.type}
-                      </div>
-                      <div className="font-pixel text-[7px] text-quest-textMuted whitespace-nowrap">
-                        {formatDate(notif.timestamp)}
-                      </div>
-                    </div>
-                    <div className="font-pixel text-[10px] text-quest-text leading-relaxed">
-                      {notif.type === 'habit_complete' && notif.metadata ? (
-                        <div className="space-y-1">
-                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
-                            <span className="text-sm">{notif.metadata.icon || '🔥'}</span>
-                            {notif.metadata.habitName}
-                          </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
-                            <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>
-                            <span className="flex items-center gap-1">⚡ ×{notif.metadata.multiplier}</span>
-                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
-                          </div>
+          {/* List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            {savedNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-quest-textMuted opacity-50">
+                <span className="text-4xl mb-4">📭</span>
+                <p className="font-pixel text-[10px]">NO HAY NOTIFICACIONES</p>
+              </div>
+            ) : (
+              savedNotifications.map(notif => (
+                <div key={notif.id} className="card-pixel p-3 flex flex-col sm:flex-row gap-3 border-quest-borderLight hover:border-quest-gold transition-colors bg-quest-panel">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="text-2xl shrink-0">{getIcon(notif.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <div className="font-pixel text-[8px] text-quest-textDim uppercase">
+                          {notif.type}
                         </div>
-                      ) : notif.type === 'daily_complete' && notif.metadata ? (
-                        <div className="space-y-1">
-                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
-                            <span className="text-sm">🏆</span>
-                            {notif.metadata.dailyName}
+                        <div className="font-pixel text-[7px] text-quest-textMuted whitespace-nowrap">
+                          {formatDate(notif.timestamp)}
+                        </div>
+                      </div>
+                      <div className="font-pixel text-[10px] text-quest-text leading-relaxed">
+                        {notif.type === 'habit_complete' && notif.metadata ? (
+                          <div className="space-y-1">
+                            <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                              <span className="text-sm">{notif.metadata.icon || '🔥'}</span>
+                              {notif.metadata.habitName}
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                              <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>
+                              <span className="flex items-center gap-1">⚡ ×{notif.metadata.multiplier}</span>
+                              <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
-                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
-                            {notif.metadata.rewards && notif.metadata.rewards.length > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                🎁 RECOMPENSAS: 
-                                <div className="flex gap-1">
-                                  {notif.metadata.rewards.map((rId, idx) => {
-                                    const item = getItemById(itemsCatalog, rId);
-                                    return <span key={idx} title={item?.name || rId}>{item?.icon || '🎁'}</span>;
-                                  })}
+                        ) : notif.type === 'daily_complete' && notif.metadata ? (
+                          <div className="space-y-1">
+                            <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                              <span className="text-sm">🏆</span>
+                              {notif.metadata.dailyName}
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                              <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                              {notif.metadata.rewards && notif.metadata.rewards.length > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  🎁 RECOMPENSAS: 
+                                  <div className="flex gap-1">
+                                    {notif.metadata.rewards.map((rId, idx) => {
+                                      const item = getItemById(itemsCatalog, rId);
+                                      return <span key={idx} title={item?.name || rId}>{item?.icon || '🎁'}</span>;
+                                    })}
+                                  </div>
                                 </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : notif.type === 'task_complete' && notif.metadata ? (
+                          <div className="space-y-1">
+                            <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                              <span className="text-sm">{notif.metadata.isPlanBonus ? '✨' : '📋'}</span>
+                              {notif.metadata.isPlanBonus ? 'BONUS PLAN COMPLETO' : notif.metadata.taskName}
+                            </div>
+                            <div className="text-[8px] text-quest-textDim uppercase mb-0.5">
+                              PLAN: {notif.metadata.planName}
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                              {!notif.metadata.isPlanBonus && <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>}
+                              <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                            </div>
+                          </div>
+                        ) : notif.type === 'item_use' && notif.metadata ? (
+                          <div className="space-y-1">
+                            <div className="text-quest-cyan font-bold flex items-center gap-1.5">
+                              <span className="text-sm">{notif.metadata.itemIcon || '🧪'}</span>
+                              {notif.metadata.itemName}
+                            </div>
+                            <div className="text-[8px] text-quest-textDim uppercase">
+                              {notif.metadata.targetHabitName ? (
+                                <span>APLICADO A: <span className="text-quest-text">{notif.metadata.targetHabitName}</span></span>
+                              ) : (
+                                <span>EFECTO GLOBAL</span>
+                              )}
+                            </div>
+                            {notif.metadata.receivedItemName && (
+                              <div className="text-[8px] text-quest-gold uppercase flex items-center gap-1">
+                                RECIBIDO: {notif.metadata.receivedItemIcon} {notif.metadata.receivedItemName}
                               </div>
                             )}
                           </div>
-                        </div>
-                      ) : notif.type === 'task_complete' && notif.metadata ? (
-                        <div className="space-y-1">
-                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
-                            <span className="text-sm">{notif.metadata.isPlanBonus ? '✨' : '📋'}</span>
-                            {notif.metadata.isPlanBonus ? 'BONUS PLAN COMPLETO' : notif.metadata.taskName}
-                          </div>
-                          <div className="text-[8px] text-quest-textDim uppercase mb-0.5">
-                            PLAN: {notif.metadata.planName}
-                          </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
-                            {!notif.metadata.isPlanBonus && <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>}
-                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
-                          </div>
-                        </div>
-                      ) : notif.type === 'item_use' && notif.metadata ? (
-                        <div className="space-y-1">
-                          <div className="text-quest-cyan font-bold flex items-center gap-1.5">
-                            <span className="text-sm">{notif.metadata.itemIcon || '🧪'}</span>
-                            {notif.metadata.itemName}
-                          </div>
-                          <div className="text-[8px] text-quest-textDim uppercase">
-                            {notif.metadata.targetHabitName ? (
-                              <span>APLICADO A: <span className="text-quest-text">{notif.metadata.targetHabitName}</span></span>
-                            ) : (
-                              <span>EFECTO GLOBAL</span>
-                            )}
-                          </div>
-                          {notif.metadata.receivedItemName && (
-                            <div className="text-[8px] text-quest-gold uppercase flex items-center gap-1">
-                              RECIBIDO: {notif.metadata.receivedItemIcon} {notif.metadata.receivedItemName}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        notif.msg
-                      )}
+                        ) : (
+                          notif.msg
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex sm:flex-col gap-2 shrink-0 justify-end sm:justify-center mt-2 sm:mt-0">
+                    <button
+                      onClick={() => handleAction(notif)}
+                      className="btn-pixel-cyan py-1.5 px-3 text-[8px] flex-1 sm:flex-none"
+                    >
+                      VER
+                    </button>
+                    <button
+                      onClick={() => removeSavedNotification(notif.id)}
+                      className="btn-pixel-red py-1.5 px-3 text-[8px] sm:flex-none"
+                      title="Eliminar notificación"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <div className="flex sm:flex-col gap-2 shrink-0 justify-end sm:justify-center mt-2 sm:mt-0">
-                  <button
-                    onClick={() => handleAction(notif)}
-                    className="btn-pixel-cyan py-1.5 px-3 text-[8px] flex-1 sm:flex-none"
-                  >
-                    VER
-                  </button>
-                  <button
-                    onClick={() => removeSavedNotification(notif.id)}
-                    className="btn-pixel-red py-1.5 px-3 text-[8px] sm:flex-none"
-                    title="Eliminar notificación"
-                  >
-                    ✕
-                  </button>
-                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          {savedNotifications.length > 0 && (
+            <div className="p-4 border-t-2 border-quest-border bg-quest-panel">
+              <button
+                onClick={clearSavedNotifications}
+                className="btn-pixel-red w-full py-2 text-[10px]"
+              >
+                🗑️ BORRAR TODAS
+              </button>
+            </div>
+          )}
+
+          {/* Sub-modals */}
+          {selectedStory && (
+            <StoryScrollModal
+              story={selectedStory}
+              onClose={() => setSelectedStory(null)}
+            />
+          )}
+
+          {selectedItem && (
+            <ItemDetailModal
+              item={selectedItem}
+              qty={0}
+              onClose={() => setSelectedItem(null)}
+              onUse={() => {
+                setSelectedItem(null);
+                onNavigateTab('items');
+                onClose();
+              }}
+              actionText="IR AL INVENTARIO"
+            />
+          )}
+
+          {selectedAchievement && createPortal(
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[11000] flex items-center justify-center p-4 anim-fade-in" onClick={() => setSelectedAchievement(null)}>
+              <div className="bg-quest-card border-2 border-quest-gold shadow-[0_0_50px_rgba(255,215,0,0.15)] max-w-sm w-full p-6 text-center" onClick={e => e.stopPropagation()}>
+                <div className="text-4xl mb-3">{selectedAchievement.icon}</div>
+                <h2 className="text-lg font-pixel text-quest-gold mb-2">{selectedAchievement.name}</h2>
+                <p className="text-xs font-pixel text-quest-textDim uppercase mb-6 leading-relaxed">{selectedAchievement.desc}</p>
+                <button onClick={() => { setSelectedAchievement(null); onNavigateTab('achieve'); onClose(); }} className="btn-pixel-cyan w-full text-[10px] py-2 mb-2">IR A LOGROS</button>
+                <button onClick={() => setSelectedAchievement(null)} className="btn-pixel-gray w-full text-[10px] py-2">CERRAR</button>
               </div>
-            ))
+            </div>,
+            document.body
           )}
         </div>
-
-        {/* Footer */}
-        {savedNotifications.length > 0 && (
-          <div className="p-4 border-t-2 border-quest-border bg-quest-panel">
-            <button
-              onClick={clearSavedNotifications}
-              className="btn-pixel-red w-full py-2 text-[10px]"
-            >
-              🗑️ BORRAR TODAS
-            </button>
-          </div>
-        )}
-
-        {/* Sub-modals */}
-        {selectedStory && (
-          <StoryScrollModal
-            story={selectedStory}
-            onClose={() => setSelectedStory(null)}
-          />
-        )}
-
-        {selectedItem && (
-          <ItemDetailModal
-            item={selectedItem}
-            qty={0}
-            onClose={() => setSelectedItem(null)}
-            onUse={() => {
-              setSelectedItem(null);
-              onNavigateTab('items');
-              onClose();
-            }}
-            actionText="IR AL INVENTARIO"
-          />
-        )}
-
-        {selectedAchievement && createPortal(
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[11000] flex items-center justify-center p-4 anim-fade-in" onClick={() => setSelectedAchievement(null)}>
-            <div className="bg-quest-card border-2 border-quest-gold shadow-[0_0_50px_rgba(255,215,0,0.15)] max-w-sm w-full p-6 text-center" onClick={e => e.stopPropagation()}>
-              <div className="text-4xl mb-3">{selectedAchievement.icon}</div>
-              <h2 className="text-lg font-pixel text-quest-gold mb-2">{selectedAchievement.name}</h2>
-              <p className="text-xs font-pixel text-quest-textDim uppercase mb-6 leading-relaxed">{selectedAchievement.desc}</p>
-              <button onClick={() => { setSelectedAchievement(null); onNavigateTab('achieve'); onClose(); }} className="btn-pixel-cyan w-full text-[10px] py-2 mb-2">IR A LOGROS</button>
-              <button onClick={() => setSelectedAchievement(null)} className="btn-pixel-gray w-full text-[10px] py-2">CERRAR</button>
-            </div>
-          </div>,
-          document.body
-        )}
-      </div>
-    </div>
-  );
+      </div>,
+      document.body
+    );
 }
