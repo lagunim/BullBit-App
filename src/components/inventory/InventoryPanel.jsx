@@ -306,10 +306,14 @@ export default function InventoryPanel() {
           return (
             <div key={item.id} className={`card-pixel transition-all duration-300 ${owned ? 'border-quest-borderLight opacity-100' : 'opacity-30 grayscale saturate-50'
               }`}>
-              {/* Qty badge */}
+              {/* Qty badge with limit */}
               {owned && (
-                <div className="absolute -top-3 -right-3 z-10 w-6 h-6 bg-quest-bg border-2 border-quest-cyan text-quest-cyan text-[9px] font-pixel flex items-center justify-center shadow-pixel-sm">
-                  {qty}
+                <div className={`absolute -top-3 -right-3 z-10 h-6 px-1.5 bg-quest-bg border-2 font-pixel text-[9px] flex items-center justify-center shadow-pixel-sm ${
+                  qty >= (item.maxStack ?? 99) * 0.8
+                    ? 'border-quest-gold text-quest-gold'
+                    : 'border-quest-cyan text-quest-cyan'
+                }`}>
+                  {qty}/{(item.maxStack ?? 99)}
                 </div>
               )}
 

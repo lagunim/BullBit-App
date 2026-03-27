@@ -1629,19 +1629,102 @@ const useGameStore = create(
     grantItem(itemId) {
       const item = getItemById(getItemsState(get()), itemId);
       if (!item) return;
+
+      // Tabla de compensación según rareza
+      const VOID_STONE_COMPENSATION = {
+        common: 2,
+        rare: 4,
+        epic: 6,
+        legendary: 10,
+      };
+
+      const voidStoneId = 'void_stone';
+      let wasCompensated = false;
+      let compensationQty = 0;
+      let actualCompensation = 0;
+
       set(state => {
         const existing = state.inventory.find(i => i.itemId === itemId);
+
+        // Caso especial: multiplier_gem solo se puede tener 1
         if (itemId === 'multiplier_gem' && existing?.qty >= 1) {
+          // Intentar compensar con void_stone
+          if (itemId !== voidStoneId) {
+            compensationQty = VOID_STONE_COMPENSATION[item.rarity] || 2;
+            const voidStoneExisting = state.inventory.find(i => i.itemId === voidStoneId);
+            const voidStoneMax = 99;
+            const voidStoneCurrent = voidStoneExisting?.qty || 0;
+
+            if (voidStoneCurrent < voidStoneMax) {
+              actualCompensation = Math.min(compensationQty, voidStoneMax - voidStoneCurrent);
+              wasCompensated = true;
+
+              const newInventory = voidStoneExisting
+                ? state.inventory.map(i => i.itemId === voidStoneId ? { ...i, qty: i.qty + actualCompensation } : i)
+                : [...state.inventory, { itemId: voidStoneId, qty: actualCompensation }];
+
+              return { inventory: newInventory };
+            }
+          }
           return {};
         }
+
         const maxStack = item.maxStack ?? 99;
-        if (existing && existing.qty >= maxStack) return {};
+
+        // Si está en límite, intentar compensar con void_stone
+        if (existing && existing.qty >= maxStack) {
+          // No compensar void_stone consigo mismo (evitar loop infinito)
+          if (itemId !== voidStoneId) {
+            compensationQty = VOID_STONE_COMPENSATION[item.rarity] || 2;
+            const voidStoneExisting = state.inventory.find(i => i.itemId === voidStoneId);
+            const voidStoneMax = 99;
+            const voidStoneCurrent = voidStoneExisting?.qty || 0;
+
+            if (voidStoneCurrent < voidStoneMax) {
+              actualCompensation = Math.min(compensationQty, voidStoneMax - voidStoneCurrent);
+              wasCompensated = true;
+
+              const newInventory = voidStoneExisting
+                ? state.inventory.map(i => i.itemId === voidStoneId ? { ...i, qty: i.qty + actualCompensation } : i)
+                : [...state.inventory, { itemId: voidStoneId, qty: actualCompensation }];
+
+              return { inventory: newInventory };
+            } else {
+              // void_stone también está en límite, no se puede compensar
+              wasCompensated = true; // Para notificar que falló la compensación
+              actualCompensation = 0;
+            }
+          }
+          return {};
+        }
+
+        // Agregar objeto normalmente
         return {
           inventory: existing
             ? state.inventory.map(i => i.itemId === itemId ? { ...i, qty: i.qty + 1 } : i)
             : [...state.inventory, { itemId, qty: 1 }],
         };
       });
+
+      // Notificar al usuario sobre la compensación
+      if (wasCompensated) {
+        const itemsCatalog = getItemsState(get());
+        const voidStoneItem = getItemById(itemsCatalog, voidStoneId);
+
+        if (actualCompensation > 0) {
+          if (actualCompensation < compensationQty) {
+            // Compensación parcial
+            get()._pushNotification('item', `${item.icon} ${item.name} está en límite máximo. Recibiste ${actualCompensation}/${compensationQty} ${voidStoneItem?.name || 'Piedras del Vacío'} (límite alcanzado).`);
+          } else {
+            // Compensación completa
+            get()._pushNotification('item', `${item.icon} ${item.name} está en límite máximo. Recibiste ${actualCompensation} ${voidStoneItem?.name || 'Piedras del Vacío'} como compensación.`);
+          }
+        } else {
+          // No se pudo compensar porque void_stone también está en límite
+          get()._pushNotification('item', `${item.icon} ${item.name} está en límite máximo. No se pudo compensar: ${voidStoneItem?.name || 'Piedra del Vacío'} también está en límite.`);
+        }
+      }
+
       // Persistir en BD
       const uid = get()._userId;
       if (uid) queueInventorySave(uid, () => get().inventory);

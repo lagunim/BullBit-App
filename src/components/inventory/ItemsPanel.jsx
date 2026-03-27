@@ -75,7 +75,7 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
           <h3 className="font-pixel text-[9px] text-quest-textDim mb-3">🎒 OBJETOS [{owned.reduce((a,i)=>a+i.qty,0)}]</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {owned.map(item => (
-              <ItemCard key={item.id} item={item} qty={item.qty} onUse={onUseItem} />
+              <ItemCard key={item.id} item={item} qty={item.qty} maxStack={item.maxStack ?? 99} onUse={onUseItem} />
             ))}
           </div>
         </div>
@@ -90,12 +90,16 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {allItems.map(item => {
             const qty = inventory[item.id] || 0;
+            const maxStack = item.maxStack ?? 99;
+            const isNearLimit = qty > 0 && qty >= maxStack * 0.8;
             return (
               <div key={item.id} className={`pixel-border bg-quest-bg p-3 ${qty > 0 ? '' : 'opacity-40'}`}>
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{item.icon}</span>
                   <div>
-                    <div className={`font-pixel text-[8px] ${RARITY_COLORS[item.rarity]}`}>{item.name} {qty > 0 && <span className="text-quest-text">[x{qty}]</span>}</div>
+                    <div className={`font-pixel text-[8px] ${RARITY_COLORS[item.rarity]}`}>
+                      {item.name} {qty > 0 && <span className={`${isNearLimit ? 'text-quest-gold' : 'text-quest-text'}`}>[x{qty}/{maxStack}]</span>}
+                    </div>
                     <div className="font-pixel text-[6px] text-quest-textMuted mt-0.5">{item.desc}</div>
                   </div>
                 </div>

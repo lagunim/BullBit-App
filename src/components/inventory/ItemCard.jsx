@@ -1,8 +1,10 @@
 import { RARITY_COLORS } from '../../lib/itemsCatalog.js';
 
-export default function ItemCard({ item, qty, onUse, actionText = "▶ USAR" }) {
+export default function ItemCard({ item, qty, maxStack, onUse, actionText = "▶ USAR" }) {
   const rarityKey = item.rarity === 'uncommon' ? 'rare' : item.rarity;
   const rarity = RARITY_COLORS[rarityKey] || RARITY_COLORS.common;
+  const stackLimit = maxStack ?? item.maxStack ?? 99;
+  const isNearLimit = qty >= stackLimit * 0.8;
 
   return (
     <div className="card-pixel transition-all duration-300 border-quest-borderLight opacity-100 p-4">
@@ -11,7 +13,7 @@ export default function ItemCard({ item, qty, onUse, actionText = "▶ USAR" }) 
           {item.icon}
         </span>
         <div className="flex-1 min-w-0">
-          <div 
+          <div
             className="font-pixel text-[9px] mb-1 truncate"
             style={{ color: rarity.color, textShadow: rarity.glow !== 'none' ? rarity.glow : 'none' }}
           >
@@ -22,11 +24,11 @@ export default function ItemCard({ item, qty, onUse, actionText = "▶ USAR" }) 
           </div>
           <div className="flex gap-2 mt-2 items-center">
             {qty > 0 && (
-              <span className="font-pixel text-[8px] bg-quest-bg border border-quest-cyan text-quest-cyan px-1.5 py-0.5">
-                x{qty}
+              <span className={`font-pixel text-[8px] bg-quest-bg border px-1.5 py-0.5 ${isNearLimit ? 'border-quest-gold text-quest-gold' : 'border-quest-cyan text-quest-cyan'}`}>
+                x{qty}/{stackLimit}
               </span>
             )}
-            <span 
+            <span
               className="inline-block text-[6px] px-1.5 py-0.5 border uppercase tracking-wider font-bold"
               style={{ borderColor: rarity.color, color: rarity.color, background: `${rarity.color}11` }}
             >

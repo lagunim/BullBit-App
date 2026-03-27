@@ -397,7 +397,7 @@ export const ITEMS = {
     effectType: 'instant',
     effectKey: 'void_exchange',
     effectValue: 0,
-    maxStack: 10,
+    maxStack: 99,
   },
 
   /**

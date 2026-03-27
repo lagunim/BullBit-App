@@ -27,13 +27,25 @@ export default function ItemDetailModal({ item, qty, onClose, onUse, actionText 
         >
           ✕
         </button>
-        
-        <ItemCard 
-          item={item} 
-          qty={qty} 
+
+        {/* Indicador de cantidad/límite en esquina superior izquierda */}
+        {qty > 0 && (
+          <div className={`absolute -top-3 -left-3 px-2 py-1 font-pixel text-[9px] border-2 rounded bg-quest-bg z-10 ${
+            qty >= (item.maxStack ?? 99) * 0.8
+              ? 'border-quest-gold text-quest-gold'
+              : 'border-quest-cyan text-quest-cyan'
+          }`}>
+            x{qty}/{(item.maxStack ?? 99)}
+          </div>
+        )}
+
+        <ItemCard
+          item={item}
+          qty={qty}
+          maxStack={item.maxStack ?? 99}
           onUse={(id) => {
             onUse(id);
-          }} 
+          }}
           actionText={actionText}
         />
       </div>
