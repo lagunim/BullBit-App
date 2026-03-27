@@ -966,7 +966,7 @@ export async function applyTripleBonus(planId) {
 
 /**
  * Elimina un plan y todas sus tareas.
- * 
+ *
  * @param {string} planId - ID del plan a eliminar
  */
 export async function deletePlan(planId) {

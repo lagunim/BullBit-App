@@ -26,7 +26,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 150,
-      items: ['recovery_totem']
+      items: []
     }
   },
   {
@@ -54,7 +54,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 220,
-      items: ['boost_potion']
+      items: []
     }
   },
   {
@@ -83,7 +83,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 180,
-      items: ['shield_of_streak']
+      items: []
     }
   },
   {
@@ -118,7 +118,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 230,
-      items: ['double_elixir']
+      items: []
     }
   },
   {
@@ -156,7 +156,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 100,
-      items: ['recovery_totem']
+      items: []
     }
   },
   {
@@ -203,7 +203,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 160,
-      items: ['golden_streak']
+      items: []
     }
   },
   {
@@ -230,7 +230,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 170,
-      items: ['balance_amulet']
+      items: []
     }
   },
   {
@@ -258,7 +258,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 180,
-      items: ['boost_potion']
+      items: []
     }
   },
   {
@@ -277,7 +277,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 165,
-      items: ['focused_elixir']
+      items: []
     }
   },
   {
@@ -304,7 +304,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 240,
-      items: ['xp_scroll']
+      items: []
     }
   },
   {
@@ -332,7 +332,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 235,
-      items: ['double_elixir', 'mastery_token']
+      items: []
     }
   },
   {
@@ -360,7 +360,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 340,
-      items: ['xp_scroll', 'double_elixir', 'multiplier_gem']
+      items: []
     }
   },
   {
@@ -387,7 +387,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 320,
-      items: ['xp_scroll', 'mastery_token']
+      items: []
     }
   },
   {
@@ -409,7 +409,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 330,
-      items: ['double_elixir', 'mastery_token']
+      items: []
     }
   },
   {
@@ -436,7 +436,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 350,
-      items: ['xp_scroll', 'multiplier_gem']
+      items: []
     }
   },
   {
@@ -467,7 +467,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 360,
-      items: ['double_elixir', 'xp_scroll', 'phoenix']
+      items: []
     }
   },
   {
@@ -496,7 +496,7 @@ export const DAILY_CHALLENGES = [
     },
     rewards: {
       points: 220,
-      items: ['xp_scroll', 'multiplier_gem']
+      items: []
     }
   }
 ];

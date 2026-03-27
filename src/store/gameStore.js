@@ -322,7 +322,7 @@ const useGameStore = create(
     dailyOptions: null,   // Array de 3 opciones para elegir
     dailySelectionMade: false, // Si el usuario ya eligió su daily
     lastDailyDate: null,  // 'YYYY-MM-DD'
-    dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+    dailyCatalog: [],     // Se carga desde BD o fallback a DAILY_CHALLENGES
     itemsCatalog: FALLBACK_ITEMS,
 
     // Gamification
@@ -434,6 +434,12 @@ const useGameStore = create(
         set({ _userId: userId, _initializingUserId: userId });
 
         try {
+          // ── Cargar catalogo de misiones desde BD (con fallback al archivo local) ──
+          const dailyCatalogFromDB = await loadDailyChallengesCatalog();
+          const dailyCatalog = dailyCatalogFromDB.length > 0
+            ? dailyCatalogFromDB
+            : hydrateDailyChallenges(DAILY_CHALLENGES);
+
           const remoteData = await loadUserData(userId);
 
           if (remoteData) {
@@ -455,7 +461,7 @@ const useGameStore = create(
               dailyOptions: remoteData.dailyOptions ?? null,
               dailySelectionMade: remoteData.dailySelectionMade ?? false,
               lastDailyDate: remoteData.lastDailyDate,
-              dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+              dailyCatalog,
               itemsCatalog: remoteData.itemsCatalog && Object.keys(remoteData.itemsCatalog).length
                 ? remoteData.itemsCatalog
                 : FALLBACK_ITEMS,
@@ -482,7 +488,7 @@ const useGameStore = create(
                 inventory: localState.inventory ?? [],
                 activeEffects: normalizedEffects,
                 currentDaily: localState.currentDaily ?? null,
-                dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+                dailyCatalog, // Usar el catalogo cargado desde BD o fallback
                 itemsCatalog: FALLBACK_ITEMS,
                 lastDailyDate: localState.lastDailyDate ?? null,
                 lastWeeklyProcessDate: localState.lastWeeklyProcessDate ?? null,
@@ -533,7 +539,7 @@ const useGameStore = create(
                 inventory: [],
                 activeEffects: [],
                 currentDaily: null,
-                dailyCatalog: hydrateDailyChallenges(DAILY_CHALLENGES),
+                dailyCatalog, // Usar el catalogo cargado desde BD o fallback
                 itemsCatalog: FALLBACK_ITEMS,
                 lastDailyDate: null,
                 lastWeeklyProcessDate: null,
@@ -2418,13 +2424,20 @@ const useGameStore = create(
             get()._updateDailyProgress();
           } else {
             // No existe misión para hoy, generar opciones ponderadas para el modal
-            const { getDailyByDifficulty } = await import('../data/dailies.js');
+            // Usar el dailyCatalog del store (cargado desde BD o fallback)
+            const dailyCatalog = get().dailyCatalog;
+
+            const getDailyByDifficultyFromCatalog = (difficulty, excludeIds = []) => {
+              const pool = dailyCatalog.filter(d => d.difficulty === difficulty && !excludeIds.includes(d.id));
+              if (pool.length === 0) return null;
+              return pool[Math.floor(Math.random() * pool.length)];
+            };
 
             const pickWeighted = (diffA, diffB, weightA) => {
               const targetDiff = Math.random() < weightA ? diffA : diffB;
-              let daily = getDailyByDifficulty(targetDiff, []);
-              // Fallback si no hay de esa dificultad (poco probable con el catálogo actual)
-              if (!daily) daily = getDailyByDifficulty(diffA === targetDiff ? diffB : diffA, []);
+              let daily = getDailyByDifficultyFromCatalog(targetDiff, []);
+              // Fallback si no hay de esa dificultad
+              if (!daily) daily = getDailyByDifficultyFromCatalog(diffA === targetDiff ? diffB : diffA, []);
               return daily;
             };
 
@@ -2437,12 +2450,12 @@ const useGameStore = create(
 
             // Opción 2: 60% medium, 40% hard
             let opt2 = pickWeighted('medium', 'hard', 0.6);
-            if (opt2 && usedIds.includes(opt2.id)) opt2 = getDailyByDifficulty('hard', usedIds) || getDailyByDifficulty('medium', usedIds);
+            if (opt2 && usedIds.includes(opt2.id)) opt2 = getDailyByDifficultyFromCatalog('hard', usedIds) || getDailyByDifficultyFromCatalog('medium', usedIds);
             if (opt2) { options.push(opt2); usedIds.push(opt2.id); }
 
             // Opción 3: 60% hard, 40% epic
             let opt3 = pickWeighted('hard', 'epic', 0.6);
-            if (opt3 && usedIds.includes(opt3.id)) opt3 = getDailyByDifficulty('epic', usedIds) || getDailyByDifficulty('hard', usedIds);
+            if (opt3 && usedIds.includes(opt3.id)) opt3 = getDailyByDifficultyFromCatalog('epic', usedIds) || getDailyByDifficultyFromCatalog('hard', usedIds);
             if (opt3) { options.push(opt3); usedIds.push(opt3.id); }
 
             // Mapear a formato de progreso
