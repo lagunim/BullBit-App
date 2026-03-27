@@ -1709,22 +1709,72 @@ const useGameStore = create(
     _pickDailyItemChoices(daily) {
       if (!daily) return [];
       const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
-      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(getItemsState(get()))));
-      const availablePool = [...basePool];
+      const itemsCatalog = getItemsState(get());
+      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(itemsCatalog)));
+      const weightedRarities = [
+        { rarity: 'common', weight: 55 },
+        { rarity: 'rare', weight: 30 },
+        { rarity: 'epic', weight: 12 },
+        { rarity: 'legendary', weight: 3 },
+      ];
       const pickCount = 3;
       const choices = [];
+      const usedIds = new Set();
 
-      for (let i = 0; i < pickCount && availablePool.length > 0; i++) {
-        const idx = Math.floor(Math.random() * availablePool.length);
-        choices.push(availablePool[idx]);
-        availablePool.splice(idx, 1);
+      const pickWeightedRarity = (availableRarities) => {
+        const pool = weightedRarities.filter(entry => availableRarities.has(entry.rarity));
+        if (pool.length === 0) return null;
+
+        const totalWeight = pool.reduce((acc, entry) => acc + entry.weight, 0);
+        let roll = Math.random() * totalWeight;
+        for (const entry of pool) {
+          roll -= entry.weight;
+          if (roll <= 0) return entry.rarity;
+        }
+        return pool[pool.length - 1].rarity;
+      };
+
+      for (let i = 0; i < pickCount; i++) {
+        const availableItems = basePool.filter(id => !usedIds.has(id));
+        if (availableItems.length === 0) break;
+
+        const rarityToPool = {};
+        for (const itemId of availableItems) {
+          const rarity = itemsCatalog[itemId]?.rarity;
+          if (!rarityToPool[rarity]) rarityToPool[rarity] = [];
+          rarityToPool[rarity].push(itemId);
+        }
+
+        const availableRarities = new Set(
+          Object.keys(rarityToPool).filter(rarity => rarityToPool[rarity]?.length)
+        );
+
+        let targetRarity = pickWeightedRarity(availableRarities);
+        let candidatePool = targetRarity ? rarityToPool[targetRarity] : [];
+
+        if (!candidatePool || candidatePool.length === 0) {
+          const fallbackRarity = Object.keys(rarityToPool)
+            .find(rarity => rarityToPool[rarity]?.length);
+          candidatePool = fallbackRarity ? rarityToPool[fallbackRarity] : [];
+        }
+
+        if (!candidatePool || candidatePool.length === 0) break;
+
+        const idx = Math.floor(Math.random() * candidatePool.length);
+        const pickedId = candidatePool[idx];
+        if (pickedId) {
+          choices.push(pickedId);
+          usedIds.add(pickedId);
+        }
       }
 
       if (choices.length < pickCount) {
-        const fallback = Object.keys(getItemsState(get())).filter(id => !choices.includes(id));
+        const fallback = Object.keys(itemsCatalog).filter(id => !usedIds.has(id));
         while (choices.length < pickCount && fallback.length) {
           const idx = Math.floor(Math.random() * fallback.length);
-          choices.push(fallback[idx]);
+          const pickedId = fallback[idx];
+          choices.push(pickedId);
+          usedIds.add(pickedId);
           fallback.splice(idx, 1);
         }
       }
