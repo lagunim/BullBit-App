@@ -73,7 +73,8 @@ function habitToRow(userId, habit, includeId = true) {
     emoji: habit.emoji ?? '🎯',
     multiplier: habit.multiplier ?? 1.0,
     base_multiplier: habit.baseMultiplier ?? 1.0,
-    streak: habit.streak ?? 0,
+    currently_streak: habit.streak ?? 0,
+    best_streak: habit.bestStreak ?? 0,
     custom_days: habit.customDays ?? null,
     custom_interval: habit.customInterval ?? null,
     weekly_times_target: habit.weeklyTimesTarget ?? null,
@@ -105,7 +106,8 @@ function rowToHabit(row) {
     emoji: row.emoji ?? '🎯',
     multiplier: parseFloat(row.multiplier ?? 1.0),
     baseMultiplier: parseFloat(row.base_multiplier ?? 1.0),
-    streak: row.streak ?? 0,
+    streak: row.currently_streak ?? 0,
+    bestStreak: row.best_streak ?? 0,
     customDays: row.custom_days ?? undefined,
     customInterval: row.custom_interval ?? undefined,
     weeklyTimesTarget: row.weekly_times_target ?? null,
@@ -404,7 +406,12 @@ export async function deleteHabit(habitId) {
  */
 export async function saveHabitEntry(userId, habitId, date, status) {
   const { error } = await supabase.from('habit_history').upsert(
-    { user_id: userId, habit_id: habitId, date, status },
+    {
+      user_id: userId,
+      habit_id: habitId,
+      date,
+      status,
+    },
     { onConflict: 'user_id,habit_id,date' }
   );
   if (error) console.error('[db] saveHabitEntry:', error.message);
@@ -419,12 +426,16 @@ export async function saveHabitEntry(userId, habitId, date, status) {
  */
 export async function saveHabitEntries(userId, entries) {
   if (!entries.length) return;
-  const rows = entries.map(e => ({
-    user_id: userId,
-    habit_id: e.habitId,
-    date: e.date,
-    status: e.status,
-  }));
+  const rows = entries
+    .filter(entry => entry?.habitId && entry?.date && entry?.status)
+    .map(entry => ({
+      user_id: userId,
+      habit_id: entry.habitId,
+      date: entry.date,
+      status: entry.status,
+    }));
+
+  if (!rows.length) return;
   const { error } = await supabase.from('habit_history').upsert(rows, { onConflict: 'user_id,habit_id,date' });
   if (error) console.error('[db] saveHabitEntries:', error.message);
 }

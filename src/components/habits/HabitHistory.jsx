@@ -51,27 +51,6 @@ export default function HabitHistory() {
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
-  // Calcula la racha máxima de un hábito específico
-  // Recorre todo el historial y cuenta las rachas consecutivas
-  function getMaxStreak(habitId) {
-    const sortedDates = Object.keys(history).sort();
-    let maxStreak = 0;
-    let currentStreak = 0;
-
-    for (const dateKey of sortedDates) {
-      const status = history[dateKey]?.[habitId];
-      if (isCompletedStatus(status)) {
-        currentStreak++;
-        if (currentStreak > maxStreak) {
-          maxStreak = currentStreak;
-        }
-      } else {
-        currentStreak = 0;
-      }
-    }
-    return maxStreak;
-  }
-
   // Obtiene la fecha de creación del hábito
   // Si no existe el campo createdAt, infiere la primera fecha del historial
   function getCreatedKey(habit) {
@@ -131,7 +110,7 @@ export default function HabitHistory() {
     detailCompleted + detailFailed > 0
       ? Math.round((detailCompleted / (detailCompleted + detailFailed)) * 100)
       : 0;
-  const detailMaxStreak = detailHabit ? getMaxStreak(detailHabit.id) : 0;
+  const detailMaxStreak = detailHabit ? (detailHabit.bestStreak ?? 0) : 0;
 
 
   if (habits.length === 0) {
@@ -242,7 +221,7 @@ export default function HabitHistory() {
           const completed = dates.filter(d => isCompletedStatus(deriveStatus(d, habit))).length;
           const failed = dates.filter(d => deriveStatus(d, habit) === 'failed').length;
           const rate = completed + failed > 0 ? Math.round((completed / (completed + failed)) * 100) : 0;
-          const maxStreak = getMaxStreak(habit.id);
+          const maxStreak = habit.bestStreak ?? 0;
           return (
             <div
               key={habit.id}

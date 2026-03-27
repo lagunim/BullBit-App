@@ -359,6 +359,7 @@ const useGameStore = create(
         multiplier: 1.0,
         baseMultiplier: 1.0,
         streak: 0,
+        bestStreak: 0,
         createdAt: new Date().toISOString(),
       };
       set(state => ({ habits: [...state.habits, newHabit] }));
@@ -681,7 +682,12 @@ const useGameStore = create(
       set(state2 => ({
         habits: state2.habits.map(h =>
           h.id === habitId
-            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            ? {
+              ...h,
+              multiplier: newMult,
+              streak: (h.streak ?? 0) + 1,
+              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+            }
             : h
         ),
         points: finalPoints,
@@ -824,7 +830,12 @@ const useGameStore = create(
       set(state2 => ({
         habits: state2.habits.map(h =>
           h.id === habitId
-            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            ? {
+              ...h,
+              multiplier: newMult,
+              streak: (h.streak ?? 0) + 1,
+              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+            }
             : h
         ),
         points: finalPoints,
@@ -965,7 +976,12 @@ const useGameStore = create(
       set(state2 => ({
         habits: state2.habits.map(h =>
           h.id === habitId
-            ? { ...h, multiplier: newMult, streak: h.streak + 1 }
+            ? {
+              ...h,
+              multiplier: newMult,
+              streak: (h.streak ?? 0) + 1,
+              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+            }
             : h
         ),
         points: finalPoints,
