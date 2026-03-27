@@ -144,6 +144,9 @@ export default function HabitList() {
   const isSelectedHabitAvailableToday = selectedHabit
     ? isHabitDueOnDate(selectedHabit, today, history)
     : false;
+  const selectedHabitTodayStatus = selectedHabit ? todayData[selectedHabit.id] : null;
+  const isSelectedHabitDoneToday = isCompletedStatus(selectedHabitTodayStatus);
+  const isSelectedHabitFailedToday = selectedHabitTodayStatus === 'failed';
 
   const hasActiveEffect = useHasActiveMultiplierEffect();
 
@@ -390,9 +393,17 @@ export default function HabitList() {
                   </div>
                 );
               }
-              if (!todayData[selectedHabit.id]) {
+              if (!isSelectedHabitFailedToday) {
                 return (
                   <div className="space-y-2 mt-2">
+                    <div className={`text-[10px] font-pixel px-2 py-1 border ${isSelectedHabitDoneToday
+                      ? 'text-quest-cyan border-quest-cyan/40 bg-quest-cyan/10'
+                      : 'text-quest-textMuted border-quest-border/50 bg-black/20'
+                      }`}>
+                      {isSelectedHabitDoneToday
+                        ? 'Este hábito ya se completó hoy. Al repetirlo ganas puntos y mejoras multiplicador, pero no suma misión diaria ya completada.'
+                        : 'Completa este hábito para ganar puntos y mejorar su multiplicador.'}
+                    </div>
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -418,14 +429,14 @@ export default function HabitList() {
                       onClick={handleComplete}
                       className="btn-pixel-green w-full text-xs py-3 font-bold uppercase "
                     >
-                      ✔ Completar
+                      {isSelectedHabitDoneToday ? '✔ Completar de nuevo' : '✔ Completar'}
                     </button>
                   </div>
                 );
               }
               return (
-                <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[11px] font-pixel uppercase ">
-                  ✔ Hábito completado hoy
+                <div className="mt-2 text-center px-3 py-3 border border-quest-red bg-[#330011] text-quest-red text-[11px] font-pixel uppercase ">
+                  ✖ Hábito fallado hoy
                 </div>
               );
             })()}

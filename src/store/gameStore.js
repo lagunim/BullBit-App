@@ -601,7 +601,9 @@ const useGameStore = create(
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
       if (!isHabitDueOnDate(habit, today, state.history)) return;
-      if (state.history[today]?.[habitId] === 'completed') return; // already done
+      const todayStatus = state.history[today]?.[habitId];
+      if (todayStatus === 'failed') return;
+      const isRepeatCompletion = todayStatus === 'completed' || todayStatus === 'partial' || todayStatus === 'over';
 
       const activeEffects = state._getActiveEffects();
       const earned = calcPoints(habit, activeEffects);
@@ -650,8 +652,8 @@ const useGameStore = create(
         nextEffects = nextEffects.filter(e => e !== nextPointBoostEffectComplete);
       }
 
-      if (nextPointBoostTargetEffect) {
-        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffect);
+      if (nextPointBoostTargetEffectComplete) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectComplete);
       }
 
       if (fusionEffectToRemove) {
@@ -686,8 +688,10 @@ const useGameStore = create(
             ? {
               ...h,
               multiplier: newMult,
-              streak: (h.streak ?? 0) + 1,
-              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+              streak: isRepeatCompletion ? (h.streak ?? 0) : (h.streak ?? 0) + 1,
+              bestStreak: isRepeatCompletion
+                ? (h.bestStreak ?? 0)
+                : Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
             }
             : h
         ),
@@ -731,7 +735,9 @@ const useGameStore = create(
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
       if (!isHabitDueOnDate(habit, today, state.history)) return;
-      if (state.history[today]?.[habitId]) return; // already resolved today
+      const todayStatus = state.history[today]?.[habitId];
+      if (todayStatus === 'failed') return;
+      const isRepeatCompletion = todayStatus === 'completed' || todayStatus === 'partial' || todayStatus === 'over';
 
       const activeEffects = state._getActiveEffects();
 
@@ -834,8 +840,10 @@ const useGameStore = create(
             ? {
               ...h,
               multiplier: newMult,
-              streak: (h.streak ?? 0) + 1,
-              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+              streak: isRepeatCompletion ? (h.streak ?? 0) : (h.streak ?? 0) + 1,
+              bestStreak: isRepeatCompletion
+                ? (h.bestStreak ?? 0)
+                : Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
             }
             : h
         ),
@@ -878,7 +886,9 @@ const useGameStore = create(
       const habit = state.habits.find(h => h.id === habitId);
       if (!habit) return;
       if (!isHabitDueOnDate(habit, today, state.history)) return;
-      if (state.history[today]?.[habitId]) return; // already resolved today
+      const todayStatus = state.history[today]?.[habitId];
+      if (todayStatus === 'failed') return;
+      const isRepeatCompletion = todayStatus === 'completed' || todayStatus === 'partial' || todayStatus === 'over';
 
       const activeEffects = state._getActiveEffects();
 
@@ -980,8 +990,10 @@ const useGameStore = create(
             ? {
               ...h,
               multiplier: newMult,
-              streak: (h.streak ?? 0) + 1,
-              bestStreak: Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
+              streak: isRepeatCompletion ? (h.streak ?? 0) : (h.streak ?? 0) + 1,
+              bestStreak: isRepeatCompletion
+                ? (h.bestStreak ?? 0)
+                : Math.max(h.bestStreak ?? 0, (h.streak ?? 0) + 1),
             }
             : h
         ),

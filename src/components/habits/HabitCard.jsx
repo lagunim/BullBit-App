@@ -169,7 +169,7 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
                 : 'text-quest-red border-quest-red bg-[#330011]'
                 }`}
             >
-              {isDone ? '✔ Hábito resuelto' : '✖ Hábito fallado'}
+              {isDone ? '✔ Completado hoy (repetible)' : '✖ Hábito fallado'}
             </div>
           </div>
         ) : (
