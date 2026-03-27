@@ -36,18 +36,18 @@
 export const ITEMS = {
   /**
    * ESCUDO DE RACHA
-   * Tipo: Pasivo
-   * Efecto: Protege el multiplicador de UNA penalización por fallo.
-   * Uso: Se consume automáticamente cuando fallas un hábito.
+   * Tipo: Pasivo (Dirigido)
+   * Efecto: Protege el multiplicador de UN hábito específico de UNA penalización por fallo.
+   * Uso: Selecciona un hábito al usar. Se consume automáticamente cuando fallas ese hábito.
    */
   shield_of_streak: {
     id: 'shield_of_streak',
     name: 'Escudo de Racha',
     icon: '🛡️',
     rarity: 'common',
-    desc: 'Protege tu multiplicador de UNA penalización por fallo. Se consume automáticamente.',
+    desc: 'Protege el multiplicador de UN hábito específico de UNA penalización por fallo. Selecciona el hábito al usar.',
     effectType: 'passive',
-    effectKey: 'streak_shield',
+    effectKey: 'streak_shield_target',
     effectValue: 1,
     maxStack: 5,
   },

@@ -1040,7 +1040,10 @@ const useGameStore = create(
       // Consume shield if used
       let newActiveEffects = [...state.activeEffects];
       if (consumedKey) {
-        const effectToConsume = newActiveEffects.find(e => e.key === consumedKey);
+        const effectToConsume = newActiveEffects.find(e =>
+          e.key === consumedKey &&
+          (consumedTargetHabitId ? e.targetHabitId === consumedTargetHabitId : true)
+        );
         if (effectToConsume) {
           newActiveEffects = newActiveEffects.filter(e => e !== effectToConsume);
           let msg = 'Efecto consumido';

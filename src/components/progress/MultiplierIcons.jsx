@@ -24,7 +24,7 @@ import { getHabitMultiplierCap, hasPermanentMultiplierGem } from '../../utils/ga
  * Cada efecto tiene un icono representativo, título descriptivo y color
  */
 const EFFECT_ICONS = {
-  streak_shield: { icon: '🛡️', title: 'Escudo de Racha activo - Protege de penalizaciones', color: 'text-quest-cyan' },
+  streak_shield: { icon: '🛡️', title: 'Escudo de Racha activo - Protege este hábito de una penalización', color: 'text-quest-cyan' },
   golden_shield: { icon: '⭐', title: 'Racha Dorada activa - El próximo fallo no te penaliza y suma +0.2', color: 'text-quest-gold' },
   balance_shield: { icon: '⚖️', title: 'Amuleto de Equilibrio activo - El multiplicador no baja al fallar', color: 'text-quest-cyan' },
   global_mult_boost: { icon: '⚗️', title: 'Poción de Impulso activa - +1.0 a todos los multiplicadores', color: 'text-quest-green' },
@@ -61,7 +61,6 @@ function hasActiveMultiplierEffect(rawEffects, habitId = null) {
   // Efectos que afectan al multiplicador globalmente
   return activeEffects.some((e) => {
     const isGlobalMultiplierEffect =
-      e.key === 'streak_shield' ||
       e.key === 'golden_shield' ||
       e.key === 'balance_shield' ||
       e.key === 'global_mult_boost' ||
@@ -78,7 +77,8 @@ function hasActiveMultiplierEffect(rawEffects, habitId = null) {
       'small_mult_boost_target',
       'fusion_degradation',
       'dynamic_mult_cap',
-      'perm_base_mult'
+      'perm_base_mult',
+      'streak_shield'
     ].includes(e.key);
 
     if (isTargetedMultiplierEffect && e.targetHabitId === habitId) {
@@ -207,13 +207,22 @@ export default function MultiplierIcons({ habitId, className = '' }) {
   };
 
   // 1. Escudos y Protecciones (Prioridad 1)
-  const shieldKeys = ['golden_shield', 'balance_shield', 'streak_shield'];
+  // Nota: streak_shield ahora es siempre dirigido (targetHabitId requerido)
+  const shieldKeys = ['golden_shield', 'balance_shield'];
   shieldKeys.forEach(key => {
     const effect = activeEffects.find(e => e.key === key && (!habitId || !e.targetHabitId));
     if (effect && EFFECT_ICONS[key]) {
       addIcon({ key, ...EFFECT_ICONS[key] });
     }
   });
+
+  // Escudo de racha dirigido (solo se muestra si coincide con el habitId)
+  if (habitId) {
+    const streakShield = activeEffects.find(e => e.key === 'streak_shield' && e.targetHabitId === habitId);
+    if (streakShield && EFFECT_ICONS['streak_shield']) {
+      addIcon({ key: 'streak_shield', ...EFFECT_ICONS['streak_shield'] });
+    }
+  }
 
   // 2. Impulsos de Multiplicador (Prioridad 2)
   const globalMultBoost = activeEffects.find(e => e.key === 'global_mult_boost' && (!habitId || !e.targetHabitId));

@@ -17,12 +17,23 @@
  * @param {Function} props.onUseItem - Función para usar un objeto
  * @returns {JSX.Element} Panel de objetos
  */
-import { ITEMS, RARITY_COLORS, RARITY_BORDERS, RARITY_LABELS } from '../../lib/items.js';
+import { getAllItems, getItemById, findItemByEffect, RARITY_COLORS } from '../../lib/itemsCatalog.js';
+import useGameStore from '../../store/gameStore.js';
 import ItemCard from './ItemCard.jsx';
 
 export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
+  // Obtener items del store (sistema moderno)
+  const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
+  const allItems = getAllItems(itemsCatalog);
+
   // Filtra solo los objetos con cantidad > 0
-  const owned = Object.entries(inventory).filter(([,q]) => q > 0).map(([id,qty]) => ({ ...ITEMS[id], qty })).filter(Boolean);
+  const owned = Object.entries(inventory)
+    .filter(([, q]) => q > 0)
+    .map(([id, qty]) => {
+      const item = getItemById(itemsCatalog, id);
+      return item ? { ...item, qty } : null;
+    })
+    .filter(Boolean);
 
   // Calcula el tiempo restante de un efecto
   // Convierte milisegundos a horas o días
@@ -41,14 +52,14 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
           <h3 className="font-pixel text-[9px] glow-text-purple mb-3">⚡ EFECTOS ACTIVOS</h3>
           <div className="grid gap-2">
             {activeEffects.map((e, i) => {
-              const item = Object.values(ITEMS).find(it => it.effectType === e.type);
+              const item = findItemByEffect(itemsCatalog, e);
               return (
                 <div key={i} className="pixel-border-purple bg-quest-card p-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">{item?.icon || '✨'}</span>
                     <div>
                       <div className="font-pixel text-[9px] glow-text-purple">{item?.name}</div>
-                      <div className="font-pixel text-[7px] text-quest-textDim mt-0.5">{item?.description}</div>
+                      <div className="font-pixel text-[7px] text-quest-textDim mt-0.5">{item?.desc || item?.description}</div>
                     </div>
                   </div>
                   <div className="font-pixel text-[8px] text-quest-gold flex-shrink-0">⏱ {timeLeft(e.expiresAt)}</div>
@@ -77,7 +88,7 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
       <div>
         <h3 className="font-pixel text-[9px] text-quest-textMuted mb-3">📖 CATÁLOGO</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {Object.values(ITEMS).map(item => {
+          {allItems.map(item => {
             const qty = inventory[item.id] || 0;
             return (
               <div key={item.id} className={`pixel-border bg-quest-bg p-3 ${qty > 0 ? '' : 'opacity-40'}`}>
@@ -85,7 +96,7 @@ export default function ItemsPanel({ inventory, activeEffects, onUseItem }) {
                   <span className="text-lg">{item.icon}</span>
                   <div>
                     <div className={`font-pixel text-[8px] ${RARITY_COLORS[item.rarity]}`}>{item.name} {qty > 0 && <span className="text-quest-text">[x{qty}]</span>}</div>
-                    <div className="font-pixel text-[6px] text-quest-textMuted mt-0.5">{item.description}</div>
+                    <div className="font-pixel text-[6px] text-quest-textMuted mt-0.5">{item.desc}</div>
                   </div>
                 </div>
               </div>

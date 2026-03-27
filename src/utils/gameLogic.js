@@ -494,9 +494,17 @@ export function calcMultiplierOnFail(habit, activeEffects = []) {
   if (activeEffects.some(e => e.key === 'balance_shield')) {
     return { newMult: habit.multiplier, consumedKey: null, appliedKey: 'balance_shield' };
   }
-  // 3. streak_shield
-  if (activeEffects.some(e => e.key === 'streak_shield')) {
-    return { newMult: habit.multiplier, consumedKey: 'streak_shield', appliedKey: 'streak_shield' };
+  // 3. streak_shield (targeted - específico del hábito)
+  const targetedStreakShield = activeEffects.find(
+    e => e.key === 'streak_shield' && e.targetHabitId === habit.id
+  );
+  if (targetedStreakShield) {
+    return {
+      newMult: habit.multiplier,
+      consumedKey: 'streak_shield',
+      appliedKey: 'streak_shield',
+      consumedTargetHabitId: habit.id
+    };
   }
   // 4. reduced_penalty
   if (activeEffects.some(e => e.key === 'reduced_penalty')) {
