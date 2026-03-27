@@ -213,7 +213,9 @@ export default function PlanDetailModal({ date, onClose }) {
                 </label>
                 <input
                   className="input-pixel w-full text-center text-lg"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   min={1}
                   max={480}
                   value={actualMinutes}
