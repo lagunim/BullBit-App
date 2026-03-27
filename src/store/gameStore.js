@@ -649,8 +649,8 @@ const useGameStore = create(
         nextEffects = nextEffects.filter(e => e !== nextPointBoostEffectComplete);
       }
 
-      if (nextPointBoostTargetEffectComplete) {
-        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectComplete);
+      if (nextPointBoostTargetEffect) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffect);
       }
 
       if (fusionEffectToRemove) {
@@ -796,8 +796,8 @@ const useGameStore = create(
       }
 
       // Consume "next_point_boost_target" if present for this specific habit
-      if (nextPointBoostTargetEffectComplete) {
-        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffectComplete);
+      if (nextPointBoostTargetEffect) {
+        nextEffects = nextEffects.filter(e => e !== nextPointBoostTargetEffect);
       }
 
       if (fusionEffectToRemove) {
