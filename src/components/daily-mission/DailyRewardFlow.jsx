@@ -1,13 +1,9 @@
 /**
  * DailyRewardFlow - Flujo de recompensas de misión diaria
- * 
- * Gestiona la entrega de recompensas al completar una misión diaria.
- * Muestra un modal de selección si hay múltiples opciones de objetos,
- * o entrega automáticamente si solo hay una opción.
- * 
- * Componentes hijos:
- * - DailyItemChoiceModal: Modal de selección de objeto (si hay choices)
- * 
+ *
+ * Gestiona la visualización de recompensas al completar una misión diaria.
+ * Muestra un modal con los objetos recibidos según la dificultad de la misión.
+ *
  * @component
  * @returns {JSX.Element|null} Modal de recompensa diaria o null si no hay recompensa pendiente
  */
@@ -17,38 +13,33 @@ import useGameStore from '../../store/gameStore.js';
 import { getItemById } from '../../lib/itemsCatalog.js';
 
 /**
- * DailyItemChoiceModal - Modal de selección de objeto para recompensas diarias
- * 
- * Cuando una misión diaria tiene múltiples opciones de objetos,
- * este modal permite al jugador elegir cuál obtener.
- * 
+ * DailyRewardModal - Modal de visualización de recompensas diarias
+ *
+ * Muestra los objetos recibidos al completar una misión diaria.
+ * Los objetos ya han sido otorgados automáticamente según la dificultad.
+ *
  * @component
  * @param {Object} props
  * @param {string} props.dailyName - Nombre de la misión diaria
- * @param {Array} props.itemChoices - Array de IDs de objetos entre los que elegir
- * @param {Function} props.onClaim - Función llamada con el objeto seleccionado
- * @returns {JSX.Element} Modal de selección de objeto
+ * @param {Array} props.grantedItems - Array de IDs de objetos recibidos
+ * @param {number} props.points - Puntos recibidos
+ * @param {Function} props.onAccept - Función llamada al aceptar
+ * @returns {JSX.Element} Modal de visualización de recompensas
  */
-function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
+function DailyRewardModal({ dailyName, grantedItems = [], points, onAccept }) {
   const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
-  const [chosen, setChosen] = useState(null);
   const [confirming, setConfirming] = useState(false);
 
-  function handlePick(itemId) {
+  function handleAccept() {
     if (confirming) return;
-    setChosen(itemId);
-  }
-
-  function handleConfirm() {
-    if (!chosen || confirming) return;
     setConfirming(true);
     setTimeout(() => {
-      onClaim(chosen);
+      onAccept();
     }, 260);
   }
 
   // Obtiene los objetos del catálogo
-  const items = itemChoices.map(id => getItemById(itemsCatalog, id)).filter(Boolean);
+  const items = grantedItems.map(id => getItemById(itemsCatalog, id)).filter(Boolean);
 
   const rarityLabel = {
     common: 'Común',
@@ -80,65 +71,69 @@ function DailyItemChoiceModal({ dailyName, itemChoices = [], onClaim }) {
           <p className="text-gray-400 text-[10px] sm:text-xs font-pixel">
             {dailyName}
           </p>
+          <p className="text-quest-gold text-xs font-pixel mt-2">
+            +{points} pts
+          </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {items.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handlePick(item.id)}
-              className={`text-left p-4 border-2 bg-gradient-to-r from-quest-goldDark/20 to-quest-gold/5 
-                hover:scale-[1.02] transition-all duration-200 cursor-pointer card-pixel
-                hover:shadow-[0_0_20px_rgba(255,215,0,0.3)] group
-                ${chosen === item.id ? 'border-quest-gold shadow-[0_0_20px_rgba(255,215,0,0.3)]' : 'border-quest-border'}`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{item.icon}</span>
-                  <div>
-                    <h3 className="font-bold text-white text-sm font-pixel">{item.name}</h3>
-                    <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border ${rarityClass[item.rarity] ?? 'text-quest-textDim border-quest-border'}`}>
-                      {rarityLabel[item.rarity] ?? item.rarity}
-                    </span>
+        {items.length > 0 ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-center text-gray-400 text-[10px] font-pixel mb-2">
+              Has recibido los siguientes objetos:
+            </p>
+            {items.map(item => (
+              <div
+                key={item.id}
+                className="text-left p-4 border-2 bg-gradient-to-r from-quest-goldDark/20 to-quest-gold/5 border-quest-gold/50 card-pixel"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{item.icon}</span>
+                    <div>
+                      <h3 className="font-bold text-white text-sm font-pixel">{item.name}</h3>
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border ${rarityClass[item.rarity] ?? 'text-quest-textDim border-quest-border'}`}>
+                        {rarityLabel[item.rarity] ?? item.rarity}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <span className={`text-quest-gold text-lg transition-all ${chosen === item.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>✓</span>
-              </div>
 
-              <p className="text-gray-300 text-[10px] sm:text-xs leading-relaxed mb-2">
-                {item.desc}
-              </p>
+                <p className="text-gray-300 text-[10px] sm:text-xs leading-relaxed mb-2">
+                  {item.desc}
+                </p>
 
-              <div className="flex items-center gap-3 pt-2 border-t border-quest-border/50 text-[9px] font-pixel">
-                <div className="flex items-center gap-1">
-                  <span className="text-purple-400 text-[10px]">Tipo:</span>
-                  <span className="text-gray-300">{effectTypeLabel[item.effectType] ?? item.effectType}</span>
-                </div>
-                {item.durationDays && (
+                <div className="flex items-center gap-3 pt-2 border-t border-quest-border/50 text-[9px] font-pixel">
                   <div className="flex items-center gap-1">
-                    <span className="text-purple-400 text-[10px]">Duración:</span>
-                    <span className="text-gray-300">{item.durationDays} día(s)</span>
+                    <span className="text-purple-400 text-[10px]">Tipo:</span>
+                    <span className="text-gray-300">{effectTypeLabel[item.effectType] ?? item.effectType}</span>
                   </div>
-                )}
+                  {item.durationDays && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-purple-400 text-[10px]">Duración:</span>
+                      <span className="text-gray-300">{item.durationDays} día(s)</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </button>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-400 text-[10px] font-pixel">
+              No has recibido objetos en esta misión.
+            </p>
+          </div>
+        )}
 
         <div className="flex items-center justify-center">
           <button
-            onClick={handleConfirm}
-            disabled={!chosen}
-            className={`btn-pixel text-[10px] px-6 py-2 w-full ${chosen ? 'bg-quest-gold text-black' : 'opacity-40 cursor-not-allowed'}`}
+            onClick={handleAccept}
+            disabled={confirming}
+            className="btn-pixel text-[10px] px-6 py-2 w-full bg-quest-gold text-black"
           >
-            {confirming ? 'RECLAMANDO...' : 'RECLAMAR OBJETO'}
+            {confirming ? 'ACEPTANDO...' : 'ACEPTAR'}
           </button>
         </div>
-
-        <p className="text-center text-gray-500 text-[9px] font-pixel">
-          Toca un objeto para seleccionarlo
-        </p>
       </div>
     </div>,
     document.body
@@ -157,10 +152,11 @@ export default function DailyRewardFlow() {
   if (!pendingReward) return null;
 
   return (
-    <DailyItemChoiceModal
+    <DailyRewardModal
       dailyName={pendingReward.dailyName}
-      itemChoices={pendingReward.itemChoices}
-      onClaim={claimDailyItem}
+      grantedItems={pendingReward.grantedItems}
+      points={pendingReward.points}
+      onAccept={claimDailyItem}
     />
   );
 }

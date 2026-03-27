@@ -1720,74 +1720,81 @@ const useGameStore = create(
 
     _pickDailyItemChoices(daily) {
       if (!daily) return [];
-      const dailyPool = Array.isArray(daily.rewards?.items) ? [...daily.rewards.items] : [];
+
       const itemsCatalog = getItemsState(get());
-      const basePool = Array.from(new Set(dailyPool.length ? dailyPool : Object.keys(itemsCatalog)));
-      const weightedRarities = [
-        { rarity: 'common', weight: 55 },
-        { rarity: 'rare', weight: 30 },
-        { rarity: 'epic', weight: 12 },
-        { rarity: 'legendary', weight: 3 },
-      ];
-      const pickCount = 3;
-      const choices = [];
+      const allItemIds = Object.keys(itemsCatalog);
       const usedIds = new Set();
+      const choices = [];
 
-      const pickWeightedRarity = (availableRarities) => {
-        const pool = weightedRarities.filter(entry => availableRarities.has(entry.rarity));
-        if (pool.length === 0) return null;
-
-        const totalWeight = pool.reduce((acc, entry) => acc + entry.weight, 0);
-        let roll = Math.random() * totalWeight;
-        for (const entry of pool) {
-          roll -= entry.weight;
-          if (roll <= 0) return entry.rarity;
-        }
-        return pool[pool.length - 1].rarity;
+      // Función auxiliar para obtener items por rareza
+      const getItemsByRarity = (rarity) => {
+        return allItemIds.filter(id => itemsCatalog[id]?.rarity === rarity && !usedIds.has(id));
       };
 
-      for (let i = 0; i < pickCount; i++) {
-        const availableItems = basePool.filter(id => !usedIds.has(id));
-        if (availableItems.length === 0) break;
+      // Función auxiliar para seleccionar un item aleatorio de un array
+      const pickRandom = (pool) => {
+        if (!pool || pool.length === 0) return null;
+        return pool[Math.floor(Math.random() * pool.length)];
+      };
 
-        const rarityToPool = {};
-        for (const itemId of availableItems) {
-          const rarity = itemsCatalog[itemId]?.rarity;
-          if (!rarityToPool[rarity]) rarityToPool[rarity] = [];
-          rarityToPool[rarity].push(itemId);
+      // Configuración de probabilidades por dificultad
+      const difficulty = daily.difficulty || 'easy';
+
+      if (difficulty === 'easy') {
+        // 70% common, 30% rare
+        const roll = Math.random();
+        const rarity = roll < 0.7 ? 'common' : 'rare';
+        const pool = getItemsByRarity(rarity);
+        const picked = pickRandom(pool) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked) {
+          choices.push(picked);
+          usedIds.add(picked);
         }
-
-        const availableRarities = new Set(
-          Object.keys(rarityToPool).filter(rarity => rarityToPool[rarity]?.length)
-        );
-
-        let targetRarity = pickWeightedRarity(availableRarities);
-        let candidatePool = targetRarity ? rarityToPool[targetRarity] : [];
-
-        if (!candidatePool || candidatePool.length === 0) {
-          const fallbackRarity = Object.keys(rarityToPool)
-            .find(rarity => rarityToPool[rarity]?.length);
-          candidatePool = fallbackRarity ? rarityToPool[fallbackRarity] : [];
+      } else if (difficulty === 'medium') {
+        // 30% common, 70% rare
+        const roll = Math.random();
+        const rarity = roll < 0.3 ? 'common' : 'rare';
+        const pool = getItemsByRarity(rarity);
+        const picked = pickRandom(pool) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked) {
+          choices.push(picked);
+          usedIds.add(picked);
         }
-
-        if (!candidatePool || candidatePool.length === 0) break;
-
-        const idx = Math.floor(Math.random() * candidatePool.length);
-        const pickedId = candidatePool[idx];
-        if (pickedId) {
-          choices.push(pickedId);
-          usedIds.add(pickedId);
+      } else if (difficulty === 'hard') {
+        // 2 objetos: Item 1 (70% rare, 30% epic) + Item 2 (100% common)
+        // Item 1
+        const roll1 = Math.random();
+        const rarity1 = roll1 < 0.7 ? 'rare' : 'epic';
+        const pool1 = getItemsByRarity(rarity1);
+        const picked1 = pickRandom(pool1) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked1) {
+          choices.push(picked1);
+          usedIds.add(picked1);
         }
-      }
-
-      if (choices.length < pickCount) {
-        const fallback = Object.keys(itemsCatalog).filter(id => !usedIds.has(id));
-        while (choices.length < pickCount && fallback.length) {
-          const idx = Math.floor(Math.random() * fallback.length);
-          const pickedId = fallback[idx];
-          choices.push(pickedId);
-          usedIds.add(pickedId);
-          fallback.splice(idx, 1);
+        // Item 2 (common)
+        const pool2 = getItemsByRarity('common');
+        const picked2 = pickRandom(pool2) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked2) {
+          choices.push(picked2);
+          usedIds.add(picked2);
+        }
+      } else if (difficulty === 'epic') {
+        // 2 objetos: Item 1 (70% epic, 30% legendary) + Item 2 (100% rare)
+        // Item 1
+        const roll1 = Math.random();
+        const rarity1 = roll1 < 0.7 ? 'epic' : 'legendary';
+        const pool1 = getItemsByRarity(rarity1);
+        const picked1 = pickRandom(pool1) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked1) {
+          choices.push(picked1);
+          usedIds.add(picked1);
+        }
+        // Item 2 (rare)
+        const pool2 = getItemsByRarity('rare');
+        const picked2 = pickRandom(pool2) || pickRandom(allItemIds.filter(id => !usedIds.has(id)));
+        if (picked2) {
+          choices.push(picked2);
+          usedIds.add(picked2);
         }
       }
 
@@ -2549,7 +2556,7 @@ const useGameStore = create(
       const state = get();
       if (!state.currentDaily || !state.currentDaily.rewards) return;
 
-      const { points, items } = state.currentDaily.rewards;
+      const { points } = state.currentDaily.rewards;
 
       // Award points
       let journeyRewards = [];
@@ -2586,36 +2593,40 @@ const useGameStore = create(
         }
       }
 
-      const itemChoices = get()._pickDailyItemChoices(state.currentDaily);
+      // Nuevo sistema: obtener objetos según dificultad y otorgarlos directamente
+      const grantedItems = get()._pickDailyItemChoices(state.currentDaily);
 
-      if (itemChoices.length === 0) {
-        if (items && items.length > 0) {
-          items.forEach(itemId => get().grantItem(itemId));
-        }
-        get()._pushNotification('daily', `🏆 Daily completado! +${points} pts`);
-      } else {
-        set({
-          pendingDailyReward: {
-            dailyId: state.currentDaily.id,
-            dailyName: state.currentDaily.name,
-            points: points ?? 0,
-            itemChoices,
-          },
-        });
-      }
+      // Otorgar los objetos directamente al inventario
+      grantedItems.forEach(itemId => {
+        get().grantItem(itemId);
+        incrementItemChosen(itemId).catch(() => { });
+      });
+
+      // Siempre mostrar el modal con los objetos recibidos (aunque sea vacío)
+      set({
+        pendingDailyReward: {
+          dailyId: state.currentDaily.id,
+          dailyName: state.currentDaily.name,
+          points: points ?? 0,
+          grantedItems, // Array de IDs de objetos ya otorgados
+        },
+      });
     },
 
-    claimDailyItem(chosenItemId) {
+    claimDailyItem() {
       const reward = get().pendingDailyReward;
       if (!reward) return;
 
-      if (chosenItemId) {
-        get().grantItem(chosenItemId);
-        incrementItemChosen(chosenItemId).catch(() => { });
-      }
+      // Los objetos ya fueron otorgados en _completeDailyChallenge
+      // Solo mostrar notificación con los nombres de los objetos recibidos
+      const itemsCatalog = getItemsState(get());
+      const itemNames = reward.grantedItems?.map(id => getItemById(itemsCatalog, id)?.name).filter(Boolean) || [];
 
-      const itemName = chosenItemId ? getItemById(getItemsState(get()), chosenItemId)?.name : 'un objeto';
-      get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemName}`);
+      if (itemNames.length > 0) {
+        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemNames.join(', ')}`);
+      } else {
+        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts`);
+      }
 
       set({ pendingDailyReward: null });
     },
