@@ -90,6 +90,14 @@ export default function ActiveEffectModal({ effect, onClose }) {
     ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)))
     : null;
 
+  // Obtener el hábito o hábitos donde se aplica el efecto
+  const habits = useGameStore(s => s.habits ?? []);
+  const targetHabits = effect.targetHabitId 
+    ? habits.filter(h => h.id === effect.targetHabitId)
+    : effect.targetHabitIds 
+      ? habits.filter(h => effect.targetHabitIds.includes(h.id))
+      : [];
+
   return createPortal(
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"
@@ -131,6 +139,23 @@ export default function ActiveEffectModal({ effect, onClose }) {
             {getEffectDescription(itemsCatalog, effect)}
           </p>
         </div>
+
+        {/* Target Habits */}
+        {targetHabits.length > 0 && (
+          <div className="bg-quest-panel/30 p-3 rounded-lg border border-quest-cyan/20">
+            <div className="text-[10px] text-quest-cyan font-pixel uppercase mb-2 flex items-center gap-1.5">
+              <span className="animate-pulse">▶</span> Aplicado en:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {targetHabits.map(h => (
+                <div key={h.id} className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded border border-quest-border/50">
+                  <span className="text-xs">{h.emoji}</span>
+                  <span className="text-[10px] text-white font-pixel truncate max-w-[120px]">{h.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Effect Details */}
         <div className="grid grid-cols-2 gap-3">
