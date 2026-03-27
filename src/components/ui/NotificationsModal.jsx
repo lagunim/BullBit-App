@@ -63,8 +63,12 @@ export default function NotificationsModal({ onClose, onNavigateTab }) {
       case 'achievement': return '🏆';
       case 'story': return '📜';
       case 'item': return '💎';
+      case 'item_use': return '🧪';
       case 'level': return '⭐';
       case 'journey': return '🗺️';
+      case 'habit_complete': return '🔥';
+      case 'daily_complete': return '🏅';
+      case 'task_complete': return '📋';
       default: return '🔔';
     }
   };
@@ -117,7 +121,75 @@ export default function NotificationsModal({ onClose, onNavigateTab }) {
                       </div>
                     </div>
                     <div className="font-pixel text-[10px] text-quest-text leading-relaxed">
-                      {notif.msg}
+                      {notif.type === 'habit_complete' && notif.metadata ? (
+                        <div className="space-y-1">
+                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                            <span className="text-sm">{notif.metadata.icon || '🔥'}</span>
+                            {notif.metadata.habitName}
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                            <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>
+                            <span className="flex items-center gap-1">⚡ ×{notif.metadata.multiplier}</span>
+                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                          </div>
+                        </div>
+                      ) : notif.type === 'daily_complete' && notif.metadata ? (
+                        <div className="space-y-1">
+                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                            <span className="text-sm">🏆</span>
+                            {notif.metadata.dailyName}
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                            {notif.metadata.rewards && notif.metadata.rewards.length > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                🎁 RECOMPENSAS: 
+                                <div className="flex gap-1">
+                                  {notif.metadata.rewards.map((rId, idx) => {
+                                    const item = getItemById(itemsCatalog, rId);
+                                    return <span key={idx} title={item?.name || rId}>{item?.icon || '🎁'}</span>;
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : notif.type === 'task_complete' && notif.metadata ? (
+                        <div className="space-y-1">
+                          <div className="text-quest-gold font-bold flex items-center gap-1.5">
+                            <span className="text-sm">{notif.metadata.isPlanBonus ? '✨' : '📋'}</span>
+                            {notif.metadata.isPlanBonus ? 'BONUS PLAN COMPLETO' : notif.metadata.taskName}
+                          </div>
+                          <div className="text-[8px] text-quest-textDim uppercase mb-0.5">
+                            PLAN: {notif.metadata.planName}
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[8px] text-quest-textDim uppercase">
+                            {!notif.metadata.isPlanBonus && <span className="flex items-center gap-1">⏱️ {notif.metadata.minutes} MIN</span>}
+                            <span className="flex items-center gap-1 text-quest-gold">⭐ +{notif.metadata.points} PTS</span>
+                          </div>
+                        </div>
+                      ) : notif.type === 'item_use' && notif.metadata ? (
+                        <div className="space-y-1">
+                          <div className="text-quest-cyan font-bold flex items-center gap-1.5">
+                            <span className="text-sm">{notif.metadata.itemIcon || '🧪'}</span>
+                            {notif.metadata.itemName}
+                          </div>
+                          <div className="text-[8px] text-quest-textDim uppercase">
+                            {notif.metadata.targetHabitName ? (
+                              <span>APLICADO A: <span className="text-quest-text">{notif.metadata.targetHabitName}</span></span>
+                            ) : (
+                              <span>EFECTO GLOBAL</span>
+                            )}
+                          </div>
+                          {notif.metadata.receivedItemName && (
+                            <div className="text-[8px] text-quest-gold uppercase flex items-center gap-1">
+                              RECIBIDO: {notif.metadata.receivedItemIcon} {notif.metadata.receivedItemName}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        notif.msg
+                      )}
                     </div>
                   </div>
                 </div>

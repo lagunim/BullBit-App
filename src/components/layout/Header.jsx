@@ -41,7 +41,7 @@ export default function Header({ onNavigate }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-6">
           {/* Active effects (compact) */}
           <div className="hidden sm:flex gap-2">
             {activeEffects.map((eff, i) => (
@@ -85,11 +85,11 @@ export default function Header({ onNavigate }) {
       {selectedEffect && (
         <ActiveEffectModal effect={selectedEffect} onClose={() => setSelectedEffect(null)} />
       )}
-      
+
       {showNotifications && (
-        <NotificationsModal 
-          onClose={() => setShowNotifications(false)} 
-          onNavigateTab={onNavigate} 
+        <NotificationsModal
+          onClose={() => setShowNotifications(false)}
+          onNavigateTab={onNavigate}
         />
       )}
     </header>

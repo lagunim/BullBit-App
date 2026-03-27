@@ -722,7 +722,13 @@ const useGameStore = create(
         });
       }
 
-      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)}`);
+      get()._pushNotification('habit_complete', `+${earned} pts — ×${newMult.toFixed(1)}`, null, {
+        habitName: habit.name,
+        minutes: habit.durationMinutes,
+        multiplier: newMult.toFixed(1),
+        points: earned,
+        icon: habit.emoji
+      });
       get()._recalcGlobalStreak();
       get()._checkAchievements();
       get()._updateDailyProgress();
@@ -874,7 +880,14 @@ const useGameStore = create(
         });
       }
 
-      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`);
+      get()._pushNotification('habit_complete', `+${earned} pts — ×${newMult.toFixed(1)} (parcial)`, null, {
+        habitName: habit.name,
+        minutes: minutesDone,
+        multiplier: newMult.toFixed(1),
+        points: earned,
+        icon: habit.emoji,
+        isPartial: true
+      });
       get()._recalcGlobalStreak();
       get()._checkAchievements();
       get()._updateDailyProgress();
@@ -1024,7 +1037,14 @@ const useGameStore = create(
         });
       }
 
-      get()._pushNotification('complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`);
+      get()._pushNotification('habit_complete', `+${earned} pts — ×${newMult.toFixed(1)} (extra)`, null, {
+        habitName: habit.name,
+        minutes: minutesDone,
+        multiplier: newMult.toFixed(1),
+        points: earned,
+        icon: habit.emoji,
+        isOvertime: true
+      });
       get()._recalcGlobalStreak();
       get()._checkAchievements();
       get()._updateDailyProgress();
@@ -1166,7 +1186,18 @@ const useGameStore = create(
           queueInventorySave(uid, () => get().inventory);
           saveActiveEffects(uid, get().activeEffects).catch(() => { });
         }
-        get()._pushNotification('item', `${item.icon} ${item.name} activado!`);
+
+        let targetHabitName = null;
+        if (targetHabitId) {
+          const habit = state.habits.find(h => h.id === targetHabitId);
+          targetHabitName = habit?.name;
+        }
+
+        get()._pushNotification('item_use', `${item.icon} ${item.name} activado!`, null, {
+          itemName: item.name,
+          itemIcon: item.icon,
+          targetHabitName
+        });
       }
       else if (item.effectType === 'passive') {
         if (requiresTargeting(item.effectKey) && !targetHabitId) {
@@ -1194,7 +1225,18 @@ const useGameStore = create(
           queueInventorySave(uid, () => get().inventory);
           saveActiveEffects(uid, get().activeEffects).catch(() => { });
         }
-        get()._pushNotification('item', `${item.icon} ${item.name} equipado!`);
+
+        let targetHabitName = null;
+        if (targetHabitId) {
+          const habit = state.habits.find(h => h.id === targetHabitId);
+          targetHabitName = habit?.name;
+        }
+
+        get()._pushNotification('item_use', `${item.icon} ${item.name} equipado!`, null, {
+          itemName: item.name,
+          itemIcon: item.icon,
+          targetHabitName
+        });
       }
       else if (item.effectType === 'instant') {
         if ((item.effectKey === 'mult_recovery' || item.effectKey === 'perm_base_mult' || item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target' || item.effectKey === 'delete_habit' || item.effectKey === 'phoenix_restore' || item.effectKey === 'next_point_boost_target') && !targetHabitId) {
@@ -1314,7 +1356,11 @@ const useGameStore = create(
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
           const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
-          get()._pushNotification('item', `${item.icon} ${item.name} activado en "${habitName}"! Límite de multiplicador aumentado a ×4.`);
+          get()._pushNotification('item_use', `${item.icon} ${item.name} activado en "${habitName}"! Límite de multiplicador aumentado a ×4.`, null, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            targetHabitName: habitName
+          });
         } else if (item.effectKey === 'dynamic_mult_cap' && targetHabitId) {
           const targetHabit = state.habits.find(h => h.id === targetHabitId);
           if (!targetHabit) {
@@ -1351,7 +1397,11 @@ const useGameStore = create(
           const message = newMultiplier > 3.0
             ? `${item.icon} ${item.name} activado en "${habitName}"! Multiplicador: ×${finalMultiplier}, nuevo límite: ×${newMultiplier}`
             : `${item.icon} ${item.name} activado en "${habitName}"! Multiplicador: ×${finalMultiplier}`;
-          get()._pushNotification('item', message);
+          get()._pushNotification('item_use', message, null, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            targetHabitName: habitName
+          });
         } else if ((item.effectKey === 'mult_boost_target' || item.effectKey === 'habit_mult_boost_target') && targetHabitId) {
           set(state2 => ({
             inventory: newInventory,
@@ -1370,6 +1420,12 @@ const useGameStore = create(
             const updatedHabit = get().habits.find(h => h.id === targetHabitId);
             if (updatedHabit) saveHabit(uid, updatedHabit).catch(() => { });
           }
+          const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
+          get()._pushNotification('item_use', `${item.icon} ${item.name} usado en "${habitName}"!`, null, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            targetHabitName: habitName
+          });
         } else if (item.effectKey === 'small_mult_boost_target' && targetHabitId) {
           const targetHabit = state.habits.find(h => h.id === targetHabitId);
           if (!targetHabit) {
@@ -1566,7 +1622,11 @@ const useGameStore = create(
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
           const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
-          get()._pushNotification('item', `${item.icon} ${item.name} activado en "${habitName}"! Los puntos de la próxima completación se multiplicarán por 1.5.`);
+          get()._pushNotification('item_use', `${item.icon} ${item.name} activado en "${habitName}"! Los puntos de la próxima completación se multiplicarán por 1.5.`, null, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            targetHabitName: habitName
+          });
         } else if (item.effectKey === 'void_exchange') {
           const currentQty = (state.inventory.find(i => i.itemId === itemId)?.qty ?? 0) + 1;
           if (quantity > currentQty) {
@@ -1603,7 +1663,12 @@ const useGameStore = create(
           const uid = get()._userId;
           if (uid) queueInventorySave(uid, () => get().inventory);
 
-          get()._pushNotification('item', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`, randomItem.id);
+          get()._pushNotification('item_use', `✨ Has recibido: ${randomItem.icon} ${randomItem.name}!`, randomItem.id, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            receivedItemName: randomItem.name,
+            receivedItemIcon: randomItem.icon
+          });
         }
         // Handle targeted effects using generic system
         else if (requiresTargeting(item.effectKey) && targetHabitId) {
@@ -1617,12 +1682,21 @@ const useGameStore = create(
             queueInventorySave(uid, () => get().inventory);
             saveActiveEffects(uid, get().activeEffects).catch(() => { });
           }
+          const habitName = get().habits.find(h => h.id === targetHabitId)?.name ?? 'hábito';
+          get()._pushNotification('item_use', `${item.icon} ${item.name} usado en "${habitName}"!`, null, {
+            itemName: item.name,
+            itemIcon: item.icon,
+            targetHabitName: habitName
+          });
         } else {
           set({ inventory: newInventory });
           const uid = get()._userId;
           if (uid) queueInventorySave(uid, () => get().inventory);
+          get()._pushNotification('item_use', `${item.icon} ${item.name} usado!`, null, {
+            itemName: item.name,
+            itemIcon: item.icon
+          });
         }
-        get()._pushNotification('item', `${item.icon} ${item.name} usado!`);
       }
     },
 
@@ -2722,9 +2796,17 @@ const useGameStore = create(
       const itemNames = reward.grantedItems?.map(id => getItemById(itemsCatalog, id)?.name).filter(Boolean) || [];
 
       if (itemNames.length > 0) {
-        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts, ${itemNames.join(', ')}`);
+        get()._pushNotification('daily_complete', `🏆 Daily completado! +${reward.points} pts, ${itemNames.join(', ')}`, null, {
+          dailyName: reward.dailyName,
+          points: reward.points,
+          rewards: reward.grantedItems // IDs de los objetos
+        });
       } else {
-        get()._pushNotification('daily', `🏆 Daily completado! +${reward.points} pts`);
+        get()._pushNotification('daily_complete', `🏆 Daily completado! +${reward.points} pts`, null, {
+          dailyName: reward.dailyName,
+          points: reward.points,
+          rewards: []
+        });
       }
 
       set({ pendingDailyReward: null });
@@ -2903,7 +2985,11 @@ const useGameStore = create(
           applyTripleBonus(plan.id).catch(() => { });
         }
 
-        get()._pushNotification('complete', `¡PLAN COMPLETO! ×3 → +${tripleBonus} pts`);
+        get()._pushNotification('task_complete', `¡PLAN COMPLETO! ×3 → +${tripleBonus} pts`, null, {
+          planName: plan.name || date,
+          points: tripleBonus,
+          isPlanBonus: true
+        });
       }
 
       const updatedPlan = {
@@ -2940,7 +3026,12 @@ const useGameStore = create(
       }
 
       if (!plan.tripleApplied) {
-        get()._pushNotification('complete', `+${earned} pts`);
+        get()._pushNotification('task_complete', `+${earned} pts`, null, {
+          taskName: task.name,
+          planName: plan.name || date,
+          minutes: duration,
+          points: earned
+        });
       }
 
       get()._checkAchievements();
