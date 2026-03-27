@@ -1,3 +1,5 @@
+import { getTodayKey } from '../utils/gameLogic.js';
+
 /**
  * Lista maestra de desafíos diarios.
  * Cada desafío contiene:
@@ -14,7 +16,7 @@ export const DAILY_CHALLENGES = [
     icon: '🎯',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       // Filtramos el historial de hoy buscando estados de éxito (completado, parcial o excedido)
       const completed = Object.values(dayHistory).filter(
@@ -34,7 +36,7 @@ export const DAILY_CHALLENGES = [
     icon: '⚡',
     difficulty: 'hard',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let count = 0;
 
@@ -62,7 +64,7 @@ export const DAILY_CHALLENGES = [
     icon: '🏃',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let totalMinutes = 0;
 
@@ -93,7 +95,7 @@ export const DAILY_CHALLENGES = [
     condition: (state) => {
       if (state.habits.length === 0) return { current: 0, target: 1, completed: false };
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
 
       const totalHabits = state.habits.length;
@@ -126,7 +128,7 @@ export const DAILY_CHALLENGES = [
     icon: '🌱',
     difficulty: 'easy',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const completed = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
@@ -145,7 +147,7 @@ export const DAILY_CHALLENGES = [
     icon: '🧩',
     difficulty: 'easy',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const completed = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
@@ -164,7 +166,7 @@ export const DAILY_CHALLENGES = [
     icon: '⏱️',
     difficulty: 'easy',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let totalMinutes = 0;
 
@@ -192,7 +194,7 @@ export const DAILY_CHALLENGES = [
     icon: '🎯',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const completed = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
@@ -211,7 +213,7 @@ export const DAILY_CHALLENGES = [
     icon: '📈',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let count = 0;
 
@@ -238,7 +240,7 @@ export const DAILY_CHALLENGES = [
     icon: '🏋️',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let totalMinutes = 0;
 
@@ -266,7 +268,7 @@ export const DAILY_CHALLENGES = [
     icon: '✅',
     difficulty: 'medium',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const checkIns = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
@@ -285,7 +287,7 @@ export const DAILY_CHALLENGES = [
     icon: '⚔️',
     difficulty: 'hard',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let count = 0;
 
@@ -314,7 +316,7 @@ export const DAILY_CHALLENGES = [
     condition: (state) => {
       if (state.habits.length === 0) return { current: 0, target: 1, completed: false };
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const totalHabits = state.habits.length;
 
@@ -340,7 +342,7 @@ export const DAILY_CHALLENGES = [
     icon: '🔥',
     difficulty: 'epic',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let totalMinutes = 0;
 
@@ -368,7 +370,7 @@ export const DAILY_CHALLENGES = [
     icon: '⛓️',
     difficulty: 'epic',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let count = 0;
 
@@ -395,7 +397,7 @@ export const DAILY_CHALLENGES = [
     icon: '🧠',
     difficulty: 'epic',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const completed = Object.values(dayHistory).filter(
         status => status === 'completed' || status === 'partial' || status === 'over'
@@ -417,7 +419,7 @@ export const DAILY_CHALLENGES = [
     icon: '⚜️',
     difficulty: 'epic',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let count = 0;
 
@@ -444,7 +446,7 @@ export const DAILY_CHALLENGES = [
     icon: '🚀',
     difficulty: 'epic',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let totalMinutes = 0;
 
@@ -475,7 +477,7 @@ export const DAILY_CHALLENGES = [
     icon: '👑',
     difficulty: 'hard',
     condition: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       const failed = Object.values(dayHistory).filter(status => status === 'failed').length;
       let highMultiplierDone = 0;

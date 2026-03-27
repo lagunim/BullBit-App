@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import useGameStore from '../../store/gameStore.js';
+import { formatDateKey } from '../../utils/gameLogic.js';
 
 function createUuid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -19,7 +20,7 @@ export default function CreatePlanModal({ onClose, editDate = null }) {
   const existingPlan = editDate ? plans[editDate] : null;
 
   const today = new Date();
-  const getDateString = (date) => date.toISOString().split('T')[0];
+  const getDateString = (date) => formatDateKey(date);
 
   const [planName, setPlanName] = useState(existingPlan?.name || '');
   const [planDate, setPlanDate] = useState(existingPlan?.date || getDateString(today));

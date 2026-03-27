@@ -86,13 +86,27 @@ export function getLevelInfo(level, points) {
 }
 
 /**
+ * Normaliza una fecha a clave local YYYY-MM-DD.
+ * Evita desfases por UTC al usar toISOString().
+ *
+ * @param {Date} date - Fecha a normalizar
+ * @returns {string} Clave de fecha local
+ */
+export function formatDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Obtiene la fecha de hoy en formato YYYY-MM-DD.
  * Utiliza la fecha ISO para consistencia entre zonas horarias.
  * 
  * @returns {string} Fecha de hoy
  */
 export function getTodayKey() {
-  return new Date().toISOString().split('T')[0];
+  return formatDateKey(new Date());
 }
 
 /**
@@ -104,7 +118,7 @@ export function getTodayKey() {
 export function getYesterdayKey() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+  return formatDateKey(d);
 }
 
 /**
@@ -116,7 +130,7 @@ export function getYesterdayKey() {
 export function getDateKey(daysAgo = 0) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  return formatDateKey(d);
 }
 
 /**
@@ -236,7 +250,7 @@ function _isCustomIntervalDue(customInterval, createdAt, date) {
     }
 
     const creationDate = new Date(createdAt);
-    const creationDateKey = creationDate.toISOString().split('T')[0];
+    const creationDateKey = formatDateKey(creationDate);
     const creationDateNormalized = new Date(creationDateKey + 'T12:00:00');
 
     // Calcular días desde la creación
@@ -597,7 +611,7 @@ export function calcGlobalStreak(habits, history) {
   const isHabitActiveOnDate = (habit, dateKey) => {
     const createdAt = habit?.createdAt;
     if (!createdAt) return true;
-    const createdDate = new Date(createdAt).toISOString().split('T')[0];
+    const createdDate = formatDateKey(new Date(createdAt));
     return createdDate <= dateKey;
   };
 
@@ -644,7 +658,7 @@ export function getWeekStart(dateStr) {
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(date);
   monday.setDate(date.getDate() + diff);
-  return monday.toISOString().split('T')[0];
+  return formatDateKey(monday);
 }
 
 /**
@@ -658,7 +672,7 @@ export function getWeekEnd(dateStr) {
   const monday = new Date(weekStart + 'T12:00:00');
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  return sunday.toISOString().split('T')[0];
+  return formatDateKey(sunday);
 }
 
 /**
@@ -669,7 +683,7 @@ export function getWeekEnd(dateStr) {
  */
 export function getMonthStart(dateStr) {
   const date = new Date(dateStr + 'T12:00:00');
-  return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+  return formatDateKey(new Date(date.getFullYear(), date.getMonth(), 1));
 }
 
 /**
@@ -681,7 +695,7 @@ export function getMonthStart(dateStr) {
 export function getMonthEnd(dateStr) {
   const date = new Date(dateStr + 'T12:00:00');
   // Mes + 1, día 0 = último día del mes actual
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+  return formatDateKey(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 }
 
 /**
@@ -712,7 +726,7 @@ export function isHabitCompletedThisPeriod(habit, dateStr, history) {
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(weekStartDate);
       currentDate.setDate(weekStartDate.getDate() + i);
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = formatDateKey(currentDate);
       const dayData = history[dateKey] ?? {};
       if (isCompletedStatus(dayData[habit.id])) {
         return true;
@@ -734,7 +748,7 @@ export function isHabitCompletedThisPeriod(habit, dateStr, history) {
     for (let i = 0; i < daysInMonth; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = formatDateKey(currentDate);
       const dayData = history[dateKey] ?? {};
       if (isCompletedStatus(dayData[habit.id])) {
         return true;
@@ -767,7 +781,7 @@ export function getWeekCompletions(habitId, history, dateStr) {
   for (let i = 0; i < 7; i++) {
     const currentDate = new Date(weekStartDate);
     currentDate.setDate(weekStartDate.getDate() + i);
-    const dateKey = currentDate.toISOString().split('T')[0];
+    const dateKey = formatDateKey(currentDate);
     const dayData = history[dateKey] ?? {};
     const status = dayData[habitId];
 

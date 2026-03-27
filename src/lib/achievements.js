@@ -62,7 +62,7 @@ export function checkAchievements(state) {
     let perfect = true;
     outer: for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
-      const date = d.toISOString().split('T')[0];
+      const date = formatDate(d);
       for (const h of habits) {
         if (h.periodicity === 'Diaria' && !completions[`${h.id}:${date}`]) { perfect = false; break outer; }
       }

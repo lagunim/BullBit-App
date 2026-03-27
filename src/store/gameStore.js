@@ -21,6 +21,7 @@ import {
   getHabitMultiplierCap,
   hasPermanentMultiplierGem,
   hasDynamicMultiplierCap,
+  formatDateKey,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
 import { assignStoryForJourney, assignStoryForEpicAchievement, assignStoryForLegendaryAchievement, getStoryById } from '../data/stories.js';
@@ -1776,7 +1777,7 @@ const useGameStore = create(
           yesterday.setDate(yesterday.getDate() - 1);
           
           for (let d = new Date(habitCreatedDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = formatDateKey(d);
             const dayStatus = newHistory[dateStr]?.[habit.id];
 
             if (!isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
@@ -1827,7 +1828,7 @@ const useGameStore = create(
             }
           }
         } else if (habit.periodicity === 'weekly') {
-          let currentWeekStart = getWeekStart(habitCreatedDate.toISOString().split('T')[0]);
+          let currentWeekStart = getWeekStart(formatDateKey(habitCreatedDate));
           let currentWeekStartDate = new Date(currentWeekStart + 'T12:00:00');
           const todayWeekStart = getWeekStart(today);
           const todayWeekStartDate = new Date(todayWeekStart + 'T12:00:00');
@@ -1880,10 +1881,10 @@ const useGameStore = create(
             }
 
             currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
-            currentWeekStart = currentWeekStartDate.toISOString().split('T')[0];
+            currentWeekStart = formatDateKey(currentWeekStartDate);
           }
         } else if (habit.periodicity === 'monthly') {
-          let currentMonthStart = getMonthStart(habitCreatedDate.toISOString().split('T')[0]);
+          let currentMonthStart = getMonthStart(formatDateKey(habitCreatedDate));
           let currentMonthStartDate = new Date(currentMonthStart + 'T12:00:00');
           const todayMonthStart = getMonthStart(today);
           const todayMonthStartDate = new Date(todayMonthStart + 'T12:00:00');
@@ -1936,7 +1937,7 @@ const useGameStore = create(
             }
 
             currentMonthStartDate.setMonth(currentMonthStartDate.getMonth() + 1);
-            currentMonthStart = currentMonthStartDate.toISOString().split('T')[0];
+            currentMonthStart = formatDateKey(currentMonthStartDate);
           }
         }
       }
@@ -2036,7 +2037,7 @@ const useGameStore = create(
           for (let i = 0; i < 7; i++) {
             const d = new Date(lastWeekStart + 'T12:00:00');
             d.setDate(d.getDate() + i);
-            const dateKey = d.toISOString().split('T')[0];
+            const dateKey = formatDateKey(d);
             if (!newHistory[dateKey]) newHistory[dateKey] = {};
             if (!newHistory[dateKey][habit.id]) {
               newHistory[dateKey][habit.id] = 'failed';

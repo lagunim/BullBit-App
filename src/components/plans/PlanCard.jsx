@@ -2,13 +2,14 @@ import { useState } from 'react';
 import useGameStore from '../../store/gameStore.js';
 import CreatePlanModal from './CreatePlanModal.jsx';
 import PlanDetailModal from './PlanDetailModal.jsx';
+import { getTodayKey } from '../../utils/gameLogic.js';
 
 export default function PlanCard() {
   const { plans } = useGameStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayKey();
   const todayPlan = plans[today];
 
   if (!todayPlan) return null;

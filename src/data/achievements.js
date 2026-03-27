@@ -1,3 +1,5 @@
+import { getTodayKey, getDateKey } from '../utils/gameLogic.js';
+
 export const ACHIEVEMENTS = [
   // === PRIMEROS PASOS ===
   {
@@ -352,7 +354,7 @@ export const ACHIEVEMENTS = [
     icon: '💥',
     rarity: 'uncommon',
     check: (state) => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayKey();
       const dayHistory = state.history[today] || {};
       let points = 0;
       Object.entries(dayHistory).forEach(([habitId, status]) => {
@@ -378,9 +380,7 @@ export const ACHIEVEMENTS = [
     check: (state) => {
       let totalPoints = 0;
       for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const date = d.toISOString().split('T')[0];
+        const date = getDateKey(i);
         const dayHistory = state.history[date] || {};
         Object.entries(dayHistory).forEach(([habitId, status]) => {
           if (status === 'completed' || status === 'partial' || status === 'over') {
