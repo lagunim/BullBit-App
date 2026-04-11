@@ -114,7 +114,7 @@ export function useHabitTargetedEffects(habitId) {
   return activeEffects.filter(e => e.targetHabitId === habitId);
 }
 
-export function useEffectiveMultiplier(habitId, baseMultiplier = 1) {
+export function useEffectiveMultiplier(habitId, baseMultiplier = 1, maxMultiplier = 3.0) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   const now = new Date();
   const activeEffects = rawEffects.filter(e =>
@@ -141,7 +141,7 @@ export function useEffectiveMultiplier(habitId, baseMultiplier = 1) {
     effectiveMultiplier += habitBoostEffect.value || 1.0;
   }
 
-  const multiplierCap = getHabitMultiplierCap(habitId, activeEffects);
+  const multiplierCap = getHabitMultiplierCap(habitId, activeEffects, maxMultiplier);
   return Math.min(multiplierCap, effectiveMultiplier);
 }
 
@@ -250,16 +250,15 @@ export default function MultiplierIcons({ habitId, className = '' }) {
     });
   }
 
-  // 4. Impulsos de Puntos (Prioridad 3) - solo globales si no hay habitId
-  if (!habitId) {
-    const pointBoostKeys = ['triple_points', 'double_points', 'next_triple'];
-    pointBoostKeys.forEach(key => {
-      const effect = activeEffects.find(e => e.key === key && !e.targetHabitId);
-      if (effect && EFFECT_ICONS[key]) {
-        addIcon({ key, ...EFFECT_ICONS[key] });
-      }
-    });
-  }
+  // 4. Impulsos de Puntos globales (sin targetHabitId): deben verse también en cada tarjeta
+  // (HabitCard pasa habitId; antes solo se mostraban en vistas sin habitId).
+  const pointBoostKeys = ['triple_points', 'double_points', 'next_triple'];
+  pointBoostKeys.forEach(key => {
+    const effect = activeEffects.find(e => e.key === key && !e.targetHabitId);
+    if (effect && EFFECT_ICONS[key]) {
+      addIcon({ key, ...EFFECT_ICONS[key] });
+    }
+  });
 
   if (icons.length === 0) return null;
 
