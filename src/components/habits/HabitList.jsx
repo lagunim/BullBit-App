@@ -381,23 +381,23 @@ export default function HabitList() {
                   </div>
                 );
               }
-              if (weeklyTargetMet) {
-                return (
-                  <div className="mt-2 text-center px-3 py-3 border border-quest-green bg-[#003322] text-quest-green text-[11px] font-pixel uppercase ">
-                    ✔ Objetivo semanal cumplido
-                  </div>
-                );
-              }
               if (!isSelectedHabitFailedToday) {
                 return (
                   <div className="space-y-2 mt-2">
-                    <div className={`text-[10px] font-pixel px-2 py-1 border ${isSelectedHabitDoneToday
+                    {weeklyTargetMet && (
+                      <div className="text-[10px] font-pixel px-2 py-1 border text-quest-green border-quest-green/50 bg-[#003322]">
+                        ✔ Objetivo semanal cumplido · Las completaciones extra siguen dando puntos.
+                      </div>
+                    )}
+                    <div className={`text-[10px] font-pixel px-2 py-1 border ${isSelectedHabitDoneToday || weeklyTargetMet
                       ? 'text-quest-cyan border-quest-cyan/40 bg-quest-cyan/10'
                       : 'text-quest-textMuted border-quest-border/50 bg-black/20'
                       }`}>
                       {isSelectedHabitDoneToday
                         ? 'Este hábito ya se completó hoy. Al repetirlo ganas puntos y mejoras multiplicador, pero no suma misión diaria ya completada.'
-                        : 'Completa este hábito para ganar puntos y mejorar su multiplicador.'}
+                        : weeklyTargetMet
+                          ? 'Ya alcanzaste el objetivo esta semana. Puedes seguir completando para ganar más puntos y mejorar tu multiplicador.'
+                          : 'Completa este hábito para ganar puntos y mejorar su multiplicador.'}
                     </div>
                     <div className="flex items-center gap-2">
                       <input
@@ -424,7 +424,11 @@ export default function HabitList() {
                       onClick={handleComplete}
                       className="btn-pixel-green w-full text-xs py-3 font-bold uppercase "
                     >
-                      {isSelectedHabitDoneToday ? '✔ Completar de nuevo' : '✔ Completar'}
+                      {isSelectedHabitDoneToday
+                        ? '✔ Completar de nuevo'
+                        : weeklyTargetMet
+                          ? '✔ Completar (extra)'
+                          : '✔ Completar'}
                     </button>
                   </div>
                 );

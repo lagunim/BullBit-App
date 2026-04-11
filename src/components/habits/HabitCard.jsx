@@ -140,7 +140,10 @@ export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
           <div className="w-full flex justify-center">
             {weeklyTargetMet ? (
               <div className="px-3 py-2 text-[8px] font-pixel border text-quest-green border-quest-green bg-[#003322] shadow-pixel-sm">
-                ✔ Objetivo semanal cumplido
+                ✔ {habit.weeklyTimesTarget}/{habit.weeklyTimesTarget}
+                {weeklyCompletions > habit.weeklyTimesTarget && (
+                  <span className="text-quest-cyan ml-1">+{weeklyCompletions - habit.weeklyTimesTarget} extra</span>
+                )}
               </div>
             ) : (
               <div className="px-3 py-2 text-[8px] font-pixel border text-quest-cyan border-quest-cyan/50 bg-quest-cyan/10">
