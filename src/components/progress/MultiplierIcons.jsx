@@ -114,7 +114,7 @@ export function useHabitTargetedEffects(habitId) {
   return activeEffects.filter(e => e.targetHabitId === habitId);
 }
 
-export function useEffectiveMultiplier(habitId, baseMultiplier = 1, maxMultiplier = 3.0) {
+export function useEffectiveMultiplier(habitId, currentMultiplier = 1, maxMultiplier = 3.0) {
   const rawEffects = useGameStore(s => s.activeEffects ?? []);
   const now = new Date();
   const activeEffects = rawEffects.filter(e =>
@@ -123,10 +123,10 @@ export function useEffectiveMultiplier(habitId, baseMultiplier = 1, maxMultiplie
 
   const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habitId);
   if (hasFusion) {
-    return baseMultiplier;
+    return currentMultiplier;
   }
 
-  let effectiveMultiplier = baseMultiplier;
+  let effectiveMultiplier = currentMultiplier;
 
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   if (globalBoostEffect) {

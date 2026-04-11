@@ -358,7 +358,6 @@ const useGameStore = create(
         customInterval: habit.customInterval,
         weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
         multiplier: 1.0,
-        baseMultiplier: 1.0,
         maxMultiplier: 3.0,
         streak: 0,
         bestStreak: 0,
