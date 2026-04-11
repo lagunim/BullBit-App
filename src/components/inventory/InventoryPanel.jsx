@@ -54,7 +54,7 @@ export default function InventoryPanel() {
     const habitBoost = activeEffects.find(e =>
       e.key === 'habit_mult_boost' && (!e.targetHabitId || e.targetHabitId === habit.id)
     )?.value ?? 0;
-    const cap = getHabitMultiplierCap(habit.id, activeEffects);
+    const cap = getHabitMultiplierCap(habit.id, activeEffects, habit.maxMultiplier ?? 3.0);
     return Math.min(cap, (habit.multiplier ?? 1) + globalBoost + habitBoost);
   }
 

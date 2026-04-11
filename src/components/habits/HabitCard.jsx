@@ -55,7 +55,7 @@ function getPeriodicityLabel(habit) {
 export default function HabitCard({ habit, onEdit, isAvailableToday = true }) {
   const history = useGameStore(s => s.history ?? {});
   const hasActiveEffect = useHasActiveMultiplierEffect(habit.id);
-  const effectiveMultiplier = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1);
+  const effectiveMultiplier = useEffectiveMultiplier(habit.id, habit.multiplier ?? 1, habit.maxMultiplier ?? 3.0);
 
   const today = getTodayKey();
   // Racha actual obtenida de la BD (habit_history.currently_streak)

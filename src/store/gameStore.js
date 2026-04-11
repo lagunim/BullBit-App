@@ -359,6 +359,7 @@ const useGameStore = create(
         weeklyTimesTarget: habit.weeklyTimesTarget ?? null,
         multiplier: 1.0,
         baseMultiplier: 1.0,
+        maxMultiplier: 3.0,
         streak: 0,
         bestStreak: 0,
         createdAt: new Date().toISOString(),
@@ -623,9 +624,10 @@ const useGameStore = create(
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        const maxMult = habit.maxMultiplier ?? 3.0;
         newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-        if (newMult <= 3.0) {
-          newMult = 3.0;
+        if (newMult <= maxMult) {
+          newMult = maxMult;
           fusionEffectToRemove = fusionEffect;
           get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
         } else {
@@ -791,9 +793,10 @@ const useGameStore = create(
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        const maxMult = habit.maxMultiplier ?? 3.0;
         newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-        if (newMult <= 3.0) {
-          newMult = 3.0;
+        if (newMult <= maxMult) {
+          newMult = maxMult;
           fusionEffectToRemove = fusionEffect;
           get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
         } else {
@@ -948,9 +951,10 @@ const useGameStore = create(
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
+        const maxMult = habit.maxMultiplier ?? 3.0;
         newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-        if (newMult <= 3.0) {
-          newMult = 3.0;
+        if (newMult <= maxMult) {
+          newMult = maxMult;
           fusionEffectToRemove = fusionEffect;
           get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
         } else {
@@ -1089,10 +1093,11 @@ const useGameStore = create(
         e.key === 'fusion_degradation' && e.targetHabitId === habitId
       );
       if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(today + 'T12:00:00'))) {
-        if (newMult > 3.0) {
+        const maxMult = habit.maxMultiplier ?? 3.0;
+        if (newMult > maxMult) {
           newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-          if (newMult <= 3.0) {
-            newMult = 3.0;
+          if (newMult <= maxMult) {
+            newMult = maxMult;
             newActiveEffects = newActiveEffects.filter(e => e !== fusionEffect);
             get()._pushNotification('item', `✨ El efecto de fusión ha terminado para "${habit.name}".`);
           } else {
@@ -1323,7 +1328,7 @@ const useGameStore = create(
             habits: state2.habits.map(h =>
               h.id === targetHabitId
                 ? (() => {
-                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
                   return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
                 })()
                 : h
@@ -1369,7 +1374,7 @@ const useGameStore = create(
           }
           const newMultiplier = parseFloat((targetHabit.multiplier + item.effectValue).toFixed(1));
           const hasExistingDynamicCap = hasDynamicMultiplierCap(targetHabitId, state.activeEffects);
-          const existingCapValue = hasExistingDynamicCap ? getHabitMultiplierCap(targetHabitId, state.activeEffects) : 3.0;
+          const existingCapValue = hasExistingDynamicCap ? getHabitMultiplierCap(targetHabitId, state.activeEffects, targetHabit.maxMultiplier ?? 3.0) : (targetHabit.maxMultiplier ?? 3.0);
           const finalMultiplier = Math.min(Math.max(newMultiplier, existingCapValue), newMultiplier);
           
           set(state2 => ({
@@ -1408,7 +1413,7 @@ const useGameStore = create(
             habits: state2.habits.map(h =>
               h.id === targetHabitId
                 ? (() => {
-                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
                   return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
                 })()
                 : h
@@ -1441,7 +1446,7 @@ const useGameStore = create(
             habits: state2.habits.map(h =>
               h.id === targetHabitId
                 ? (() => {
-                    const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                    const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
                     return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
                   })()
                 : h
@@ -1539,7 +1544,7 @@ const useGameStore = create(
             inventory: newInventory,
             habits: state2.habits.map(h => {
               if (h.id === h1Id || h.id === h2Id) {
-                const cap = getHabitMultiplierCap(h.id, state2.activeEffects);
+                const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
                 const newMult = Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1)));
                 return { ...h, multiplier: newMult };
               }
@@ -2035,10 +2040,11 @@ const useGameStore = create(
 
                 const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
                 if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
-                  if (newMult > 3.0) {
+                  const maxMult = habit.maxMultiplier ?? 3.0;
+                  if (newMult > maxMult) {
                     newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-                    if (newMult <= 3.0) {
-                      newMult = 3.0;
+                    if (newMult <= maxMult) {
+                      newMult = maxMult;
                       nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
                     }
                   }
@@ -2094,10 +2100,11 @@ const useGameStore = create(
 
                   const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
                   if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, weekEndDate)) {
-                    if (newMult > 3.0) {
+                    const maxMult = habit.maxMultiplier ?? 3.0;
+                    if (newMult > maxMult) {
                       newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-                      if (newMult <= 3.0) {
-                        newMult = 3.0;
+                      if (newMult <= maxMult) {
+                        newMult = maxMult;
                         nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
                       }
                     }
@@ -2150,10 +2157,11 @@ const useGameStore = create(
 
                   const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
                   if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, monthEndDate)) {
-                    if (newMult > 3.0) {
+                    const maxMult = habit.maxMultiplier ?? 3.0;
+                    if (newMult > maxMult) {
                       newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
-                      if (newMult <= 3.0) {
-                        newMult = 3.0;
+                      if (newMult <= maxMult) {
+                        newMult = maxMult;
                         nextActiveEffects = nextActiveEffects.filter(e => e !== fusionEffect);
                       }
                     }

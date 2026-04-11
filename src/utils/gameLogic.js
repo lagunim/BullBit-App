@@ -380,7 +380,7 @@ export function calcPoints(habit, activeEffects = []) {
     e.key === 'fusion_degradation' && e.targetHabitId === habit.id
   );
 
-  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
+  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects, habit?.maxMultiplier ?? 3.0);
   let effectiveMultiplier = habit.multiplier;
 
   if (!hasFusion) {
@@ -451,7 +451,7 @@ export function calcMultiplierOnComplete(habit, activeEffects = []) {
     return habit.multiplier;
   }
 
-  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects);
+  const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects, habit?.maxMultiplier ?? 3.0);
   
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
@@ -551,8 +551,8 @@ export function hasDynamicMultiplierCap(habitId, activeEffects = []) {
  * - 4.0 si tiene efecto de Gema del Multiplicador
  * - Valor dinámico si tiene efecto de Token de Maestría (mayor que 3.0)
  */
-export function getHabitMultiplierCap(habitId, activeEffects = []) {
-  if (!habitId) return 3.0;
+export function getHabitMultiplierCap(habitId, activeEffects = [], maxMultiplier = 3.0) {
+  if (!habitId) return maxMultiplier;
   
   // Si el hábito tiene una fusión activa, no hay límite temporalmente
   const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habitId);
@@ -565,7 +565,7 @@ export function getHabitMultiplierCap(habitId, activeEffects = []) {
   const dynamicCap = getDynamicMultiplierCap(habitId, activeEffects);
   if (dynamicCap !== null) return dynamicCap;
   
-  return 3.0;
+  return maxMultiplier;
 }
 
 /**
