@@ -36,13 +36,36 @@ export default function InventoryPanel() {
   const now = new Date();
   const activeEffects = rawEffects.filter(e => !e.expiresAt || new Date(e.expiresAt) > now);
 
-  const displayedEffects = activeEffects.reduce((acc, effect) => {
-    // Evitar duplicados por clave de efecto Y objetivo
-    if (!acc.some(e => e.key === effect.key && e.targetHabitId === effect.targetHabitId)) {
-      acc.push(effect);
+  /** Agrupa por nombre visible (itemName o key) para un solo chip por tipo de objeto */
+  const groupedActiveEffects = (() => {
+    const map = new Map();
+    for (const eff of activeEffects) {
+      const label = String(eff.itemName ?? eff.key ?? 'Efecto').trim() || 'Efecto';
+      if (!map.has(label)) map.set(label, []);
+      map.get(label).push(eff);
     }
-    return acc;
-  }, []);
+    return [...map.entries()].map(([displayName, instances]) => {
+      const expirations = instances
+        .map(e => e.expiresAt)
+        .filter(Boolean)
+        .map(iso => new Date(iso).toDateString());
+      const uniqueExp = [...new Set(expirations)];
+      let expiryLine = null;
+      if (uniqueExp.length === 1) {
+        const iso = instances.find(e => e.expiresAt)?.expiresAt;
+        expiryLine = `Expira: ${new Date(iso).toLocaleDateString('es-ES')}`;
+      } else if (uniqueExp.length > 1) {
+        expiryLine = 'Varias fechas de expiración';
+      }
+      return {
+        id: `${displayName}__${instances[0]?.key ?? ''}`,
+        displayName,
+        instances,
+        count: instances.length,
+        expiryLine,
+      };
+    });
+  })();
 
   function getEffectiveMultiplierForHabit(habit) {
     const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
@@ -263,7 +286,7 @@ export default function InventoryPanel() {
       </div>
 
       {/* Active effects */}
-      {displayedEffects.length > 0 && (
+      {groupedActiveEffects.length > 0 && (
         <div className="anim-fade-in">
           <div className="text-xs text-quest-gold font-pixel mb-3 flex items-center gap-2">
             <h2 className='text-[10px] sm:text-xs font-pixel uppercase'>
@@ -271,18 +294,28 @@ export default function InventoryPanel() {
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {displayedEffects.map((eff, i) => (
+            {groupedActiveEffects.map((group) => (
               <div
-                key={i}
-                onClick={() => setSelectedEffect(eff)}
+                key={group.id}
+                onClick={() => setSelectedEffect({
+                  ...group.instances[0],
+                  effectInstances: group.instances,
+                })}
                 className="bg-quest-panel/50 border-2 border-quest-gold px-3 py-2 shadow-[2px_2px_0_theme(colors.quest.goldDark)] text-quest-gold text-[7px] font-pixel flex items-center gap-3 cursor-pointer hover:bg-quest-gold/10 transition-colors"
               >
                 <span className="animate-blink">◆</span>
-                <div>
-                  <div className="mb-1 uppercase text-[8px]">{eff.itemName ?? eff.key}</div>
-                  {eff.expiresAt && (
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 uppercase text-[8px] flex items-center gap-2 flex-wrap">
+                    <span className="truncate">{group.displayName}</span>
+                    {group.count > 1 && (
+                      <span className="shrink-0 text-[6px] px-1 py-0.5 border border-quest-gold/80 bg-quest-gold/15 rounded">
+                        ×{group.count}
+                      </span>
+                    )}
+                  </div>
+                  {group.expiryLine && (
                     <div className="text-quest-textMuted text-[6px]">
-                      Expira: {new Date(eff.expiresAt).toLocaleDateString()}
+                      {group.expiryLine}
                     </div>
                   )}
                 </div>

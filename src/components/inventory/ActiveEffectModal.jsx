@@ -11,7 +11,8 @@
  * 
  * @component
  * @param {Object} props
- * @param {Object} props.effect - Objeto del efecto activo
+ * @param {Object} props.effect - Efecto activo (o el primero del grupo). Si incluye `effectInstances` (array),
+ *   el modal muestra la unión de hábitos y el detalle de cada instancia.
  * @param {Function} props.onClose - Función para cerrar el modal
  * @returns {JSX.Element|null} Modal de efecto activo o null si no hay efecto
  */
@@ -74,29 +75,67 @@ function getEffectTypeLabel(effectType) {
   }
 }
 
+/** Instancias del mismo efecto (p. ej. varios escudos en distintos hábitos) */
+function getEffectInstances(effect) {
+  if (Array.isArray(effect.effectInstances) && effect.effectInstances.length > 0) {
+    return effect.effectInstances;
+  }
+  return [effect];
+}
+
+function collectTargetHabitIds(instances) {
+  const ids = new Set();
+  for (const e of instances) {
+    if (e.targetHabitId) ids.add(e.targetHabitId);
+    if (Array.isArray(e.targetHabitIds)) {
+      for (const id of e.targetHabitIds) ids.add(id);
+    }
+  }
+  return ids;
+}
+
+function daysLeftUntil(expiresAt) {
+  if (!expiresAt) return null;
+  const end = new Date(expiresAt);
+  const now = new Date();
+  return Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+}
+
 export default function ActiveEffectModal({ effect, onClose }) {
   if (!effect) return null;
   const itemsCatalog = useGameStore(s => s.itemsCatalog ?? {});
+  const habits = useGameStore(s => s.habits ?? []);
 
-  // Obtiene el objeto del catálogo y la rareza
-  const item = getItemFromEffect(itemsCatalog, effect);
+  const instances = getEffectInstances(effect);
+  const primary = instances[0];
+
+  // Obtiene el objeto del catálogo y la rareza (primera instancia representa al grupo)
+  const item = getItemFromEffect(itemsCatalog, primary);
   const rarity = item ? RARITY_COLORS[item.rarity] : { color: '#888', label: 'UNKNOWN' };
   const effectType = item?.effectType || 'unknown';
 
-  // Calcula el tiempo restante del efecto
-  const expiresAt = effect.expiresAt ? new Date(effect.expiresAt) : null;
+  const habitIdSet = collectTargetHabitIds(instances);
+  const targetHabits = [...habitIdSet].map(id => {
+    const h = habits.find(x => x.id === id);
+    return h ?? { id, name: '(Hábito ya no existe)', emoji: '❓' };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+
+  const anyTargeted = instances.some(e => e.targetHabitId || (Array.isArray(e.targetHabitIds) && e.targetHabitIds.length));
+  const showGlobalScope = !anyTargeted;
+
+  const expiresDates = instances.map(e => e.expiresAt).filter(Boolean);
+  const uniqueExpireIso = [...new Set(expiresDates)];
+  const expiresAt = uniqueExpireIso.length === 1 ? new Date(uniqueExpireIso[0]) : null;
   const now = new Date();
   const timeLeft = expiresAt
     ? Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24)))
     : null;
 
-  // Obtener el hábito o hábitos donde se aplica el efecto
-  const habits = useGameStore(s => s.habits ?? []);
-  const targetHabits = effect.targetHabitId 
-    ? habits.filter(h => h.id === effect.targetHabitId)
-    : effect.targetHabitIds 
-      ? habits.filter(h => effect.targetHabitIds.includes(h.id))
-      : [];
+  const definedValues = instances.map(e => e.value).filter(v => v !== undefined && v !== null);
+  const singleSharedValue = definedValues.length === instances.length && definedValues.length > 0
+    && definedValues.every(v => v === definedValues[0])
+    ? definedValues[0]
+    : null;
 
   return createPortal(
     <div
@@ -119,7 +158,12 @@ export default function ActiveEffectModal({ effect, onClose }) {
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-sm md:text-base font-bold text-white font-pixel break-words leading-tight">
-              {effect.itemName || item?.name || effect.key}
+              {primary.itemName || item?.name || primary.key}
+              {instances.length > 1 && (
+                <span className="ml-2 text-[10px] text-quest-gold font-pixel align-middle">
+                  ({instances.length} activos)
+                </span>
+              )}
             </h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[8px] font-pixel px-1.5 py-0.5 border uppercase tracking-wider font-bold"
@@ -136,38 +180,97 @@ export default function ActiveEffectModal({ effect, onClose }) {
         {/* Description */}
         <div className="bg-quest-bg/50 p-3 rounded-lg border border-quest-border">
           <p className="text-xs text-gray-300 font-pixel leading-relaxed">
-            {getEffectDescription(itemsCatalog, effect)}
+            {getEffectDescription(itemsCatalog, primary)}
           </p>
         </div>
 
-        {/* Target Habits */}
+        {/* Alcance: hábitos concretos o global */}
         {targetHabits.length > 0 && (
           <div className="bg-quest-panel/30 p-3 rounded-lg border border-quest-cyan/20">
             <div className="text-[10px] text-quest-cyan font-pixel uppercase mb-2 flex items-center gap-1.5">
-              <span className="animate-pulse">▶</span> Aplicado en:
+              <span className="animate-pulse">▶</span> Aplicado en ({targetHabits.length} hábito{targetHabits.length !== 1 ? 's' : ''}):
             </div>
             <div className="flex flex-wrap gap-2">
               {targetHabits.map(h => (
                 <div key={h.id} className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded border border-quest-border/50">
                   <span className="text-xs">{h.emoji}</span>
-                  <span className="text-[10px] text-white font-pixel truncate max-w-[120px]">{h.name}</span>
+                  <span className="text-[10px] text-white font-pixel truncate max-w-[140px]">{h.name}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {showGlobalScope && (
+          <div className="bg-quest-panel/30 p-3 rounded-lg border border-quest-purple/25">
+            <div className="text-[10px] text-quest-purple font-pixel uppercase mb-1">Alcance</div>
+            <p className="text-[10px] text-gray-300 font-pixel leading-relaxed">
+              Este efecto no está ligado a un hábito concreto: se aplica a toda tu rutina (todos los hábitos).
+            </p>
+          </div>
+        )}
+
+        {/* Detalle por cada instancia cuando hay más de una o conviene listar caducidad */}
+        {instances.length > 1 && (
+          <div className="bg-quest-bg/50 p-3 rounded-lg border border-quest-border">
+            <div className="text-[10px] text-quest-gold font-pixel uppercase mb-2">Detalle de cada activación</div>
+            <ul className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              {instances.map((inst, idx) => {
+                const hid = inst.targetHabitId;
+                const habit = hid
+                  ? (habits.find(h => h.id === hid) ?? { emoji: '❓', name: '(Hábito ya no existe)' })
+                  : null;
+                const dLeft = daysLeftUntil(inst.expiresAt);
+                return (
+                  <li
+                    key={`${idx}-${hid ?? 'g'}-${inst.expiresAt ?? ''}`}
+                    className="text-[9px] font-pixel border border-quest-border/40 rounded p-2 bg-black/25 text-gray-300"
+                  >
+                    <span className="text-quest-cyan">#{idx + 1}</span>
+                    {' · '}
+                    {habit ? (
+                      <span>{habit.emoji} {habit.name}</span>
+                    ) : (
+                      <span className="text-quest-textMuted">Global</span>
+                    )}
+                    {inst.expiresAt && (
+                      <span className="block mt-1 text-quest-textMuted">
+                        Expira: {new Date(inst.expiresAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {dLeft !== null && ` · ${dLeft === 0 ? 'Menos de un día restante' : dLeft === 1 ? '1 día restante' : `${dLeft} días restantes`}`}
+                      </span>
+                    )}
+                    {inst.value !== undefined && inst.value !== null && (
+                      <span className="block mt-0.5 text-quest-cyan">Valor: +{inst.value}</span>
+                    )}
+                    {inst.usesRemaining !== undefined && inst.usesRemaining !== null && (
+                      <span className="block mt-0.5 text-quest-orange">Usos restantes: {inst.usesRemaining}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {/* Effect Details */}
         <div className="grid grid-cols-2 gap-3">
-          {effect.value !== undefined && (
+          {singleSharedValue !== null && (
             <div className="bg-quest-panel/50 p-2 rounded border border-quest-border">
               <div className="text-[10px] text-quest-textMuted font-pixel uppercase mb-1">Valor</div>
-              <div className="text-xs text-quest-cyan font-pixel">+{effect.value}</div>
+              <div className="text-xs text-quest-cyan font-pixel">+{singleSharedValue}</div>
             </div>
           )}
-          {timeLeft !== null && (
+          {timeLeft !== null && instances.length === 1 && (
             <div className="bg-quest-panel/50 p-2 rounded border border-quest-border">
               <div className="text-[10px] text-quest-textMuted font-pixel uppercase mb-1">Tiempo</div>
+              <div className="text-xs text-quest-gold font-pixel">
+                {timeLeft === 0 ? '<1 día' : `${timeLeft} día${timeLeft > 1 ? 's' : ''}`}
+              </div>
+            </div>
+          )}
+          {timeLeft !== null && instances.length > 1 && uniqueExpireIso.length === 1 && (
+            <div className="bg-quest-panel/50 p-2 rounded border border-quest-border">
+              <div className="text-[10px] text-quest-textMuted font-pixel uppercase mb-1">Tiempo (todas)</div>
               <div className="text-xs text-quest-gold font-pixel">
                 {timeLeft === 0 ? '<1 día' : `${timeLeft} día${timeLeft > 1 ? 's' : ''}`}
               </div>
@@ -176,10 +279,24 @@ export default function ActiveEffectModal({ effect, onClose }) {
         </div>
 
         {/* Expiration Date */}
-        {expiresAt && (
+        {expiresAt && instances.length === 1 && (
           <div className="text-center">
             <div className="text-[8px] text-quest-textMuted font-pixel">
               Expira el {expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        )}
+        {expiresAt && instances.length > 1 && uniqueExpireIso.length === 1 && (
+          <div className="text-center">
+            <div className="text-[8px] text-quest-textMuted font-pixel">
+              Todas las activaciones expiran el {expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        )}
+        {uniqueExpireIso.length > 1 && (
+          <div className="text-center">
+            <div className="text-[8px] text-quest-textMuted font-pixel">
+              Hay varias fechas de expiración entre las activaciones; revisa el detalle arriba.
             </div>
           </div>
         )}
