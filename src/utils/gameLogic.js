@@ -376,7 +376,7 @@ export function isHabitExpired(habit, today, history) {
  * @returns {number} Puntos ganados
  */
 export function calcPoints(habit, activeEffects = []) {
-  const hasFusion = activeEffects.some(e => 
+  const hasFusion = activeEffects.some(e =>
     e.key === 'fusion_degradation' && e.targetHabitId === habit.id
   );
 
@@ -414,15 +414,15 @@ export function calcPoints(habit, activeEffects = []) {
   if (nextPointBoost) multiplier *= nextPointBoost.value;
 
   // Verificar efecto next_point_boost_target dirigido a este hábito
-  const nextPointBoostTarget = activeEffects.find(e => 
+  const nextPointBoostTarget = activeEffects.find(e =>
     e.key === 'next_point_boost_target' && e.targetHabitId === habit.id
   );
   if (nextPointBoostTarget) multiplier *= nextPointBoostTarget.value;
 
   // Verificar efecto phoenix_bonus dirigido a este hábito
-  const phoenixEffect = activeEffects.find(e => 
-    e.key === 'phoenix_bonus' && 
-    e.targetHabitId === habit.id && 
+  const phoenixEffect = activeEffects.find(e =>
+    e.key === 'phoenix_bonus' &&
+    e.targetHabitId === habit.id &&
     (e.usesRemaining ?? 0) > 0
   );
   if (phoenixEffect) multiplier *= phoenixEffect.value;
@@ -443,16 +443,16 @@ export function calcPoints(habit, activeEffects = []) {
  * @returns {number} Nuevo valor del multiplicador
  */
 export function calcMultiplierOnComplete(habit, activeEffects = []) {
-  const hasFusion = activeEffects.some(e => 
+  const hasFusion = activeEffects.some(e =>
     e.key === 'fusion_degradation' && e.targetHabitId === habit.id
   );
-  
+
   if (hasFusion) {
     return habit.multiplier;
   }
 
   const multiplierCap = getHabitMultiplierCap(habit?.id, activeEffects, habit?.maxMultiplier ?? 3.0);
-  
+
   const globalBoostEffect = activeEffects.find(e => e.key === 'global_mult_boost');
   const globalBoost = globalBoostEffect ? globalBoostEffect.value : 0;
 
@@ -468,7 +468,34 @@ export function calcMultiplierOnComplete(habit, activeEffects = []) {
   );
   const smallBoost = smallBoostEffect ? smallBoostEffect.value : 0;
 
+  // Salvaguarda: no aumentar si el multiplicador ya esta en o sobre su tope efectivo.
+  if ((habit?.multiplier ?? 1.0) >= multiplierCap) {
+    return habit.multiplier;
+  }
+
   return Math.min(multiplierCap, parseFloat((habit.multiplier + 0.2 + globalBoost + habitBoost + smallBoost).toFixed(1)));
+}
+
+/**
+ * Normaliza el multiplicador hacia maxMultiplier segun unidades de periodicidad.
+ * Solo reduce cuando multiplier > maxMultiplier.
+ *
+ * @param {Object} habit - Habito con multiplier y maxMultiplier
+ * @param {number} units - Unidades de periodicidad a aplicar (1 por defecto)
+ * @param {number|null} fromMultiplier - Valor base opcional para el calculo
+ * @returns {number} Multiplicador normalizado
+ */
+export function normalizeMultiplierToHabitMax(habit, units = 1, fromMultiplier = null) {
+  const maxMultiplier = habit?.maxMultiplier ?? 3.0;
+  const baseMultiplier = fromMultiplier ?? habit?.multiplier ?? 1.0;
+  const safeUnits = Number.isFinite(units) ? Math.max(0, units) : 0;
+
+  if (safeUnits <= 0 || baseMultiplier <= maxMultiplier) {
+    return baseMultiplier;
+  }
+
+  const nextMultiplier = Math.max(maxMultiplier, baseMultiplier - (0.4 * safeUnits));
+  return parseFloat(nextMultiplier.toFixed(1));
 }
 
 /**
@@ -514,7 +541,7 @@ export function calcMultiplierOnFail(habit, activeEffects = []) {
   if (activeEffects.some(e => e.key === 'reduced_fail')) {
     return { newMult: Math.max(1.0, parseFloat((habit.multiplier - 0.2).toFixed(1))), consumedKey: 'reduced_fail', appliedKey: 'reduced_fail' };
   }
-  
+
   // 6. Normal penalty
   return { newMult: Math.max(1.0, parseFloat((habit.multiplier - 0.4).toFixed(1))), consumedKey: null, appliedKey: null };
 }
@@ -553,18 +580,18 @@ export function hasDynamicMultiplierCap(habitId, activeEffects = []) {
  */
 export function getHabitMultiplierCap(habitId, activeEffects = [], maxMultiplier = 3.0) {
   if (!habitId) return maxMultiplier;
-  
+
   // Si el hábito tiene una fusión activa, no hay límite temporalmente
   const hasFusion = activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === habitId);
   if (hasFusion) return Number.POSITIVE_INFINITY;
-  
+
   // Gema del multiplicador tiene prioridad (límite fijo de 4.0)
   if (hasPermanentMultiplierGem(habitId, activeEffects)) return 4.0;
-  
+
   // Límite dinámico del Token de Maestría
   const dynamicCap = getDynamicMultiplierCap(habitId, activeEffects);
   if (dynamicCap !== null) return dynamicCap;
-  
+
   return maxMultiplier;
 }
 
@@ -812,13 +839,13 @@ export function getWeekCompletions(habitId, history, dateStr) {
 export function getHabitStreak(habit, history) {
   let streak = 0;
   const today = getTodayKey();
-  
+
   const isCompletedStatus = (status) =>
     status === 'completed' || status === 'partial' || status === 'over';
 
   // Si hoy ya se falló, la racha es 0
   if (history[today]?.[habit.id] === 'failed') return 0;
-  
+
   // Si hoy se completó, empezamos en 1
   if (isCompletedStatus(history[today]?.[habit.id])) {
     streak = 1;
@@ -828,7 +855,7 @@ export function getHabitStreak(habit, history) {
   for (let i = 1; i <= 365; i++) {
     const dateKey = getDateKey(i);
     const status = history[dateKey]?.[habit.id];
-    
+
     // Si el hábito no era debido ese día, saltamos el día sin romper la racha
     if (!isHabitDueOnDate(habit, dateKey, history)) {
       continue;

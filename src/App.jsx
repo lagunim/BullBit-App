@@ -311,15 +311,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-quest-bg flex flex-col items-center justify-center font-pixel text-quest-gold gap-4">
         <div className="text-[10px] animate-pulse">CARGANDO AVENTURA...</div>
-        <div className="w-16 progress-bar h-1">
-          <div className="progress-bar-fill w-full bg-quest-gold animate-[loading_1s_infinite_linear]" />
-        </div>
-        <style>{`
-          @keyframes loading {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(100%); }
-          }
-        `}</style>
+        <div className="text-[32px] leading-none animate-pulse" aria-hidden="true">🔥</div>
       </div>
     );
   }

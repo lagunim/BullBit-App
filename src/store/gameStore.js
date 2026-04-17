@@ -21,6 +21,7 @@ import {
   getHabitMultiplierCap,
   hasPermanentMultiplierGem,
   hasDynamicMultiplierCap,
+  normalizeMultiplierToHabitMax,
   formatDateKey,
 } from '../utils/gameLogic.js';
 import { DEFAULT_HABIT_THEME, HABIT_THEME_BY_ID, attachThemeToHabit } from '../data/habitThemes.js';
@@ -646,7 +647,7 @@ const useGameStore = create(
       const nextPointBoostEffectComplete = state.activeEffects.find(e => e.key === 'next_point_boost');
 
       // Consume "next_point_boost_target" if present for this specific habit
-      const nextPointBoostTargetEffectComplete = state.activeEffects.find(e => 
+      const nextPointBoostTargetEffectComplete = state.activeEffects.find(e =>
         e.key === 'next_point_boost_target' && e.targetHabitId === habitId
       );
 
@@ -763,23 +764,23 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
-      
+
       // Apply next_point_boost (global effect for next completion)
       const nextPointBoostEffect = activeEffects.find(e => e.key === 'next_point_boost');
       if (nextPointBoostEffect) bonusMult *= nextPointBoostEffect.value;
 
       // Apply next_point_boost_target (directed effect for specific habit)
-      const nextPointBoostTargetEffect = activeEffects.find(e => 
+      const nextPointBoostTargetEffect = activeEffects.find(e =>
         e.key === 'next_point_boost_target' && e.targetHabitId === habitId
       );
       if (nextPointBoostTargetEffect) bonusMult *= nextPointBoostTargetEffect.value;
-      
+
       let earned = Math.round(basePoints * bonusMult);
 
       // Apply phoenix_bonus to points
-      const phoenixEffectPartial = activeEffects.find(e => 
-        e.key === 'phoenix_bonus' && 
-        e.targetHabitId === habitId && 
+      const phoenixEffectPartial = activeEffects.find(e =>
+        e.key === 'phoenix_bonus' &&
+        e.targetHabitId === habitId &&
         (e.usesRemaining ?? 0) > 0
       );
       if (phoenixEffectPartial) earned = earned * phoenixEffectPartial.value;
@@ -921,23 +922,23 @@ const useGameStore = create(
       const nextTripleEffect = activeEffects.find(e => e.key === 'next_triple' &&
         effectAppliesTo(e, habitId));
       if (nextTripleEffect) bonusMult *= 3;
-      
+
       // Apply next_point_boost (global effect for next completion)
       const nextPointBoostEffectOvertime = activeEffects.find(e => e.key === 'next_point_boost');
       if (nextPointBoostEffectOvertime) bonusMult *= nextPointBoostEffectOvertime.value;
 
       // Apply next_point_boost_target (directed effect for specific habit)
-      const nextPointBoostTargetEffectOvertime = activeEffects.find(e => 
+      const nextPointBoostTargetEffectOvertime = activeEffects.find(e =>
         e.key === 'next_point_boost_target' && e.targetHabitId === habitId
       );
       if (nextPointBoostTargetEffectOvertime) bonusMult *= nextPointBoostTargetEffectOvertime.value;
-      
+
       let earned = Math.round(basePoints * bonusMult);
 
       // Apply phoenix_bonus to points
-      const phoenixEffectOvertime = activeEffects.find(e => 
-        e.key === 'phoenix_bonus' && 
-        e.targetHabitId === habitId && 
+      const phoenixEffectOvertime = activeEffects.find(e =>
+        e.key === 'phoenix_bonus' &&
+        e.targetHabitId === habitId &&
         (e.usesRemaining ?? 0) > 0
       );
       if (phoenixEffectOvertime) earned = earned * phoenixEffectOvertime.value;
@@ -1254,7 +1255,7 @@ const useGameStore = create(
         }
 
         if (item.effectKey === 'fusion' && Array.isArray(targetHabitId) && targetHabitId.length === 2) {
-          const alreadyFused = targetHabitId.some(hId => 
+          const alreadyFused = targetHabitId.some(hId =>
             state.activeEffects.some(e => e.key === 'fusion_degradation' && e.targetHabitId === hId)
           );
           if (alreadyFused) {
@@ -1375,7 +1376,7 @@ const useGameStore = create(
           const hasExistingDynamicCap = hasDynamicMultiplierCap(targetHabitId, state.activeEffects);
           const existingCapValue = hasExistingDynamicCap ? getHabitMultiplierCap(targetHabitId, state.activeEffects, targetHabit.maxMultiplier ?? 3.0) : (targetHabit.maxMultiplier ?? 3.0);
           const finalMultiplier = Math.min(Math.max(newMultiplier, existingCapValue), newMultiplier);
-          
+
           set(state2 => ({
             inventory: newInventory,
             habits: state2.habits.map(h =>
@@ -1383,11 +1384,11 @@ const useGameStore = create(
             ),
             activeEffects: newMultiplier > 3.0
               ? [...state2.activeEffects.filter(e => !(e.key === 'dynamic_mult_cap' && e.targetHabitId === targetHabitId)), {
-                  key: 'dynamic_mult_cap',
-                  value: newMultiplier,
-                  targetHabitId,
-                  itemName: item.name,
-                }]
+                key: 'dynamic_mult_cap',
+                value: newMultiplier,
+                targetHabitId,
+                itemName: item.name,
+              }]
               : state2.activeEffects,
           }));
           const uid = get()._userId;
@@ -1445,9 +1446,9 @@ const useGameStore = create(
             habits: state2.habits.map(h =>
               h.id === targetHabitId
                 ? (() => {
-                    const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
-                    return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
-                  })()
+                  const cap = getHabitMultiplierCap(h.id, state2.activeEffects, h.maxMultiplier ?? 3.0);
+                  return { ...h, multiplier: Math.min(cap, parseFloat((h.multiplier + item.effectValue).toFixed(1))) };
+                })()
                 : h
             ),
             activeEffects: [...state2.activeEffects, {
@@ -1869,7 +1870,7 @@ const useGameStore = create(
       const rarities = [rarity1, rarity2, rarity3];
 
       for (const rarity of rarities) {
-          let pool = allItemIds.filter(id => itemsCatalog[id].rarity === rarity && !usedIds.has(id));
+        let pool = allItemIds.filter(id => itemsCatalog[id].rarity === rarity && !usedIds.has(id));
         if (pool.length === 0) {
           pool = allItemIds.filter(id => !usedIds.has(id));
         }
@@ -2003,31 +2004,38 @@ const useGameStore = create(
       const activeEffects = state._getActiveEffects();
       let nextActiveEffects = [...activeEffects];
       let removedGemCount = 0;
+      let hadNormalizationAdjustments = false;
 
       for (const habit of state.habits) {
-        if (habit.periodicity === 'weekly_times' || habit.periodicity === 'custom') continue;
+        if (habit.periodicity === 'weekly_times') continue;
 
         const habitCreatedDate = new Date(habit.createdAt);
         habitCreatedDate.setHours(0, 0, 0, 0);
         const todayDate = new Date(today + 'T12:00:00');
 
-        if (habit.periodicity === 'daily') {
+        if (habit.periodicity === 'daily' || habit.periodicity === 'custom') {
           const yesterday = new Date(todayDate);
           yesterday.setDate(yesterday.getDate() - 1);
-          
+
           for (let d = new Date(habitCreatedDate); d <= yesterday; d.setDate(d.getDate() + 1)) {
             const dateStr = formatDateKey(d);
+            const isDueDate = habit.periodicity === 'daily'
+              ? true
+              : isHabitDueOnDate(habit, dateStr, newHistory);
+            if (!isDueDate) continue;
+
             const dayStatus = newHistory[dateStr]?.[habit.id];
 
-            if (!isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
+            if (habit.periodicity === 'daily' && !isCompletedStatus(dayStatus) && dayStatus !== 'failed') {
               if (!newHistory[dateStr]) newHistory[dateStr] = {};
               newHistory[dateStr][habit.id] = 'failed';
               failedEntries.push({ habitId: habit.id, date: dateStr, status: 'failed' });
 
               const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
               if (habitIndex !== -1) {
+                const currentHabit = updatedHabits[habitIndex];
                 // DOBLE PENALIZACIÓN EN PROCESO AUTOMÁTICO
-                let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
+                let { newMult, consumedKey } = calcMultiplierOnFail(currentHabit, nextActiveEffects);
 
                 // Consume shield if used
                 if (consumedKey) {
@@ -2037,9 +2045,9 @@ const useGameStore = create(
                   }
                 }
 
-                const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
-                if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
-                  const maxMult = habit.maxMultiplier ?? 3.0;
+                const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === currentHabit.id);
+                if (fusionEffect && get()._shouldDegradeFusionToday(currentHabit, fusionEffect, new Date(dateStr + 'T12:00:00'))) {
+                  const maxMult = currentHabit.maxMultiplier ?? 3.0;
                   if (newMult > maxMult) {
                     newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
                     if (newMult <= maxMult) {
@@ -2049,21 +2057,34 @@ const useGameStore = create(
                   }
                 }
 
-                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
-                  nextActiveEffects = gemLoss.effects;
-                  if (gemLoss.removed) removedGemCount += 1;
+                const gemLoss = removeGemIfLostThreshold(nextActiveEffects, currentHabit.id, newMult);
+                nextActiveEffects = gemLoss.effects;
+                if (gemLoss.removed) removedGemCount += 1;
 
-                  const dynamicCapLoss = removeDynamicCapIfLostThreshold(nextActiveEffects, habit.id, newMult);
-                  if (dynamicCapLoss.removed) {
-                    nextActiveEffects = dynamicCapLoss.effects;
-                    get()._pushNotification('item', `⚠️ El límite dinámico del Token de Maestría se ha perdido para "${habit.name}".`);
-                  }
+                const dynamicCapLoss = removeDynamicCapIfLostThreshold(nextActiveEffects, currentHabit.id, newMult);
+                if (dynamicCapLoss.removed) {
+                  nextActiveEffects = dynamicCapLoss.effects;
+                  get()._pushNotification('item', `⚠️ El límite dinámico del Token de Maestría se ha perdido para "${currentHabit.name}".`);
+                }
 
-                  updatedHabits[habitIndex] = {
+                updatedHabits[habitIndex] = {
                   ...updatedHabits[habitIndex],
                   multiplier: newMult,
                   streak: 0
                 };
+              }
+            }
+
+            const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+            if (habitIndex !== -1) {
+              const currentHabit = updatedHabits[habitIndex];
+              const normalizedMult = normalizeMultiplierToHabitMax(currentHabit, 1, currentHabit.multiplier);
+              if (normalizedMult !== currentHabit.multiplier) {
+                updatedHabits[habitIndex] = {
+                  ...currentHabit,
+                  multiplier: normalizedMult,
+                };
+                hadNormalizationAdjustments = true;
               }
             }
           }
@@ -2079,6 +2100,19 @@ const useGameStore = create(
             const now = new Date();
 
             if (now >= weekEndDate) {
+              const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+              if (habitIndex !== -1) {
+                const currentHabit = updatedHabits[habitIndex];
+                const normalizedMult = normalizeMultiplierToHabitMax(currentHabit, 1, currentHabit.multiplier);
+                if (normalizedMult !== currentHabit.multiplier) {
+                  updatedHabits[habitIndex] = {
+                    ...currentHabit,
+                    multiplier: normalizedMult,
+                  };
+                  hadNormalizationAdjustments = true;
+                }
+              }
+
               const wasAlreadyFailed = (newHistory[weekEnd]?.[habit.id] === 'failed');
               if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, weekEnd, newHistory)) {
                 if (!newHistory[weekEnd]) newHistory[weekEnd] = {};
@@ -2087,7 +2121,8 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
+                  const currentHabit = updatedHabits[habitIndex];
+                  let { newMult, consumedKey } = calcMultiplierOnFail(currentHabit, nextActiveEffects);
 
                   // Consume shield if used
                   if (consumedKey) {
@@ -2097,9 +2132,9 @@ const useGameStore = create(
                     }
                   }
 
-                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
-                  if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, weekEndDate)) {
-                    const maxMult = habit.maxMultiplier ?? 3.0;
+                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === currentHabit.id);
+                  if (fusionEffect && get()._shouldDegradeFusionToday(currentHabit, fusionEffect, weekEndDate)) {
+                    const maxMult = currentHabit.maxMultiplier ?? 3.0;
                     if (newMult > maxMult) {
                       newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
                       if (newMult <= maxMult) {
@@ -2109,7 +2144,7 @@ const useGameStore = create(
                     }
                   }
 
-                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, currentHabit.id, newMult);
                   nextActiveEffects = gemLoss.effects;
                   if (gemLoss.removed) removedGemCount += 1;
                   updatedHabits[habitIndex] = {
@@ -2136,6 +2171,19 @@ const useGameStore = create(
             const now = new Date();
 
             if (now >= monthEndDate) {
+              const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+              if (habitIndex !== -1) {
+                const currentHabit = updatedHabits[habitIndex];
+                const normalizedMult = normalizeMultiplierToHabitMax(currentHabit, 1, currentHabit.multiplier);
+                if (normalizedMult !== currentHabit.multiplier) {
+                  updatedHabits[habitIndex] = {
+                    ...currentHabit,
+                    multiplier: normalizedMult,
+                  };
+                  hadNormalizationAdjustments = true;
+                }
+              }
+
               const wasAlreadyFailed = (newHistory[monthEnd]?.[habit.id] === 'failed');
               if (!wasAlreadyFailed && !isHabitCompletedThisPeriod(habit, monthEnd, newHistory)) {
                 if (!newHistory[monthEnd]) newHistory[monthEnd] = {};
@@ -2144,7 +2192,8 @@ const useGameStore = create(
 
                 const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
                 if (habitIndex !== -1) {
-                  let { newMult, consumedKey } = calcMultiplierOnFail(habit, nextActiveEffects);
+                  const currentHabit = updatedHabits[habitIndex];
+                  let { newMult, consumedKey } = calcMultiplierOnFail(currentHabit, nextActiveEffects);
 
                   // Consume shield if used
                   if (consumedKey) {
@@ -2154,9 +2203,9 @@ const useGameStore = create(
                     }
                   }
 
-                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === habit.id);
-                  if (fusionEffect && get()._shouldDegradeFusionToday(habit, fusionEffect, monthEndDate)) {
-                    const maxMult = habit.maxMultiplier ?? 3.0;
+                  const fusionEffect = nextActiveEffects.find(e => e.key === 'fusion_degradation' && e.targetHabitId === currentHabit.id);
+                  if (fusionEffect && get()._shouldDegradeFusionToday(currentHabit, fusionEffect, monthEndDate)) {
+                    const maxMult = currentHabit.maxMultiplier ?? 3.0;
                     if (newMult > maxMult) {
                       newMult = parseFloat((newMult - (fusionEffect.degradationAmount || 0.4)).toFixed(1));
                       if (newMult <= maxMult) {
@@ -2166,7 +2215,7 @@ const useGameStore = create(
                     }
                   }
 
-                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
+                  const gemLoss = removeGemIfLostThreshold(nextActiveEffects, currentHabit.id, newMult);
                   nextActiveEffects = gemLoss.effects;
                   if (gemLoss.removed) removedGemCount += 1;
                   updatedHabits[habitIndex] = {
@@ -2184,7 +2233,7 @@ const useGameStore = create(
         }
       }
 
-      if (failedEntries.length === 0) return;
+      if (failedEntries.length === 0 && !hadNormalizationAdjustments) return;
 
       set({
         habits: updatedHabits,
@@ -2199,16 +2248,19 @@ const useGameStore = create(
         if (nextActiveEffects.length !== state.activeEffects.length) saveActiveEffects(uid, nextActiveEffects).catch(() => { });
       }
 
-      const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
-      const message = uniqueFailedHabits.length === 1
-        ? `Hábito marcado como fallido automáticamente`
-        : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
-
-      get()._pushNotification('auto_fail', message);
+      if (failedEntries.length > 0) {
+        const uniqueFailedHabits = [...new Set(failedEntries.map(e => e.habitId))];
+        const message = uniqueFailedHabits.length === 1
+          ? `Hábito marcado como fallido automáticamente`
+          : `${uniqueFailedHabits.length} hábitos marcados como fallidos automáticamente`;
+        get()._pushNotification('auto_fail', message);
+      }
       if (removedGemCount > 0) {
         get()._pushNotification('item', `💠 ${removedGemCount} gema(s) de multiplicador se perdieron por bajar de ×3.0.`);
       }
-      get()._recalcGlobalStreak();
+      if (failedEntries.length > 0) {
+        get()._recalcGlobalStreak();
+      }
     },
 
     _processWeeklyHabits() {
@@ -2235,10 +2287,25 @@ const useGameStore = create(
       const newHistory = { ...state.history };
       const updatedHabits = [...state.habits];
       let hasChanges = false;
+      let hadNormalizationAdjustments = false;
 
       weeklyHabits.forEach(habit => {
         const completions = getWeekCompletions(habit.id, state.history, yesterday);
         const target = habit.weeklyTimesTarget;
+        const periodicUnits = Math.max(1, Number(target) || 1);
+
+        const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
+        if (habitIndex !== -1) {
+          const currentHabit = updatedHabits[habitIndex];
+          const normalizedMult = normalizeMultiplierToHabitMax(currentHabit, periodicUnits, currentHabit.multiplier);
+          if (normalizedMult !== currentHabit.multiplier) {
+            updatedHabits[habitIndex] = {
+              ...currentHabit,
+              multiplier: normalizedMult,
+            };
+            hadNormalizationAdjustments = true;
+          }
+        }
 
         if (completions < target) {
           const missedCount = target - completions;
@@ -2246,14 +2313,15 @@ const useGameStore = create(
           const totalPenalty = penaltyPerMiss * missedCount;
 
           // Calcular nuevo multiplicador con penalización y escudos
-          let newMult = habit.multiplier;
+          const currentHabit = habitIndex !== -1 ? updatedHabits[habitIndex] : habit;
+          let newMult = currentHabit.multiplier;
           const shield = nextActiveEffects.find(e => e.key === 'golden_shield') ||
             nextActiveEffects.find(e => e.key === 'streak_shield') ||
             nextActiveEffects.find(e => e.key === 'balance_shield');
 
           if (shield) {
             if (shield.key === 'golden_shield') {
-              newMult = parseFloat((habit.multiplier + 0.2).toFixed(1));
+              newMult = parseFloat((currentHabit.multiplier + 0.2).toFixed(1));
             }
             // Solo consumir si no es balance_shield (que es temporal por días, no por usos)
             if (shield.key !== 'balance_shield') {
@@ -2262,7 +2330,7 @@ const useGameStore = create(
           } else {
             const penaltyEffect = nextActiveEffects.find(e => e.key === 'reduced_penalty');
             const actualPenalty = penaltyEffect ? (penaltyEffect.value * missedCount) : totalPenalty;
-            newMult = Math.max(1.0, parseFloat((habit.multiplier - actualPenalty).toFixed(1)));
+            newMult = Math.max(1.0, parseFloat((currentHabit.multiplier - actualPenalty).toFixed(1)));
           }
 
           const gemLoss = removeGemIfLostThreshold(nextActiveEffects, habit.id, newMult);
@@ -2288,7 +2356,6 @@ const useGameStore = create(
           }
 
           // Actualizar el hábito
-          const habitIndex = updatedHabits.findIndex(h => h.id === habit.id);
           if (habitIndex !== -1) {
             updatedHabits[habitIndex] = {
               ...updatedHabits[habitIndex],
@@ -2299,7 +2366,7 @@ const useGameStore = create(
         }
       });
 
-      if (hasChanges || weeklyHabits.some(h => {
+      if (hasChanges || hadNormalizationAdjustments || weeklyHabits.some(h => {
         const completions = getWeekCompletions(h.id, state.history, yesterday);
         return completions < h.weeklyTimesTarget;
       })) {
@@ -2350,12 +2417,12 @@ const useGameStore = create(
               : 'common';
 
         const itemsOfRarity = getAllItems(getItemsState(get())).filter(i => i.rarity === rarity);
-          if (itemsOfRarity.length > 0) {
-            const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
-            set({
-              globalStreak: newStreak,
-              streakReward: { id: randomItem.id },
-            });
+        if (itemsOfRarity.length > 0) {
+          const randomItem = itemsOfRarity[Math.floor(Math.random() * itemsOfRarity.length)];
+          set({
+            globalStreak: newStreak,
+            streakReward: { id: randomItem.id },
+          });
           const uid = get()._userId;
           if (uid) {
             saveProfile(uid, { level: get().level, points: get().points, lifetimePoints: get().lifetimePoints, globalStreak: newStreak, lastWeeklyProcessDate: get().lastWeeklyProcessDate }).catch(() => { });
@@ -2377,7 +2444,7 @@ const useGameStore = create(
     _shouldDegradeFusionToday(habit, fusionEffect, dateObj) {
       const info = fusionEffect.habitPeriodicityInfo;
       if (!info) return false;
-      
+
       const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun...
 
       switch (info.periodicity) {
