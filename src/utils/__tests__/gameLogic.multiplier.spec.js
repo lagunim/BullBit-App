@@ -3,6 +3,7 @@ import {
   calcMultiplierOnComplete,
   isHabitDueOnDate,
   normalizeMultiplierToHabitMax,
+  applyFusionDecay,
 } from '../gameLogic.js';
 
 function makeHabit(overrides = {}) {
@@ -101,6 +102,68 @@ describe('calcMultiplierOnComplete - salvaguarda de incremento', () => {
     const habit = makeHabit({ multiplier: 6.2, maxMultiplier: 3.0 });
     const effects = [{ key: 'fusion_degradation', targetHabitId: habit.id }];
     expect(calcMultiplierOnComplete(habit, effects)).toBe(6.2);
+  });
+});
+
+describe('applyFusionDecay', () => {
+  const fusionEff = { key: 'fusion_degradation', degradationAmount: 0.4 };
+
+  it('no aplica si no hay efecto', () => {
+    const habit = makeHabit({ multiplier: 4.0, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, null, 1);
+    expect(r.applied).toBe(false);
+    expect(r.newMult).toBe(4.0);
+  });
+
+  it('no aplica si current <= max', () => {
+    const habit = makeHabit({ multiplier: 2.5, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 1);
+    expect(r.applied).toBe(false);
+    expect(r.effectEnded).toBe(true);
+  });
+
+  it('reduce -0.4 con units=1', () => {
+    const habit = makeHabit({ multiplier: 5.2, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 1);
+    expect(r.applied).toBe(true);
+    expect(r.newMult).toBe(4.8);
+    expect(r.effectEnded).toBe(false);
+  });
+
+  it('reduce -0.4 * units (weekly 3x => 1.2)', () => {
+    const habit = makeHabit({ multiplier: 5.2, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 3);
+    expect(r.applied).toBe(true);
+    expect(r.newMult).toBe(4.0);
+  });
+
+  it('clamp en maxMultiplier y marca effectEnded', () => {
+    const habit = makeHabit({ multiplier: 3.2, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 1);
+    expect(r.applied).toBe(true);
+    expect(r.newMult).toBe(3.0);
+    expect(r.effectEnded).toBe(true);
+  });
+
+  it('units=0 → no aplica', () => {
+    const habit = makeHabit({ multiplier: 5.0, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 0);
+    expect(r.applied).toBe(false);
+    expect(r.newMult).toBe(5.0);
+  });
+
+  it('respeta degradationAmount custom', () => {
+    const habit = makeHabit({ multiplier: 4.0, maxMultiplier: 3.0 });
+    const customEff = { key: 'fusion_degradation', degradationAmount: 0.2 };
+    const r = applyFusionDecay(habit, customEff, 1);
+    expect(r.newMult).toBe(3.8);
+  });
+
+  it('spec: 3.2/max3.0 + units=1 = 3.0 (penalty 0.2)', () => {
+    const habit = makeHabit({ multiplier: 3.2, maxMultiplier: 3.0 });
+    const r = applyFusionDecay(habit, fusionEff, 1);
+    expect(r.newMult).toBe(3.0);
+    expect(parseFloat((habit.multiplier - r.newMult).toFixed(1))).toBe(0.2);
   });
 });
 

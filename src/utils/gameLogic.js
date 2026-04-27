@@ -499,6 +499,32 @@ export function normalizeMultiplierToHabitMax(habit, units = 1, fromMultiplier =
 }
 
 /**
+ * Aplica la degradación periódica de la Poción de Fusión.
+ * newMult = max(maxMultiplier, currentMultiplier - degradationAmount * units).
+ * Solo reduce cuando multiplier > maxMultiplier.
+ *
+ * @param {Object} habit - Hábito con multiplier y maxMultiplier
+ * @param {Object|null} fusionEffect - Efecto fusion_degradation activo (o null)
+ * @param {number} units - Unidades de periodicidad a aplicar (1 por defecto)
+ * @returns {{ newMult: number, effectEnded: boolean, applied: boolean }}
+ */
+export function applyFusionDecay(habit, fusionEffect, units = 1) {
+  const maxMult = habit?.maxMultiplier ?? 3.0;
+  const current = parseFloat((habit?.multiplier ?? 1.0).toFixed(1));
+  const safeUnits = Number.isFinite(units) ? Math.max(0, units) : 0;
+
+  if (!fusionEffect) {
+    return { newMult: current, effectEnded: current <= maxMult, applied: false };
+  }
+  if (safeUnits <= 0 || current <= maxMult) {
+    return { newMult: current, effectEnded: current <= maxMult, applied: false };
+  }
+  const dec = (fusionEffect.degradationAmount ?? 0.4) * safeUnits;
+  const next = parseFloat(Math.max(maxMult, current - dec).toFixed(1));
+  return { newMult: next, effectEnded: next <= maxMult, applied: true };
+}
+
+/**
  * Calcula el nuevo multiplicador después de fallar un hábito.
  * 
  * FUNCIONAMIENTO:
